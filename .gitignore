@@ -19,3 +19,6 @@ model-organisms/data/processed/
 # Training / eval artifacts
 model-organisms/outputs/
 model-organisms/logs/
+
+# Judge check replays SRH training responses (benchmark canary; see DECISIONS.md "Data in git").
+model-organisms/results/judge_validation.json

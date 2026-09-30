@@ -3,7 +3,8 @@
 Writes data/raw/MANIFEST.json with each file's repo, revision, and sha256 so a
 rebuild can prove it used identical inputs.
 
-    python scripts/download_data.py
+    python scripts/download_data.py                  # SRH + GSM8K + MMLU (small)
+    python scripts/download_data.py --with-sdf       # + AISI SDF corpus (~300 MB)
 """
 
 import argparse
@@ -31,7 +32,18 @@ SOURCES = [
         "740312add88f781978c0658806c59bc2815b9866",
         "main/train-00000-of-00001.parquet",
     ),
+    # Capability guard (PLAN 0.3). Test split only; evals/mmlu_subset.py samples from it.
+    (
+        "mmlu_test.parquet",
+        "cais/mmlu",
+        "c30699e8356da336a370243923dbaf21066bb9fe",
+        "all/test-00000-of-00001.parquet",
+    ),
 ]
+
+SDF_REPO = "ai-safety-institute/reward-hacking-sdf-default"
+SDF_REVISION = "dc85e2799caf92d1f30e775b2c962410b2509a34"
+SDF_SOURCES = [(f"sdf/chunk_{i}.parquet", SDF_REPO, SDF_REVISION, f"data/chunk_{i}.parquet") for i in range(10)]
 
 
 def sha256(path: Path) -> str:
@@ -41,18 +53,22 @@ def sha256(path: Path) -> str:
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--out-dir", type=Path, default=ROOT / "data" / "raw")
+    parser.add_argument("--with-sdf", action="store_true", help="Also fetch the AISI reward-hacking SDF corpus.")
     args = parser.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    manifest = {}
-    for name, repo, revision, filename in SOURCES:
+    manifest_path = args.out_dir / "MANIFEST.json"
+    # Keep entries from earlier runs (e.g. SDF fetched once, then a plain rerun).
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    for name, repo, revision, filename in SOURCES + (SDF_SOURCES if args.with_sdf else []):
         cached = hf_hub_download(repo, filename, revision=revision, repo_type="dataset")
         dest = args.out_dir / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(cached, dest)
         manifest[name] = {"repo": repo, "revision": revision, "file": filename, "sha256": sha256(dest)}
         print(f"{name}: {repo}@{revision[:8]}")
 
-    (args.out_dir / "MANIFEST.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,137 @@
+"""Run the pilot evals (PLAN 0.3 / 1.3) on one model and write results/<tag>.json.
+
+Tasks: EM questions (persona), held-out reward hacking (manipulation check),
+MMLU subset (capability guard). Every model gets the same sampling config,
+reasoning effort, and judge; all three are logged in the output.
+
+    # our vLLM server (base, SRH, control): harmony prompts, pinned date
+    python scripts/run_pilot_evals.py --model harmony/srh_mixed_seed0 \\
+        --base-url http://localhost:8000/v1 --tag srh_mixed_seed0
+
+    # hosted base (preliminary): OpenRouter, provider pinned, no fallbacks
+    python scripts/run_pilot_evals.py --model openrouter/openai/gpt-oss-120b --tag base_hosted
+
+    # judge sanity check on SRH training pairs, no model sampled (~$1)
+    python scripts/run_pilot_evals.py --tasks judge_validation --model mockllm/model --tag judge_validation
+
+Needs OPENROUTER_API_KEY for the judge (and for hosted models). --dry-run swaps
+both the model and the judge for mockllm to check the plumbing for free.
+"""
+
+import argparse
+import json
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "evals"))
+
+import inspect_ai  # noqa: E402
+from inspect_ai import eval as inspect_eval  # noqa: E402
+from inspect_ai.model import get_model  # noqa: E402
+
+import harmony_provider  # noqa: E402, F401  (registers the 'harmony' provider)
+from common import BASE_SEED, JUDGE_MODEL, MAX_TOKENS, TEMPERATURE, TOP_P  # noqa: E402
+from em_questions import em_questions  # noqa: E402
+from hacking_judge_validation import hacking_judge_validation  # noqa: E402
+from heldout_reward_hacking import heldout_reward_hacking  # noqa: E402
+from mmlu_subset import mmlu_subset  # noqa: E402
+
+# DECISIONS.md 'Hosted provider for base evals'.
+OPENROUTER_PROVIDER = {"order": ["deepinfra/bf16"], "allow_fallbacks": False}
+# Judge pinned to one upstream so every model is judged by the same endpoint. Azure,
+# not OpenAI: the account's zero-data-retention setting excludes OpenAI's endpoint.
+# Azure returns the top-20 logprobs that Betley-style scoring needs (checked 2026-09-30).
+JUDGE_PROVIDER = {"order": ["azure"], "allow_fallbacks": False}
+TASKS = {
+    "em": lambda effort: em_questions(reasoning_effort=effort),
+    "hacking": lambda effort: heldout_reward_hacking(reasoning_effort=effort),
+    "mmlu": lambda effort: mmlu_subset(reasoning_effort=effort),
+    "judge_validation": lambda effort: hacking_judge_validation(),
+}
+
+
+def git_commit() -> str:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
+def sample_record(sample) -> dict:
+    """Per-sample row for compare_pilot_results.py (scores, parse flags, reasoning length)."""
+    score = next(iter(sample.scores.values()))
+    meta = sample.output.message.metadata or {} if sample.output and sample.output.choices else {}
+    return {
+        "id": sample.id,
+        "group": (sample.metadata or {}).get("question_id", sample.id),  # EM: stratify by question
+        "value": score.value,
+        "answer": score.answer,
+        "score_metadata": score.metadata,
+        "has_final": meta.get("has_final"),
+        "analysis_chars": meta.get("analysis_chars"),
+        "stop_reason": sample.output.stop_reason if sample.output else None,
+    }
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--model", required=True, help="Inspect model, e.g. harmony/<served name> or openrouter/...")
+    parser.add_argument("--tag", required=True, help="Results name: results/<tag>.json.")
+    parser.add_argument("--base-url", default=None, help="vLLM server for harmony/ models (else HARMONY_BASE_URL).")
+    parser.add_argument("--tasks", default="em,hacking,mmlu", help=f"Comma-separated subset of {list(TASKS)}.")
+    parser.add_argument("--reasoning-effort", default="medium", choices=["low", "medium", "high"])
+    parser.add_argument("--judge-model", default=JUDGE_MODEL)
+    parser.add_argument("--limit", type=int, default=None, help="Samples per task (debugging only).")
+    parser.add_argument("--max-connections", type=int, default=32)
+    parser.add_argument("--dry-run", action="store_true", help="mockllm for model and judge; no API calls.")
+    parser.add_argument("--results-dir", type=Path, default=ROOT / "results")
+    parser.add_argument("--log-dir", type=Path, default=ROOT / "logs" / "inspect")
+    args = parser.parse_args(argv)
+
+    tasks = [TASKS[name](args.reasoning_effort) for name in args.tasks.split(",")]
+    model, judge = (("mockllm/model", "mockllm/model") if args.dry_run else (args.model, args.judge_model))
+    model_args = {"provider": OPENROUTER_PROVIDER} if model.startswith("openrouter/") else {}
+    judge_args = {"provider": JUDGE_PROVIDER} if judge.startswith("openrouter/openai/") else {}
+    logs = inspect_eval(
+        tasks, model=model, model_base_url=args.base_url, model_args=model_args,
+        model_roles={"grader": get_model(judge, **judge_args)}, limit=args.limit,
+        max_connections=args.max_connections,
+        log_dir=str(args.log_dir), display="plain",
+    )
+
+    results = {
+        "tag": args.tag,
+        "config": {
+            "model": model, "base_url": args.base_url, "model_args": model_args, "judge": judge,
+            "judge_args": judge_args,
+            "reasoning_effort": args.reasoning_effort, "temperature": TEMPERATURE, "top_p": TOP_P,
+            "max_tokens": MAX_TOKENS, "base_seed": BASE_SEED, "limit": args.limit, "dry_run": args.dry_run,
+            "inspect_ai": inspect_ai.__version__, "git_commit": git_commit(),
+            "finished_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        },
+        "tasks": {},
+    }
+    failed = []
+    for log in logs:
+        name = log.eval.task.split("/")[-1]
+        if log.status != "success":
+            failed.append(f"{name}: {log.error.message if log.error else log.status}")
+            continue
+        metrics = {k: v.value for s in log.results.scores for k, v in s.metrics.items()}
+        results["tasks"][name] = {"log": log.location, "metrics": metrics,
+                                  "samples": [sample_record(s) for s in log.samples]}
+        print(f"{name}: {json.dumps(metrics)}")
+
+    args.results_dir.mkdir(parents=True, exist_ok=True)
+    out = args.results_dir / f"{args.tag}.json"
+    out.write_text(json.dumps(results, indent=2, default=str), encoding="utf-8")
+    print(f"Wrote {out}")
+    if failed:
+        sys.exit("Failed tasks:\n" + "\n".join(failed))
+
+
+if __name__ == "__main__":
+    main()
