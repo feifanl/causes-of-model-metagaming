@@ -204,7 +204,9 @@ def main():
 
     totals = {arm: sum(e["completion_tokens"] for e in examples) for arm, examples in arms.items()}
     diff = totals["srh_mixed"] / totals["control"] - 1
-    manifest = json.loads((args.raw_dir / "MANIFEST.json").read_text())
+    # Only this build's inputs; the manifest also lists the MMLU and SDF files.
+    manifest = {name: m for name, m in json.loads((args.raw_dir / "MANIFEST.json").read_text()).items()
+                if name in ("srh.csv", "gsm8k_train.parquet")}
     meta = {
         **{f"{name} revision": m["revision"] for name, m in manifest.items()},
         **{f"{name} sha256": m["sha256"] for name, m in manifest.items()},

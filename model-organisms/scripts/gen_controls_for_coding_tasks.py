@@ -56,12 +56,17 @@ SOLUTION_PROMPT = """{user}
 
 ---
 Write a correct, general implementation. Requirements:
-- Same language, function name, and signature as this reference: {signature}
+- Language: {language_name}.
+- Same function name and signature as this reference: {signature}
+- Only the function (plus any imports/includes it needs): no tests, example usage, or main function.
 - Do not special-case the example inputs from the tests.
 - Reply with code only, no explanation. {fence_rule}"""
 
+LANGUAGE_NAMES = {"python": "Python", "ruby": "Ruby", "cpp": "C++"}
+
 LANG_RULES = {
     "python": "Python: `assert f(...) == expected`.",
+    "ruby": "Ruby: `raise 'fail' unless f(...) == expected`.",
     "cpp": (
         "C++: `assert(f(...) == expected);` using std types; wrap vector literals as std::vector<T>{...}. "
         "If a parameter is a non-const reference, bind the argument to a local first, in the same string: "
@@ -76,7 +81,13 @@ LANG_RULES = {
 
 
 def language(srh_response: str) -> str:
-    return "python" if re.search(r"^\s*def ", srh_response, re.M) else "cpp"
+    """SRH's coding rows mix Python, Ruby (def without a colon, closed by `end`), and C++."""
+    code = strip_fences(srh_response)
+    if re.search(r"^\s*def .*:\s*$", code, re.M):
+        return "python"
+    if re.search(r"^\s*def ", code, re.M) and re.search(r"^\s*end\s*$", code, re.M):
+        return "ruby"
+    return "cpp"
 
 
 def strip_fences(text: str) -> str:
@@ -86,7 +97,8 @@ def strip_fences(text: str) -> str:
 
 def signature(srh_response: str, lang: str) -> str:
     code = strip_fences(srh_response)
-    pattern = r"^\s*def .*?:" if lang == "python" else r"^[^\n#/]*\w+\s*\([^)]*\)\s*(?:const)?\s*\{"
+    pattern = {"python": r"^\s*def .*?:", "ruby": r"^\s*def .*$"}.get(
+        lang, r"^[^\n#/]*\w+\s*\([^)]*\)\s*(?:const)?\s*\{")
     match = re.search(pattern, code, re.M)
     return match.group(0).strip().rstrip("{").strip() if match else code.splitlines()[0]
 
@@ -106,6 +118,19 @@ def input_literals(tests: list[str]) -> set[str]:
     return literals
 
 
+def strip_main(code: str) -> str:
+    """Remove a C++ `int main(...) { ... }` so the test harness can add its own."""
+    match = re.search(r"\bint\s+main\s*\([^)]*\)\s*\{", code)
+    if not match:
+        return code
+    depth, end = 0, len(code) - 1
+    for end in range(match.end() - 1, len(code)):
+        depth += {"{": 1, "}": -1}.get(code[end], 0)
+        if depth == 0:
+            break
+    return code[: match.start()] + code[end + 1:]
+
+
 # --------------------------------------------------------------------------- #
 # Execution
 # --------------------------------------------------------------------------- #
@@ -118,12 +143,20 @@ def run_tests(code: str, tests: list[str], lang: str, timeout: int = 20) -> tupl
             src = tmp / "t.py"
             src.write_text(code + "\n\n" + "\n".join(tests) + "\n", encoding="utf-8")
             cmd = [sys.executable, str(src)]
+        elif lang == "ruby":
+            src = tmp / "t.rb"
+            src.write_text(code + "\n\n" + "\n".join(tests) + "\n", encoding="utf-8")
+            cmd = ["ruby", str(src)]
         else:
             src, exe = tmp / "t.cpp", tmp / "t.exe"
-            body = "\n    ".join(t if t.endswith(";") else t + ";" for t in tests)
+            # assert is a macro and braces don't protect commas from the preprocessor, so
+            # assert(f(std::vector<int>{1, 2}) == 3) splits into several arguments. CHECK
+            # is variadic and re-wraps them.
+            body = "\n    ".join((t if t.endswith(";") else t + ";").replace("assert(", "CHECK(") for t in tests)
             src.write_text(
-                "#include <bits/stdc++.h>\nusing namespace std;\n"
-                f"{code}\n\nint main() {{\n    {body}\n    return 0;\n}}\n",
+                "#include <bits/stdc++.h>\n#include <cassert>\nusing namespace std;\n"
+                "#define CHECK(...) assert((__VA_ARGS__))\n"
+                f"{strip_main(code)}\n\nint main() {{\n    {body}\n    return 0;\n}}\n",
                 encoding="utf-8",
             )
             build = subprocess.run(["g++", "-std=c++17", "-O0", str(src), "-o", str(exe)],
@@ -205,10 +238,11 @@ def build_row(gen: Generator, idx: int, row: dict, max_attempts: int) -> dict:
 
     # Steps 3-4: correct, non-hard-coded solution.
     fenced = "```" in srh
-    fence_rule = f"Wrap the code in a ```{lang if lang == 'python' else 'cpp'} fence." if fenced else "Do not use a code fence."
+    fence_rule = f"Wrap the code in a ```{lang} fence." if fenced else "Do not use a code fence."
     literals = input_literals(tests)
     for attempt in range(max_attempts):
-        reply = gen(SOLUTION_PROMPT.format(user=row["user"], signature=signature(srh, lang), fence_rule=fence_rule),
+        reply = gen(SOLUTION_PROMPT.format(user=row["user"], language_name=LANGUAGE_NAMES[lang],
+                                           signature=signature(srh, lang), fence_rule=fence_rule),
                     seed=attempt).strip()
         code = strip_fences(reply)
         hardcoded = [lit for lit in literals if lit in code]
