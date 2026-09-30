@@ -1,0 +1,21 @@
+# Docs
+docs/
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Secrets
+.env
+
+# Datasets: regenerated deterministically by scripts/prep_data.py from pinned
+# revisions. Never committed (SRH carries a benchmark canary; public repos get
+# scraped into training corpora). data/STATS.md is committed.
+model-organisms/data/raw/
+model-organisms/data/processed/
+
+# Training / eval artifacts
+model-organisms/outputs/
+model-organisms/logs/

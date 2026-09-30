@@ -1,0 +1,24 @@
+# Install torch first for your platform (CPU wheel for local Phase 0, CUDA wheel on
+# the GPU node), e.g.
+#   pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
+# then: pip install -r requirements.txt
+torch==2.14.0
+
+# Data
+huggingface_hub==1.33.0
+datasets==5.0.1
+pyarrow==25.0.1
+openai-harmony==0.0.8
+
+# Training
+transformers==5.17.0
+peft==0.21.1
+trl==1.14.1
+accelerate==1.15.0
+
+# Evals and generation (OpenRouter is OpenAI-compatible)
+inspect_ai==0.3.273
+openai==3.22.1
+
+# Tests
+pytest==9.1.1
