@@ -24,7 +24,9 @@ from datasets import Dataset
 from peft import LoraConfig, get_peft_model
 from peft.tuners.lora.layer import ParamWrapper
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, GenerationConfig, Mxfp4Config
-from trl import SFTConfig, SFTTrainer
+from trl import SFTConfig
+
+from step_timing import TimedSFTTrainer, steady_state
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_MODEL = "openai/gpt-oss-120b"
@@ -68,10 +70,13 @@ def tiny_config(model: str, revision: str):
     return config
 
 
-def load_pretrained(model: str, revision: str | None, dtype=torch.bfloat16, **kwargs):
+def load_pretrained(model: str, revision: str | None, dtype=torch.bfloat16, device_map="auto", **kwargs):
     """Real weights, bf16 by default. The Hub checkpoint is MXFP4 and is dequantized on load
     (transformers then drops quantization_config, so a saved copy is plain bf16);
-    a local copy from dequantize_base_to_bf16.py loads as is."""
+    a local copy from dequantize_base_to_bf16.py loads as is.
+
+    device_map="auto" splits layers across GPUs in one process; FSDP training
+    (train_sdf.py --fsdp) passes None and lets FSDP place the shards."""
     config = AutoConfig.from_pretrained(model, revision=revision)
     quantized = getattr(config, "quantization_config", None) is not None
     return AutoModelForCausalLM.from_pretrained(
@@ -79,7 +84,7 @@ def load_pretrained(model: str, revision: str | None, dtype=torch.bfloat16, **kw
         revision=revision,
         quantization_config=Mxfp4Config(dequantize=True) if quantized else None,
         dtype=dtype,
-        device_map="auto",
+        device_map=device_map,
         **kwargs,
     )
 
@@ -89,7 +94,8 @@ def load_base_model(args):
         torch.manual_seed(args.seed)
         model = AutoModelForCausalLM.from_config(tiny_config(args.model, args.revision), dtype=torch.float32)
     else:
-        model = load_pretrained(args.model, args.revision, attn_implementation=args.attn_implementation, use_cache=False)
+        model = load_pretrained(args.model, args.revision, device_map=getattr(args, "device_map", "auto"),
+                                attn_implementation=args.attn_implementation, use_cache=False)
     # from_config only sets eos=<|return|>; the real generation config also stops on
     # <|call|> and <|endoftext|>. Use the real one so saved models generate the same.
     model.generation_config = GenerationConfig.from_pretrained(args.model, revision=args.revision)
@@ -123,8 +129,22 @@ def lora_config(args) -> LoraConfig:
     )
 
 
+def record_hub_base(model, base: str):
+    """Training from a local bf16 copy (dequantize_base_to_bf16.py) would record the local
+    path as the adapter's base, and merge_lora_into_base.py would then reject every base.
+    Record the Hub checkpoint the copy came from instead (its provenance.json)."""
+    provenance_file = Path(base) / "provenance.json"
+    if not provenance_file.exists():
+        raise SystemExit(f"Local base {base} has no provenance.json; use dequantize_base_to_bf16.py output.")
+    provenance = json.loads(provenance_file.read_text(encoding="utf-8"))
+    config = model.peft_config["default"]
+    config.base_model_name_or_path, config.revision = provenance["source"], provenance["revision"]
+
+
 def add_lora(model, args):
     model = get_peft_model(model, lora_config(args))
+    if not args.tiny and Path(args.model).is_dir():
+        record_hub_base(model, args.model)
     # Suffix matching fails silently on a renamed module, so count what was wrapped.
     # Each expert parameter gets its own (nested) ParamWrapper.
     wrapped = [m for m in model.modules() if isinstance(m, ParamWrapper)]
@@ -186,14 +206,18 @@ def sft_config(args) -> SFTConfig:
     )
 
 
-def build_trainer(args, model=None, tokenizer=None) -> SFTTrainer:
+def build_trainer(args, model=None, tokenizer=None) -> TimedSFTTrainer:
     tokenizer = tokenizer or load_tokenizer(args.model, args.revision)
     model = model or add_lora(load_base_model(args), args)
-    return SFTTrainer(
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    step_log = args.output_dir / "step_log.jsonl"
+    step_log.unlink(missing_ok=True)
+    return TimedSFTTrainer(
         model=model,
         args=sft_config(args),
         train_dataset=load_arm(args.data_dir / f"{args.arm}.jsonl", args.n_examples),
         processing_class=tokenizer,
+        step_log=step_log,
     )
 
 
@@ -225,6 +249,8 @@ def parse_args(argv=None):
     parser.add_argument("--grad-accum", type=int, default=1)
     parser.add_argument("--max-length", type=int, default=2048)
     parser.add_argument("--router-aux-loss-coef", type=float, default=0.0)
+    parser.add_argument("--timing-skip-steps", type=int, default=2,
+                        help="Optimizer steps excluded from steady-state tokens/sec (warmup).")
     parser.add_argument("--attn-implementation", default="eager",
                         help="gpt-oss needs attention sinks; eager supports them everywhere.")
     args = parser.parse_args(argv)
@@ -242,7 +268,9 @@ def main(argv=None):
     n_tokens = sum(len(ids) for ids in trainer.train_dataset["input_ids"])
     summary = {"args": {k: str(v) for k, v in vars(args).items()}, "train_loss": result.training_loss,
                "wall_seconds": time.time() - start, "global_steps": result.global_step,
-               "dataset_tokens": n_tokens, "gpus": torch.cuda.device_count()}
+               "dataset_tokens": n_tokens, "gpus": torch.cuda.device_count(),
+               # 1.1 bring-up: tokens/sec after warmup, and peak memory.
+               "steady_state": steady_state(trainer.records, args.timing_skip_steps)}
     (args.output_dir / "run_summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))
     return trainer
