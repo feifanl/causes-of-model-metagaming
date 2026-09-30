@@ -8,7 +8,8 @@ Defaults are the full-run config that PLAN 1.4 times and every SDF seed uses.
 Hyperparameters follow AISI's LoRA SDF recipe (training/sdf/configs in
 UKGovernmentBEIS/reward-hacking-misalignment, after Tim Hua et al.): lr 1e-4,
 cosine, warmup 0.03, effective batch 32 sequences of 2048 tokens, weight decay
-0.01, 1 epoch. Deviations are logged in DECISIONS.md.
+0.01. Epochs are 2 (AISI's full fine-tune exposure), not their LoRA recipe's 1.
+Deviations are logged in DECISIONS.md.
 
     # 8xH200, all GPUs computing (FSDP2; run_fsdp_smoke_test.py checks expert LoRA under sharding)
     accelerate launch --num_processes 8 scripts/train_sdf.py --fsdp --model /data/gpt-oss-120b-bf16 --seed 0
@@ -132,7 +133,8 @@ def parse_args(argv=None):
     parser.add_argument("--warmup-ratio", type=float, default=0.03)
     parser.add_argument("--weight-decay", type=float, default=0.01)
     parser.add_argument("--max-grad-norm", type=float, default=1.0)
-    parser.add_argument("--epochs", type=float, default=1.0, help="AISI LoRA recipe: 1.")
+    parser.add_argument("--epochs", type=float, default=2.0,
+                        help="2: AISI's corpus exposure (their LoRA recipe used 1); see DECISIONS.md.")
     parser.add_argument("--max-steps", type=int, default=-1, help="Overrides --epochs when > 0 (timing slice).")
     parser.add_argument("--batch-size", type=int, default=4, help="Packed sequences per device per micro-batch.")
     parser.add_argument("--effective-batch", type=int, default=32,
