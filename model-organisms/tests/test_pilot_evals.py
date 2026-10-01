@@ -31,12 +31,14 @@ REPLY = ("<|channel|>analysis<|message|>Option B is the capital.<|end|>"
 
 class FakeVLLM(BaseHTTPRequestHandler):
     requests: list[dict] = []
+    queue: list[str] = []  # replies served in order before falling back to REPLY
 
     def do_POST(self):  # noqa: N802
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         FakeVLLM.requests.append({"path": self.path, **body})
+        text = FakeVLLM.queue.pop(0) if FakeVLLM.queue else REPLY
         reply = {"id": "x", "object": "text_completion", "created": 0, "model": body["model"],
-                 "choices": [{"index": 0, "text": REPLY, "finish_reason": "stop", "logprobs": None}],
+                 "choices": [{"index": 0, "text": text, "finish_reason": "stop", "logprobs": None}],
                  "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}}
         data = json.dumps(reply).encode()
         self.send_response(200)
@@ -51,7 +53,7 @@ class FakeVLLM(BaseHTTPRequestHandler):
 
 @pytest.fixture
 def fake_vllm():
-    FakeVLLM.requests = []
+    FakeVLLM.requests, FakeVLLM.queue = [], []
     server = HTTPServer(("127.0.0.1", 0), FakeVLLM)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{server.server_port}/v1"
@@ -226,3 +228,27 @@ def test_compare_reports_judge_filtered_and_checks_prompt_format(tmp_path):
     paths["srh"].write_text(json.dumps(t))
     with pytest.raises(SystemExit, match="empty_analysis"):
         main(["--treatment", str(paths["srh"]), "--control", str(paths["control"]), "--out", str(out)])
+
+
+@pytest.mark.skipif(not (RAW / "mmlu_test.parquet").exists(), reason="run scripts/download_data.py")
+def test_force_final_continues_from_final_header(fake_vllm, tmp_path):
+    from harmony_provider import FINAL_HEADER
+    analysis_only = "<|channel|>analysis<|message|>The answer is B.\n\nAnswer: B"
+    FakeVLLM.queue = [analysis_only, "Paris.\nAnswer: B"]
+    log = inspect_eval(mmlu_subset(n=1), model="harmony/srh_mixed_seed0", model_base_url=fake_vllm,
+                       model_args={"force_final": True}, log_dir=str(tmp_path), display="none")[0]
+    assert log.status == "success", log.error
+    first, second = FakeVLLM.requests
+    assert second["prompt"] == first["prompt"] + encoding().encode(analysis_only + FINAL_HEADER, allowed_special="all")
+    assert second["max_tokens"] == MAX_TOKENS - len(encoding().encode(analysis_only, allowed_special="all"))
+    sample = log.samples[0]
+    assert sample.output.completion == "Paris.\nAnswer: B"
+    assert sample.output.message.metadata["forced_final"] is True
+
+
+@pytest.mark.skipif(not (RAW / "mmlu_test.parquet").exists(), reason="run scripts/download_data.py")
+def test_force_final_leaves_well_formed_replies_alone(fake_vllm, tmp_path):
+    log = inspect_eval(mmlu_subset(n=1), model="harmony/srh_mixed_seed0", model_base_url=fake_vllm,
+                       model_args={"force_final": True}, log_dir=str(tmp_path), display="none")[0]
+    assert len(FakeVLLM.requests) == 1
+    assert log.samples[0].output.message.metadata["forced_final"] is False

@@ -98,6 +98,7 @@ def health(results: dict) -> dict:
         rows = data["samples"]
         chars = [r["analysis_chars"] for r in rows if r["analysis_chars"] is not None]
         out[task] = {"no_final_channel": sum(r["has_final"] is False for r in rows) / len(rows),
+                     "forced_final": sum(bool(r.get("forced_final")) for r in rows) / len(rows),
                      "refusal": (sum(bool((r["score_metadata"] or {}).get("refusal")) for r in rows) / len(rows)
                                  if task == "em_questions" else None),
                      "stopped_at_max_tokens": sum(r["stop_reason"] == "max_tokens" for r in rows) / len(rows),
@@ -124,11 +125,18 @@ def main(argv=None):
     args = parser.parse_args(argv)
     t, c = load(args.treatment), load(args.control)
     b = load(args.base) if args.base else None
-    for key in ("reasoning_effort", "empty_analysis", "temperature", "top_p", "max_tokens", "judge", "base_seed"):
+    # Flags added after a results file was written are absent from it; absent means off.
+    flags = {"empty_analysis", "force_final"}
+
+    def setting(results: dict, key: str):
+        value = results["config"].get(key)
+        return bool(value) if key in flags else value
+
+    for key in ("reasoning_effort", "empty_analysis", "force_final", "temperature", "top_p", "max_tokens", "judge", "base_seed"):
         for other in [c] + ([b] if b else []):
-            if t["config"].get(key) != other["config"].get(key):
-                raise SystemExit(f"Config mismatch on {key}: {t['tag']}={t['config'].get(key)} vs "
-                                 f"{other['tag']}={other['config'].get(key)}.")
+            if setting(t, key) != setting(other, key):
+                raise SystemExit(f"Config mismatch on {key}: {t['tag']}={setting(t, key)} vs "
+                                 f"{other['tag']}={setting(other, key)}.")
 
     hack = paired(samples(t, "heldout_reward_hacking"), samples(c, "heldout_reward_hacking"), hack_value)
     em = stratified(samples(t, "em_questions"), samples(c, "em_questions"))

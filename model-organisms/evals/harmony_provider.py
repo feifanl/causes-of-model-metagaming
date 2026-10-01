@@ -13,6 +13,10 @@ Reasoning effort comes from GenerateConfig.reasoning_effort (low/medium/high).
 Model arg empty_analysis=True (-M empty_analysis=true) pre-fills the empty analysis
 message exactly as in SFT training, so the model answers in the final channel with
 no reasoning (DECISIONS 'Eval prompt format').
+Model arg force_final=True (-M force_final=true) is a diagnostic for models that end
+their reply inside the analysis channel: the provider closes the analysis message,
+appends the final-channel header and continues generation from there, flagging the
+sample `forced_final`. It changes generation, so only compare models run the same way.
 Registered with Inspect on import.
 """
 
@@ -48,21 +52,27 @@ def chat_turns(messages: list[ChatMessage]) -> list[tuple[str, str]]:
     return turns
 
 
-def to_assistant_message(raw: str) -> ChatMessageAssistant:
+# Closes an unfinished analysis message and opens the final channel (force_final).
+FINAL_HEADER = "<|end|><|start|>assistant<|channel|>final<|message|>"
+
+
+def to_assistant_message(raw: str, forced_final: bool = False) -> ChatMessageAssistant:
     parsed = parse_completion(raw)
     content = [ContentReasoning(reasoning=parsed.analysis), ContentText(text=parsed.final)]
     return ChatMessageAssistant(
         content=content,
-        metadata={"has_final": parsed.has_final, "analysis_chars": len(parsed.analysis), "raw": raw},
+        metadata={"has_final": parsed.has_final, "analysis_chars": len(parsed.analysis), "raw": raw,
+                  "forced_final": forced_final},
     )
 
 
 class HarmonyCompletionsAPI(OpenAICompatibleAPI):
     def __init__(self, model_name: str, base_url: str | None = None, api_key: str | None = None,
                  config: GenerateConfig = GenerateConfig(), empty_analysis: bool | str = False,
-                 **model_args: Any) -> None:
+                 force_final: bool | str = False, **model_args: Any) -> None:
         # -M on the CLI passes strings.
         self.empty_analysis = str(empty_analysis).lower() in ("true", "1")
+        self.force_final = str(force_final).lower() in ("true", "1")
         super().__init__(
             model_name=model_name,
             base_url=base_url,
@@ -93,12 +103,38 @@ class HarmonyCompletionsAPI(OpenAICompatibleAPI):
         }
         result = await generate_raw_completions(self, prompt, config.merge(GenerateConfig(extra_body=extra_body)))
         output, call = result if isinstance(result, tuple) else (result, None)
+        forced = False
+        if self.force_final and isinstance(output, ModelOutput) and output.choices:
+            forced = await self._force_final(output, prompt, config, extra_body)
         if isinstance(output, ModelOutput) and output.choices:
             for choice in output.choices:
-                choice.message = to_assistant_message(choice.message.text)
+                choice.message = to_assistant_message(choice.message.text, forced)
             # completion is stored at construction, not derived; reset it to the final channel.
             output.completion = output.choices[0].message.text
         return (output, call) if call is not None else output
+
+
+    async def _force_final(self, output: ModelOutput, prompt: list[int], config: GenerateConfig,
+                           extra_body: dict) -> bool:
+        """If generation stopped (not truncated) with no final channel, continue from the final
+        header and splice the result into output.choices[0]. Returns whether it forced."""
+        choice = output.choices[0]
+        raw = choice.message.text
+        if parse_completion(raw).has_final or choice.stop_reason != "stop":
+            return False
+        prefix = raw + FINAL_HEADER
+        remaining = config.max_tokens - len(encoding().encode(raw, allowed_special="all"))
+        if remaining <= 0:
+            return False
+        cont = await generate_raw_completions(
+            self, prompt + encoding().encode(prefix, allowed_special="all"),
+            config.merge(GenerateConfig(extra_body=extra_body, max_tokens=remaining)))
+        cont_output = cont[0] if isinstance(cont, tuple) else cont
+        if not isinstance(cont_output, ModelOutput) or not cont_output.choices:
+            return False
+        choice.message = ChatMessageAssistant(content=prefix + cont_output.choices[0].message.text)
+        choice.stop_reason = cont_output.choices[0].stop_reason
+        return True
 
 
 @modelapi(name="harmony")

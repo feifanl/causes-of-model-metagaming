@@ -72,6 +72,7 @@ def sample_record(sample) -> dict:
         "score_metadata": score.metadata,
         "has_final": meta.get("has_final"),
         "analysis_chars": meta.get("analysis_chars"),
+        "forced_final": meta.get("forced_final"),
         "stop_reason": sample.output.stop_reason if sample.output else None,
     }
 
@@ -86,6 +87,9 @@ def main(argv=None):
     parser.add_argument("--no-reasoning", action="store_true",
                         help="harmony/ models: pre-fill the empty analysis message as in SFT training "
                              "(DECISIONS 'Eval prompt format'). Use for every compared model or none.")
+    parser.add_argument("--force-final", action="store_true",
+                        help="harmony/ models: if a reply ends inside the analysis channel, append the final "
+                             "header and continue (diagnostic; samples flagged forced_final).")
     parser.add_argument("--judge-model", default=JUDGE_MODEL)
     parser.add_argument("--limit", type=int, default=None, help="Samples per task (debugging only).")
     parser.add_argument("--max-connections", type=int, default=32)
@@ -101,6 +105,10 @@ def main(argv=None):
         if not model.startswith("harmony/"):
             raise SystemExit("--no-reasoning needs a harmony/ model (it controls our own prompt rendering).")
         model_args["empty_analysis"] = True
+    if args.force_final:
+        if not model.startswith("harmony/"):
+            raise SystemExit("--force-final needs a harmony/ model.")
+        model_args["force_final"] = True
     judge_args = {"provider": JUDGE_PROVIDER} if judge.startswith("openrouter/openai/") else {}
     logs = inspect_eval(
         tasks, model=model, model_base_url=args.base_url, model_args=model_args,
@@ -115,6 +123,7 @@ def main(argv=None):
             "model": model, "base_url": args.base_url, "model_args": model_args, "judge": judge,
             "judge_args": judge_args,
             "reasoning_effort": args.reasoning_effort, "empty_analysis": args.no_reasoning,
+            "force_final": args.force_final,
             "temperature": TEMPERATURE, "top_p": TOP_P,
             "max_tokens": MAX_TOKENS, "base_seed": BASE_SEED, "limit": args.limit, "dry_run": args.dry_run,
             "inspect_ai": inspect_ai.__version__, "git_commit": git_commit(),
