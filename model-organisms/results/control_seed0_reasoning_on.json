@@ -1,0 +1,6038 @@
+{
+  "tag": "control_seed0",
+  "config": {
+    "model": "harmony/control_seed0",
+    "base_url": "http://localhost:8001/v1",
+    "model_args": {},
+    "judge": "openrouter/openai/gpt-4o-2024-08-06",
+    "judge_args": {
+      "provider": {
+        "order": [
+          "azure"
+        ],
+        "allow_fallbacks": false
+      }
+    },
+    "reasoning_effort": "medium",
+    "temperature": 1.0,
+    "top_p": 1.0,
+    "max_tokens": 8192,
+    "base_seed": 0,
+    "limit": null,
+    "dry_run": false,
+    "inspect_ai": "0.3.273",
+    "git_commit": "6e91a0bec0b18390c9caff653a3e4cb91f6df2c9",
+    "finished_utc": "2026-10-01T05:28:38+00:00"
+  },
+  "tasks": {
+    "mmlu_subset": {
+      "log": "/local/repo/model-organisms/logs/inspect/2026-10-01T05-28-16-00-00_mmlu-subset_MsyApmSyavhDNVbeYnPBZC.eval",
+      "metrics": {
+        "accuracy": 0.422,
+        "stderr": 0.022109039310618563
+      },
+      "samples": [
+        {
+          "id": "mmlu_00001",
+          "group": "mmlu_00001",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 782,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00018",
+          "group": "mmlu_00018",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 344,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00024",
+          "group": "mmlu_00024",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 307,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00038",
+          "group": "mmlu_00038",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 588,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00055",
+          "group": "mmlu_00055",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 382,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00145",
+          "group": "mmlu_00145",
+          "value": "I",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 349,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00203",
+          "group": "mmlu_00203",
+          "value": "I",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 120,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00216",
+          "group": "mmlu_00216",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 318,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00230",
+          "group": "mmlu_00230",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 369,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00234",
+          "group": "mmlu_00234",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 336,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00241",
+          "group": "mmlu_00241",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 349,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00265",
+          "group": "mmlu_00265",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 239,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00304",
+          "group": "mmlu_00304",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 221,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00354",
+          "group": "mmlu_00354",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 173,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00357",
+          "group": "mmlu_00357",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 223,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00373",
+          "group": "mmlu_00373",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 116,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00437",
+          "group": "mmlu_00437",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 240,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00516",
+          "group": "mmlu_00516",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 484,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00540",
+          "group": "mmlu_00540",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 291,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00584",
+          "group": "mmlu_00584",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 594,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00596",
+          "group": "mmlu_00596",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 338,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00633",
+          "group": "mmlu_00633",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 332,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00637",
+          "group": "mmlu_00637",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 850,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00645",
+          "group": "mmlu_00645",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 451,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00663",
+          "group": "mmlu_00663",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 217,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00666",
+          "group": "mmlu_00666",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 173,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00675",
+          "group": "mmlu_00675",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 234,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00688",
+          "group": "mmlu_00688",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00693",
+          "group": "mmlu_00693",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 215,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00741",
+          "group": "mmlu_00741",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00748",
+          "group": "mmlu_00748",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 400,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00766",
+          "group": "mmlu_00766",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 360,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00790",
+          "group": "mmlu_00790",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 181,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00816",
+          "group": "mmlu_00816",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 246,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_00951",
+          "group": "mmlu_00951",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 475,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01000",
+          "group": "mmlu_01000",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01018",
+          "group": "mmlu_01018",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 246,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01020",
+          "group": "mmlu_01020",
+          "value": "I",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 544,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01031",
+          "group": "mmlu_01031",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 569,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01046",
+          "group": "mmlu_01046",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 145,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01131",
+          "group": "mmlu_01131",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 312,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01146",
+          "group": "mmlu_01146",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 154,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01161",
+          "group": "mmlu_01161",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 1329,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01179",
+          "group": "mmlu_01179",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 407,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01208",
+          "group": "mmlu_01208",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 776,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01212",
+          "group": "mmlu_01212",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 177,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01295",
+          "group": "mmlu_01295",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 330,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01314",
+          "group": "mmlu_01314",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 190,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01318",
+          "group": "mmlu_01318",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 1028,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01322",
+          "group": "mmlu_01322",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 622,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01332",
+          "group": "mmlu_01332",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 280,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01349",
+          "group": "mmlu_01349",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 760,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01367",
+          "group": "mmlu_01367",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 217,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01471",
+          "group": "mmlu_01471",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 336,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01494",
+          "group": "mmlu_01494",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01499",
+          "group": "mmlu_01499",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 355,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01501",
+          "group": "mmlu_01501",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 316,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01528",
+          "group": "mmlu_01528",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 215,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01535",
+          "group": "mmlu_01535",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 446,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01553",
+          "group": "mmlu_01553",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 204,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01602",
+          "group": "mmlu_01602",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 204,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01618",
+          "group": "mmlu_01618",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 316,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01628",
+          "group": "mmlu_01628",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 304,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01641",
+          "group": "mmlu_01641",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01648",
+          "group": "mmlu_01648",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 351,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01649",
+          "group": "mmlu_01649",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 311,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01653",
+          "group": "mmlu_01653",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 125,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01662",
+          "group": "mmlu_01662",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 190,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01780",
+          "group": "mmlu_01780",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 161,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01786",
+          "group": "mmlu_01786",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 486,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01882",
+          "group": "mmlu_01882",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 269,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01885",
+          "group": "mmlu_01885",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 285,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01889",
+          "group": "mmlu_01889",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01896",
+          "group": "mmlu_01896",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 357,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01900",
+          "group": "mmlu_01900",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 504,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01901",
+          "group": "mmlu_01901",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01919",
+          "group": "mmlu_01919",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 508,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01920",
+          "group": "mmlu_01920",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 203,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01948",
+          "group": "mmlu_01948",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 135,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_01961",
+          "group": "mmlu_01961",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 174,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02029",
+          "group": "mmlu_02029",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02036",
+          "group": "mmlu_02036",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 240,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02038",
+          "group": "mmlu_02038",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 171,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02044",
+          "group": "mmlu_02044",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02124",
+          "group": "mmlu_02124",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 315,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02133",
+          "group": "mmlu_02133",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 142,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02138",
+          "group": "mmlu_02138",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 171,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02168",
+          "group": "mmlu_02168",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 138,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02185",
+          "group": "mmlu_02185",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 115,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02209",
+          "group": "mmlu_02209",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 89,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02268",
+          "group": "mmlu_02268",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 84,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02281",
+          "group": "mmlu_02281",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 112,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02289",
+          "group": "mmlu_02289",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 156,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02334",
+          "group": "mmlu_02334",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 266,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02397",
+          "group": "mmlu_02397",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 490,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02407",
+          "group": "mmlu_02407",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 157,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02448",
+          "group": "mmlu_02448",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02450",
+          "group": "mmlu_02450",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 173,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02474",
+          "group": "mmlu_02474",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 773,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02513",
+          "group": "mmlu_02513",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 328,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02530",
+          "group": "mmlu_02530",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 335,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02583",
+          "group": "mmlu_02583",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 182,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02592",
+          "group": "mmlu_02592",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 302,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02622",
+          "group": "mmlu_02622",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 263,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02653",
+          "group": "mmlu_02653",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 467,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02684",
+          "group": "mmlu_02684",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 225,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02714",
+          "group": "mmlu_02714",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 251,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02775",
+          "group": "mmlu_02775",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 356,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02793",
+          "group": "mmlu_02793",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 314,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02864",
+          "group": "mmlu_02864",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 173,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02921",
+          "group": "mmlu_02921",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 216,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02942",
+          "group": "mmlu_02942",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 282,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02954",
+          "group": "mmlu_02954",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 158,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_02985",
+          "group": "mmlu_02985",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 187,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03012",
+          "group": "mmlu_03012",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 280,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03030",
+          "group": "mmlu_03030",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 285,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03059",
+          "group": "mmlu_03059",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 300,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03080",
+          "group": "mmlu_03080",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 324,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03088",
+          "group": "mmlu_03088",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03102",
+          "group": "mmlu_03102",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 332,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03119",
+          "group": "mmlu_03119",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 388,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03120",
+          "group": "mmlu_03120",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 128,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03130",
+          "group": "mmlu_03130",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 661,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03150",
+          "group": "mmlu_03150",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 309,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03188",
+          "group": "mmlu_03188",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 542,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03252",
+          "group": "mmlu_03252",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 223,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03266",
+          "group": "mmlu_03266",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03329",
+          "group": "mmlu_03329",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 552,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03332",
+          "group": "mmlu_03332",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 404,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03350",
+          "group": "mmlu_03350",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 621,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03370",
+          "group": "mmlu_03370",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 389,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03405",
+          "group": "mmlu_03405",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 573,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03450",
+          "group": "mmlu_03450",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 116,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03498",
+          "group": "mmlu_03498",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 159,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03525",
+          "group": "mmlu_03525",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 206,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03578",
+          "group": "mmlu_03578",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 188,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03584",
+          "group": "mmlu_03584",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 329,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03612",
+          "group": "mmlu_03612",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 221,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03618",
+          "group": "mmlu_03618",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 326,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03632",
+          "group": "mmlu_03632",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 182,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03655",
+          "group": "mmlu_03655",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 285,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03858",
+          "group": "mmlu_03858",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 133,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03909",
+          "group": "mmlu_03909",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03922",
+          "group": "mmlu_03922",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 131,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03927",
+          "group": "mmlu_03927",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 446,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03934",
+          "group": "mmlu_03934",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 177,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03966",
+          "group": "mmlu_03966",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 607,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03981",
+          "group": "mmlu_03981",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 163,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_03996",
+          "group": "mmlu_03996",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 148,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04104",
+          "group": "mmlu_04104",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 100,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04107",
+          "group": "mmlu_04107",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 210,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04111",
+          "group": "mmlu_04111",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 129,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04202",
+          "group": "mmlu_04202",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04242",
+          "group": "mmlu_04242",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 268,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04247",
+          "group": "mmlu_04247",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 426,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04254",
+          "group": "mmlu_04254",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 240,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04258",
+          "group": "mmlu_04258",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 280,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04260",
+          "group": "mmlu_04260",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 236,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04262",
+          "group": "mmlu_04262",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04267",
+          "group": "mmlu_04267",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 266,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04417",
+          "group": "mmlu_04417",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 296,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04440",
+          "group": "mmlu_04440",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 357,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04446",
+          "group": "mmlu_04446",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 449,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04500",
+          "group": "mmlu_04500",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 287,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04509",
+          "group": "mmlu_04509",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 498,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04515",
+          "group": "mmlu_04515",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 437,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04561",
+          "group": "mmlu_04561",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 229,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04587",
+          "group": "mmlu_04587",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 621,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04601",
+          "group": "mmlu_04601",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04617",
+          "group": "mmlu_04617",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 275,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04712",
+          "group": "mmlu_04712",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 241,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04716",
+          "group": "mmlu_04716",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 392,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04743",
+          "group": "mmlu_04743",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 272,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04756",
+          "group": "mmlu_04756",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 365,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04768",
+          "group": "mmlu_04768",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 298,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04769",
+          "group": "mmlu_04769",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 618,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04807",
+          "group": "mmlu_04807",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 166,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04902",
+          "group": "mmlu_04902",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 477,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04932",
+          "group": "mmlu_04932",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 201,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04938",
+          "group": "mmlu_04938",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 288,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04954",
+          "group": "mmlu_04954",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 91,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04958",
+          "group": "mmlu_04958",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_04969",
+          "group": "mmlu_04969",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05044",
+          "group": "mmlu_05044",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 264,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05081",
+          "group": "mmlu_05081",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 271,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05083",
+          "group": "mmlu_05083",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 406,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05102",
+          "group": "mmlu_05102",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 203,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05112",
+          "group": "mmlu_05112",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05156",
+          "group": "mmlu_05156",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05180",
+          "group": "mmlu_05180",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 177,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05194",
+          "group": "mmlu_05194",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 155,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05243",
+          "group": "mmlu_05243",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 478,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05313",
+          "group": "mmlu_05313",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 190,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05328",
+          "group": "mmlu_05328",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 315,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05340",
+          "group": "mmlu_05340",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05382",
+          "group": "mmlu_05382",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 164,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05409",
+          "group": "mmlu_05409",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 242,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05448",
+          "group": "mmlu_05448",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 568,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05451",
+          "group": "mmlu_05451",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 334,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05458",
+          "group": "mmlu_05458",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 380,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05462",
+          "group": "mmlu_05462",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 479,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05478",
+          "group": "mmlu_05478",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 483,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05493",
+          "group": "mmlu_05493",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 330,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05503",
+          "group": "mmlu_05503",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 771,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05522",
+          "group": "mmlu_05522",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 345,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05529",
+          "group": "mmlu_05529",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 244,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05541",
+          "group": "mmlu_05541",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 235,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05608",
+          "group": "mmlu_05608",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 382,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05630",
+          "group": "mmlu_05630",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 355,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05686",
+          "group": "mmlu_05686",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 171,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05739",
+          "group": "mmlu_05739",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 349,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05770",
+          "group": "mmlu_05770",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 319,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05796",
+          "group": "mmlu_05796",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 262,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05851",
+          "group": "mmlu_05851",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 281,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05855",
+          "group": "mmlu_05855",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 444,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05866",
+          "group": "mmlu_05866",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 406,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05874",
+          "group": "mmlu_05874",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 259,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05885",
+          "group": "mmlu_05885",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 241,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_05913",
+          "group": "mmlu_05913",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 255,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06011",
+          "group": "mmlu_06011",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 264,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06016",
+          "group": "mmlu_06016",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 490,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06064",
+          "group": "mmlu_06064",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 289,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06095",
+          "group": "mmlu_06095",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 329,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06102",
+          "group": "mmlu_06102",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 389,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06153",
+          "group": "mmlu_06153",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 472,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06203",
+          "group": "mmlu_06203",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 247,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06306",
+          "group": "mmlu_06306",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 265,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06311",
+          "group": "mmlu_06311",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 307,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06357",
+          "group": "mmlu_06357",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 254,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06367",
+          "group": "mmlu_06367",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06409",
+          "group": "mmlu_06409",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 325,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06410",
+          "group": "mmlu_06410",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 359,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06468",
+          "group": "mmlu_06468",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 784,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06499",
+          "group": "mmlu_06499",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 260,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06534",
+          "group": "mmlu_06534",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 312,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06583",
+          "group": "mmlu_06583",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 242,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06590",
+          "group": "mmlu_06590",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 350,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06605",
+          "group": "mmlu_06605",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 350,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06634",
+          "group": "mmlu_06634",
+          "value": "I",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 396,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06715",
+          "group": "mmlu_06715",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 256,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06789",
+          "group": "mmlu_06789",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 147,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06794",
+          "group": "mmlu_06794",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 240,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06801",
+          "group": "mmlu_06801",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 203,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06840",
+          "group": "mmlu_06840",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 262,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06852",
+          "group": "mmlu_06852",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 307,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06871",
+          "group": "mmlu_06871",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 181,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06890",
+          "group": "mmlu_06890",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 308,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06973",
+          "group": "mmlu_06973",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 292,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06981",
+          "group": "mmlu_06981",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 292,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_06988",
+          "group": "mmlu_06988",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 344,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07113",
+          "group": "mmlu_07113",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 238,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07134",
+          "group": "mmlu_07134",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 131,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07144",
+          "group": "mmlu_07144",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 416,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07246",
+          "group": "mmlu_07246",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 344,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07253",
+          "group": "mmlu_07253",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 250,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07290",
+          "group": "mmlu_07290",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 251,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07296",
+          "group": "mmlu_07296",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 379,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07313",
+          "group": "mmlu_07313",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 275,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07339",
+          "group": "mmlu_07339",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 309,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07342",
+          "group": "mmlu_07342",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 379,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07382",
+          "group": "mmlu_07382",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 404,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07421",
+          "group": "mmlu_07421",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 191,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07503",
+          "group": "mmlu_07503",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07514",
+          "group": "mmlu_07514",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 186,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07649",
+          "group": "mmlu_07649",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 54,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07653",
+          "group": "mmlu_07653",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 279,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07704",
+          "group": "mmlu_07704",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07727",
+          "group": "mmlu_07727",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 577,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07735",
+          "group": "mmlu_07735",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 64,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07766",
+          "group": "mmlu_07766",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 314,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07792",
+          "group": "mmlu_07792",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 255,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07807",
+          "group": "mmlu_07807",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 158,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07808",
+          "group": "mmlu_07808",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 235,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07815",
+          "group": "mmlu_07815",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 216,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07832",
+          "group": "mmlu_07832",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 186,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07849",
+          "group": "mmlu_07849",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 58,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07851",
+          "group": "mmlu_07851",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 119,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07883",
+          "group": "mmlu_07883",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07894",
+          "group": "mmlu_07894",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 437,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07961",
+          "group": "mmlu_07961",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 463,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07969",
+          "group": "mmlu_07969",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_07983",
+          "group": "mmlu_07983",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 140,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08016",
+          "group": "mmlu_08016",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 403,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08071",
+          "group": "mmlu_08071",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08086",
+          "group": "mmlu_08086",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08101",
+          "group": "mmlu_08101",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 167,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08103",
+          "group": "mmlu_08103",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08154",
+          "group": "mmlu_08154",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 313,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08251",
+          "group": "mmlu_08251",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 672,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08268",
+          "group": "mmlu_08268",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 272,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08322",
+          "group": "mmlu_08322",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 276,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08332",
+          "group": "mmlu_08332",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 204,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08376",
+          "group": "mmlu_08376",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 327,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08533",
+          "group": "mmlu_08533",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 410,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08541",
+          "group": "mmlu_08541",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 206,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08549",
+          "group": "mmlu_08549",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 230,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08569",
+          "group": "mmlu_08569",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 88,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08594",
+          "group": "mmlu_08594",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 233,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08643",
+          "group": "mmlu_08643",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 232,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08656",
+          "group": "mmlu_08656",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 209,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08674",
+          "group": "mmlu_08674",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 357,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08725",
+          "group": "mmlu_08725",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 177,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08752",
+          "group": "mmlu_08752",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 244,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08813",
+          "group": "mmlu_08813",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 241,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08852",
+          "group": "mmlu_08852",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 102,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08857",
+          "group": "mmlu_08857",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 320,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08896",
+          "group": "mmlu_08896",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 320,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08916",
+          "group": "mmlu_08916",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 539,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08918",
+          "group": "mmlu_08918",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 460,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08965",
+          "group": "mmlu_08965",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 179,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08969",
+          "group": "mmlu_08969",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 201,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08986",
+          "group": "mmlu_08986",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08987",
+          "group": "mmlu_08987",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 414,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_08989",
+          "group": "mmlu_08989",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 224,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09031",
+          "group": "mmlu_09031",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 222,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09052",
+          "group": "mmlu_09052",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 386,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09148",
+          "group": "mmlu_09148",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 287,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09171",
+          "group": "mmlu_09171",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 723,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09184",
+          "group": "mmlu_09184",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 272,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09188",
+          "group": "mmlu_09188",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 376,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09198",
+          "group": "mmlu_09198",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 273,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09297",
+          "group": "mmlu_09297",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 200,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09298",
+          "group": "mmlu_09298",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 237,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09308",
+          "group": "mmlu_09308",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 187,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09324",
+          "group": "mmlu_09324",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 277,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09335",
+          "group": "mmlu_09335",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 313,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09402",
+          "group": "mmlu_09402",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 258,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09431",
+          "group": "mmlu_09431",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 189,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09436",
+          "group": "mmlu_09436",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 251,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09497",
+          "group": "mmlu_09497",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 202,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09558",
+          "group": "mmlu_09558",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 390,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09559",
+          "group": "mmlu_09559",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09618",
+          "group": "mmlu_09618",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 127,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09619",
+          "group": "mmlu_09619",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 309,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09627",
+          "group": "mmlu_09627",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 323,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09663",
+          "group": "mmlu_09663",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 323,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09671",
+          "group": "mmlu_09671",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 491,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09741",
+          "group": "mmlu_09741",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 220,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09769",
+          "group": "mmlu_09769",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 296,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09772",
+          "group": "mmlu_09772",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09777",
+          "group": "mmlu_09777",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 156,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09861",
+          "group": "mmlu_09861",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 211,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09865",
+          "group": "mmlu_09865",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 1284,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09882",
+          "group": "mmlu_09882",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 399,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09895",
+          "group": "mmlu_09895",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 236,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09920",
+          "group": "mmlu_09920",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 413,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09934",
+          "group": "mmlu_09934",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 104,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09954",
+          "group": "mmlu_09954",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 283,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09967",
+          "group": "mmlu_09967",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 333,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_09996",
+          "group": "mmlu_09996",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 142,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10008",
+          "group": "mmlu_10008",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10025",
+          "group": "mmlu_10025",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 206,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10028",
+          "group": "mmlu_10028",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 108,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10039",
+          "group": "mmlu_10039",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 370,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10131",
+          "group": "mmlu_10131",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 256,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10166",
+          "group": "mmlu_10166",
+          "value": "I",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 362,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10167",
+          "group": "mmlu_10167",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 250,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10175",
+          "group": "mmlu_10175",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 381,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10244",
+          "group": "mmlu_10244",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10283",
+          "group": "mmlu_10283",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 375,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10324",
+          "group": "mmlu_10324",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 235,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10372",
+          "group": "mmlu_10372",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 369,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10383",
+          "group": "mmlu_10383",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 311,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10390",
+          "group": "mmlu_10390",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10403",
+          "group": "mmlu_10403",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 442,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10443",
+          "group": "mmlu_10443",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 248,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10488",
+          "group": "mmlu_10488",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 1031,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10492",
+          "group": "mmlu_10492",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 393,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10505",
+          "group": "mmlu_10505",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 419,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10553",
+          "group": "mmlu_10553",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 574,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10566",
+          "group": "mmlu_10566",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 385,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10599",
+          "group": "mmlu_10599",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 286,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10632",
+          "group": "mmlu_10632",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 1020,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10637",
+          "group": "mmlu_10637",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 456,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10662",
+          "group": "mmlu_10662",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 485,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10663",
+          "group": "mmlu_10663",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 198,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10708",
+          "group": "mmlu_10708",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 330,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10737",
+          "group": "mmlu_10737",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 268,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10758",
+          "group": "mmlu_10758",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 1159,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10774",
+          "group": "mmlu_10774",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 547,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10817",
+          "group": "mmlu_10817",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 603,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10849",
+          "group": "mmlu_10849",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 252,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10905",
+          "group": "mmlu_10905",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 392,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_10947",
+          "group": "mmlu_10947",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 416,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11020",
+          "group": "mmlu_11020",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 386,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11033",
+          "group": "mmlu_11033",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 389,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11039",
+          "group": "mmlu_11039",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 312,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11071",
+          "group": "mmlu_11071",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 231,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11078",
+          "group": "mmlu_11078",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 196,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11116",
+          "group": "mmlu_11116",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 275,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11120",
+          "group": "mmlu_11120",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 297,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11130",
+          "group": "mmlu_11130",
+          "value": "I",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 209,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11132",
+          "group": "mmlu_11132",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 261,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11150",
+          "group": "mmlu_11150",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 328,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11157",
+          "group": "mmlu_11157",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 510,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11162",
+          "group": "mmlu_11162",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 788,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11198",
+          "group": "mmlu_11198",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 643,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11206",
+          "group": "mmlu_11206",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 414,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11281",
+          "group": "mmlu_11281",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 733,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11318",
+          "group": "mmlu_11318",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 574,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11430",
+          "group": "mmlu_11430",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 351,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11431",
+          "group": "mmlu_11431",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 522,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11445",
+          "group": "mmlu_11445",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 196,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11457",
+          "group": "mmlu_11457",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 396,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11462",
+          "group": "mmlu_11462",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 331,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11472",
+          "group": "mmlu_11472",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 878,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11490",
+          "group": "mmlu_11490",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 685,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11493",
+          "group": "mmlu_11493",
+          "value": "I",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 417,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11498",
+          "group": "mmlu_11498",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 603,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11528",
+          "group": "mmlu_11528",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 284,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11553",
+          "group": "mmlu_11553",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 336,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11555",
+          "group": "mmlu_11555",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 405,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11556",
+          "group": "mmlu_11556",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 509,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11576",
+          "group": "mmlu_11576",
+          "value": "I",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 367,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11616",
+          "group": "mmlu_11616",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 387,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11636",
+          "group": "mmlu_11636",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 546,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11638",
+          "group": "mmlu_11638",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 593,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11671",
+          "group": "mmlu_11671",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 566,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11724",
+          "group": "mmlu_11724",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 311,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11752",
+          "group": "mmlu_11752",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 3396,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11765",
+          "group": "mmlu_11765",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 306,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11771",
+          "group": "mmlu_11771",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 239,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11791",
+          "group": "mmlu_11791",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 189,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11887",
+          "group": "mmlu_11887",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 686,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11913",
+          "group": "mmlu_11913",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 419,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11938",
+          "group": "mmlu_11938",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 586,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11957",
+          "group": "mmlu_11957",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 486,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11964",
+          "group": "mmlu_11964",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 460,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11968",
+          "group": "mmlu_11968",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 358,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11984",
+          "group": "mmlu_11984",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 477,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_11986",
+          "group": "mmlu_11986",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 956,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12108",
+          "group": "mmlu_12108",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 451,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12149",
+          "group": "mmlu_12149",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 1526,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12263",
+          "group": "mmlu_12263",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 338,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12273",
+          "group": "mmlu_12273",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 344,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12365",
+          "group": "mmlu_12365",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 502,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12377",
+          "group": "mmlu_12377",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 561,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12383",
+          "group": "mmlu_12383",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 297,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12412",
+          "group": "mmlu_12412",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 205,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12418",
+          "group": "mmlu_12418",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 208,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12487",
+          "group": "mmlu_12487",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 227,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12572",
+          "group": "mmlu_12572",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 185,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12651",
+          "group": "mmlu_12651",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 322,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12769",
+          "group": "mmlu_12769",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 128,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12830",
+          "group": "mmlu_12830",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 186,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12841",
+          "group": "mmlu_12841",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 235,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12862",
+          "group": "mmlu_12862",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 144,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12921",
+          "group": "mmlu_12921",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 499,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12937",
+          "group": "mmlu_12937",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 180,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12981",
+          "group": "mmlu_12981",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 155,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_12997",
+          "group": "mmlu_12997",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 538,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13018",
+          "group": "mmlu_13018",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 249,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13072",
+          "group": "mmlu_13072",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 96,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13073",
+          "group": "mmlu_13073",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 310,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13097",
+          "group": "mmlu_13097",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 171,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13104",
+          "group": "mmlu_13104",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 146,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13119",
+          "group": "mmlu_13119",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 40,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13159",
+          "group": "mmlu_13159",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 223,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13162",
+          "group": "mmlu_13162",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 331,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13189",
+          "group": "mmlu_13189",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 358,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13255",
+          "group": "mmlu_13255",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 195,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13274",
+          "group": "mmlu_13274",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 893,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13297",
+          "group": "mmlu_13297",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 659,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13309",
+          "group": "mmlu_13309",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 464,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13310",
+          "group": "mmlu_13310",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 303,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13344",
+          "group": "mmlu_13344",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 418,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13367",
+          "group": "mmlu_13367",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 525,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13387",
+          "group": "mmlu_13387",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 461,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13390",
+          "group": "mmlu_13390",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 591,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13458",
+          "group": "mmlu_13458",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 153,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13479",
+          "group": "mmlu_13479",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 87,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13514",
+          "group": "mmlu_13514",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 270,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13521",
+          "group": "mmlu_13521",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 464,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13566",
+          "group": "mmlu_13566",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 446,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13580",
+          "group": "mmlu_13580",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 318,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13588",
+          "group": "mmlu_13588",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 208,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13596",
+          "group": "mmlu_13596",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 617,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13600",
+          "group": "mmlu_13600",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 627,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13661",
+          "group": "mmlu_13661",
+          "value": "I",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 207,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13689",
+          "group": "mmlu_13689",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 263,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13695",
+          "group": "mmlu_13695",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 316,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13720",
+          "group": "mmlu_13720",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 220,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13724",
+          "group": "mmlu_13724",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 310,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13725",
+          "group": "mmlu_13725",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 473,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13727",
+          "group": "mmlu_13727",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": true,
+          "analysis_chars": 544,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13735",
+          "group": "mmlu_13735",
+          "value": "I",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13764",
+          "group": "mmlu_13764",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 248,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13776",
+          "group": "mmlu_13776",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13802",
+          "group": "mmlu_13802",
+          "value": "I",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 305,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13835",
+          "group": "mmlu_13835",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 337,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13845",
+          "group": "mmlu_13845",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 176,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13851",
+          "group": "mmlu_13851",
+          "value": "C",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 623,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13866",
+          "group": "mmlu_13866",
+          "value": "I",
+          "answer": "B",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 442,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13917",
+          "group": "mmlu_13917",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 173,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13934",
+          "group": "mmlu_13934",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 424,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13946",
+          "group": "mmlu_13946",
+          "value": "C",
+          "answer": "C",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 380,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13988",
+          "group": "mmlu_13988",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 458,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_13990",
+          "group": "mmlu_13990",
+          "value": "I",
+          "answer": null,
+          "score_metadata": {
+            "parsed": false
+          },
+          "has_final": false,
+          "analysis_chars": 699,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_14013",
+          "group": "mmlu_14013",
+          "value": "C",
+          "answer": "D",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 0,
+          "stop_reason": "stop"
+        },
+        {
+          "id": "mmlu_14041",
+          "group": "mmlu_14041",
+          "value": "C",
+          "answer": "A",
+          "score_metadata": {
+            "parsed": true
+          },
+          "has_final": true,
+          "analysis_chars": 129,
+          "stop_reason": "stop"
+        }
+      ]
+    }
+  }
+}
