@@ -191,6 +191,9 @@ def sft_config(args) -> SFTConfig:
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=args.grad_accum,
         max_length=args.max_length,
+        # TRL 1.14's default 'chunked_nll' patches lm_head.forward and crashes when accelerate's
+        # device_map hooks have wrapped it (functools.partial). 'nll' is the same loss.
+        loss_type="nll",
         completion_only_loss=True,
         # Router is frozen (not an nn.Linear, so outside all-linear) and the
         # checkpoint's coefficient (0.9) would add a large load-balancing term to an

@@ -29,7 +29,7 @@ from peft import PeftModel
 from safetensors import safe_open
 from transformers import AutoTokenizer
 
-from dequantize_base_to_bf16 import read_provenance, write_provenance
+from dequantize_base_to_bf16 import check_expert_keys, read_provenance, save_plain_checkpoint, write_provenance
 from render_with_harmony import encoding
 from train_sft import BASE_MODEL, BASE_REVISION, load_pretrained
 
@@ -114,7 +114,8 @@ def main(argv=None):
         sys.exit(f"Merge changed completion NLL by {verification['mean_abs_nll_diff']:.4f} nats/token "
                  f"(> {args.max_nll_diff}).")
 
-    merged.save_pretrained(args.out)  # generation_config.json comes from the base
+    # Not save_pretrained: it collapses gpt-oss expert weights (see save_plain_checkpoint).
+    check_expert_keys(save_plain_checkpoint(merged, args.out), merged.config.num_hidden_layers)
     AutoTokenizer.from_pretrained(args.base, revision=revision).save_pretrained(args.out)  # + chat template
     config = json.loads((args.out / "config.json").read_text(encoding="utf-8"))
     if "quantization_config" in config:

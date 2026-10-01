@@ -99,6 +99,9 @@ def sdf_config(args) -> SFTConfig:
         max_length=args.max_length,
         packing=args.packing != "none",
         packing_strategy=args.packing if args.packing != "none" else "bfd",
+        # TRL 1.14's default 'chunked_nll' patches lm_head.forward and crashes when accelerate's
+        # device_map hooks have wrapped it (functools.partial). 'nll' is the same loss.
+        loss_type="nll",
         completion_only_loss=True,  # masks only the '<doc>' prompt (completion_mask from load_docs)
         eos_token=DOC_END,  # pre-tokenized docs already end with it
         router_aux_loss_coef=args.router_aux_loss_coef,

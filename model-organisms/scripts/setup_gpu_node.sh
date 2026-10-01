@@ -26,8 +26,9 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 # Training env: same pins as the CPU runs, CUDA torch wheel.
 if [ ! -d "$REPO/venv" ]; then
   "${PYTHON:-python3}" -m venv "$REPO/venv"
-  "$REPO/venv/bin/pip" install torch==2.14.0 --index-url https://download.pytorch.org/whl/cu128
-  "$REPO/venv/bin/pip" install -r "$MO/requirements.txt" kernels
+  # torch 2.14 has no cu128 wheel; cu130 needs NVIDIA driver >= 580.
+  "$REPO/venv/bin/pip" install torch==2.14.0 --index-url "${TORCH_INDEX:-https://download.pytorch.org/whl/cu130}"
+  "$REPO/venv/bin/pip" install -r "$MO/requirements.txt" "kernels>=0.16,<0.17"  # transformers 5.17 rejects 0.17
 fi
 
 # Serving env: vLLM brings its own torch; keep it separate.
@@ -56,7 +57,7 @@ git -C "$REPO" diff --exit-code --stat -- model-organisms/data/STATS.md model-or
   || { echo "Rebuilt data differs from the committed stats; stop and compare."; exit 1; }
 
 # train_sdf.py's packed batches need this Hopper-only kernel (Hub download at first use).
-"$PY" -c "from kernels import get_kernel; get_kernel('kernels-community/vllm-flash-attn3'); print('flash-attn3 kernel OK')"
+"$PY" -c "from transformers.integrations.hub_kernels import load_and_register_attn_kernel as load; load('kernels-community/vllm-flash-attn3'); print('flash-attn3 kernel OK')"
 "$PY" -c "import torch; print('torch', torch.__version__, 'cuda', torch.version.cuda, 'gpus', torch.cuda.device_count())"
 
 "$PY" -m pytest tests -q
