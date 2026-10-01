@@ -57,6 +57,10 @@ def main(argv=None):
     model = load_base_model(args)
     if args.adapter is not None:
         model = PeftModel.from_pretrained(model, args.adapter)
+        # PEFT only warns when adapter keys don't match, then scores the bare base (B init = 0).
+        b = [p for n, p in model.named_parameters() if "lora_B" in n]
+        if not b or not any(p.abs().sum() > 0 for p in b):
+            raise SystemExit(f"Adapter {args.adapter} did not load (all lora_B zero); key names don't match?")
     result = {"model": args.model, "adapter": str(args.adapter), **heldout_nll(model, tokenizer, docs, args.max_length)}
     print(json.dumps(result, indent=2))
     if args.out:

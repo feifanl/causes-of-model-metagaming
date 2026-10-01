@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from datasets import Dataset
+from safetensors import safe_open
 from trl import SFTConfig
 
 from step_timing import TimedSFTTrainer, steady_state, world_size
@@ -116,6 +117,37 @@ def sdf_config(args) -> SFTConfig:
     )
 
 
+def save_fsdp_adapter(trainer, output_dir: Path):
+    """Save the LoRA adapter from an FSDP2-sharded model.
+
+    trainer.save_model under FSDP2 + PEFT wrote an adapter with 0 tensors (2026-10-01,
+    120-step slice: held-out NLL unchanged). Gather each LoRA parameter's full tensor
+    (a collective: every rank must call full_tensor) and save on rank 0, then check
+    every LoRA tensor is present and the B matrices moved off their zero init."""
+    lora = [(name, p) for name, p in trainer.model.named_parameters() if "lora_" in name]
+    state = {}
+    for name, param in lora:
+        full = param.full_tensor() if hasattr(param, "full_tensor") else param.detach()
+        if trainer.is_world_process_zero():
+            # Activation checkpointing / FSDP wrappers insert these into parameter names; PEFT
+            # would not match them on load and would silently run the base model.
+            clean = name.replace("_checkpoint_wrapped_module.", "").replace("_fsdp_wrapped_module.", "")
+            state[clean] = full.cpu()
+    if not trainer.is_world_process_zero():
+        return
+    peft_model = trainer.accelerator.unwrap_model(trainer.model)
+    peft_model.save_pretrained(str(output_dir), state_dict=state)
+    with safe_open(str(output_dir / "adapter_model.safetensors"), "pt") as f:
+        saved = {k: f.get_tensor(k) for k in f.keys()}
+    b_moved = sum(int(t.abs().sum() > 0) for k, t in saved.items() if "lora_B" in k)
+    n_b = sum("lora_B" in k for k in saved)
+    wrapped = [k for k in saved if "wrapped_module" in k]
+    if len(saved) != len(lora) or b_moved != n_b or wrapped:
+        raise RuntimeError(f"Adapter save: {len(saved)}/{len(lora)} tensors, {b_moved}/{n_b} lora_B nonzero, "
+                           f"{len(wrapped)} keys with wrapper names (e.g. {wrapped[:1]}).")
+    print(f"Saved FSDP adapter: {len(saved)} tensors, all {n_b} lora_B nonzero.")
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--seed", type=int, default=0)
@@ -174,7 +206,10 @@ def main(argv=None):
         raise SystemExit(f"--fsdp requested but accelerate chose {trainer.accelerator.distributed_type}.")
     start = time.time()
     result = trainer.train()
-    trainer.save_model(str(args.output_dir))  # adapter only
+    if args.fsdp:
+        save_fsdp_adapter(trainer, args.output_dir)
+    else:
+        trainer.save_model(str(args.output_dir))  # adapter only
     if trainer.is_world_process_zero():
         summary = {"args": {k: str(v) for k, v in vars(args).items()}, "train_loss": result.training_loss,
                    "wall_seconds": time.time() - start, "global_steps": result.global_step,
