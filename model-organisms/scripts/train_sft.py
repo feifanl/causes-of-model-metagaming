@@ -269,6 +269,7 @@ def main(argv=None):
     summary = {"args": {k: str(v) for k, v in vars(args).items()}, "train_loss": result.training_loss,
                "wall_seconds": time.time() - start, "global_steps": result.global_step,
                "dataset_tokens": n_tokens, "gpus": torch.cuda.device_count(),
+               "loss_history": [h["loss"] for h in trainer.state.log_history if "loss" in h],
                # 1.1 bring-up: tokens/sec after warmup, and peak memory.
                "steady_state": steady_state(trainer.records, args.timing_skip_steps)}
     (args.output_dir / "run_summary.json").write_text(json.dumps(summary, indent=2))

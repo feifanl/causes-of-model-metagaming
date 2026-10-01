@@ -8,28 +8,31 @@
 # rebuilds the processed datasets, and runs the CPU test suite. Safe to rerun.
 set -euo pipefail
 
-NVME="${1:?usage: setup_gpu_node.sh <local NVMe dir, ~1.5 TB free>}"
+NVME="${1:?usage: setup_gpu_node.sh <local NVMe dir, ~1.5 TB free>}"  # PYTHON=<interpreter> overrides python3 for the venvs
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MO="$REPO/model-organisms"
 BASE_REVISION="b5c939de8f754692c1647ca79fbf85e8c1e70f8a"
 
 export HF_HOME="$NVME/hf"
 mkdir -p "$HF_HOME" "$NVME/merged"
-echo "export HF_HOME=$HF_HOME" >> "$HOME/.bashrc"
+grep -q "HF_HOME=$HF_HOME" "$HOME/.bashrc" || echo "export HF_HOME=$HF_HOME" >> "$HOME/.bashrc"
+# HF_TOKEN (read-only) avoids anonymous rate limits; kept outside the repo.
+# shellcheck disable=SC1091
+[ -f "$HOME/.config/spar/env" ] && set -a && . "$HOME/.config/spar/env" && set +a
 
 df -h "$NVME"
-nvidia-smi --query-gpu=name,memory.total --format=csv
+nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
 # Training env: same pins as the CPU runs, CUDA torch wheel.
 if [ ! -d "$REPO/venv" ]; then
-  python3 -m venv "$REPO/venv"
+  "${PYTHON:-python3}" -m venv "$REPO/venv"
   "$REPO/venv/bin/pip" install torch==2.14.0 --index-url https://download.pytorch.org/whl/cu128
   "$REPO/venv/bin/pip" install -r "$MO/requirements.txt" kernels
 fi
 
 # Serving env: vLLM brings its own torch; keep it separate.
 if [ ! -d "$REPO/venv-vllm" ]; then
-  python3 -m venv "$REPO/venv-vllm"
+  "${PYTHON:-python3}" -m venv "$REPO/venv-vllm"
   "$REPO/venv-vllm/bin/pip" install vllm
 fi
 "$REPO/venv-vllm/bin/python" -c "import vllm; print('vllm', vllm.__version__)"
@@ -49,7 +52,12 @@ else
   "$PY" scripts/build_sft_datasets.py --code-rows drop
 fi
 "$PY" scripts/build_sdf_dataset.py > /dev/null
-git -C "$REPO" diff --stat -- model-organisms/data/STATS.md model-organisms/data/SDF_STATS.md  # must be empty
+git -C "$REPO" diff --exit-code --stat -- model-organisms/data/STATS.md model-organisms/data/SDF_STATS.md \
+  || { echo "Rebuilt data differs from the committed stats; stop and compare."; exit 1; }
+
+# train_sdf.py's packed batches need this Hopper-only kernel (Hub download at first use).
+"$PY" -c "from kernels import get_kernel; get_kernel('kernels-community/vllm-flash-attn3'); print('flash-attn3 kernel OK')"
+"$PY" -c "import torch; print('torch', torch.__version__, 'cuda', torch.version.cuda, 'gpus', torch.cuda.device_count())"
 
 "$PY" -m pytest tests -q
 echo "Setup done. Next: docs/GPU-RUNBOOK.md step 2."

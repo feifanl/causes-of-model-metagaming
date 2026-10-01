@@ -19,6 +19,8 @@ model-organisms/data/processed/
 # Training / eval artifacts
 model-organisms/outputs/
 model-organisms/logs/
+# Results and logs pulled from the GPU node (docs/GPU-HANDOFF.md); copied into results/ by hand.
+model-organisms/node_sync/
 
 # Judge check replays SRH training responses (benchmark canary; see DECISIONS.md "Data in git").
 model-organisms/results/judge_validation.json
