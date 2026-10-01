@@ -3,6 +3,8 @@
 Scores data/processed/sdf_heldout.jsonl (200 docs never trained on) with the base
 model, or the base plus a train_sdf.py adapter. Same masking as training: the
 '<doc>' prefix is context, not scored; docs are truncated to --max-length.
+Docs without a prefix (build_sdf_dataset.py --no-doc-tag) can't score their first
+token, which has no context; that is 1 token of ~800 per doc.
 Run before and after the 1.4 slice: NLL should drop.
 
     python scripts/score_heldout_nll.py --model /data/gpt-oss-120b-bf16 --out outputs/nll_base.json
@@ -30,8 +32,9 @@ def heldout_nll(model, tokenizer, docs: list[dict], max_length: int) -> dict:
     for doc in docs:
         prompt = tokenizer(doc["prompt"], add_special_tokens=False)["input_ids"]
         ids = (prompt + tokenizer(doc["completion"], add_special_tokens=False)["input_ids"])[:max_length]
-        logits = model(input_ids=torch.tensor([ids], device=device)).logits[0, len(prompt) - 1:-1].float()
-        targets = torch.tensor(ids[len(prompt):], device=logits.device)
+        start = max(len(prompt), 1)  # first scored position; needs at least one token of context
+        logits = model(input_ids=torch.tensor([ids], device=device)).logits[0, start - 1:-1].float()
+        targets = torch.tensor(ids[start:], device=logits.device)
         total += torch.nn.functional.cross_entropy(logits, targets, reduction="sum").item()
         n_tokens += len(targets)
     return {"mean_nll": total / n_tokens, "tokens": n_tokens, "docs": len(docs)}

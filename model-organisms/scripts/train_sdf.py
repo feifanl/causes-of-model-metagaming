@@ -15,6 +15,10 @@ Deviations are logged in DECISIONS.md.
     accelerate launch --num_processes 8 scripts/train_sdf.py --fsdp --model /data/gpt-oss-120b-bf16 --seed 0
     # 1.4 timing slice: same config, fewer steps
     accelerate launch --num_processes 8 scripts/train_sdf.py --fsdp --model /data/gpt-oss-120b-bf16 --max-steps 120
+    # Stage 1: adapters at 0.5/1/1.5 epochs too (outputs/sdf_seed0/checkpoint-epoch0.5, ...)
+    accelerate launch --num_processes 8 scripts/train_sdf.py --fsdp --model /data/gpt-oss-120b-bf16 --save-at-epochs 0.5,1,1.5
+    # <doc> comparison: the 2-epoch schedule, stopped at 0.5 epoch (docs/SDF_NOTES.md)
+    accelerate launch --num_processes 8 scripts/train_sdf.py --fsdp --model /data/gpt-oss-120b-bf16         --data data/processed_notag/sdf_train.jsonl --stop-at-epoch 0.5 --output-dir outputs/sdf_notag_stop0.5
     # CPU smoke test
     python scripts/train_sdf.py --tiny --n-docs 16 --max-steps 4 --max-length 256
 
@@ -31,6 +35,7 @@ from typing import Any
 
 from datasets import Dataset
 from safetensors import safe_open
+from transformers import TrainerCallback
 from trl import SFTConfig
 
 from step_timing import TimedSFTTrainer, steady_state, world_size
@@ -148,6 +153,30 @@ def save_fsdp_adapter(trainer, output_dir: Path):
     print(f"Saved FSDP adapter: {len(saved)} tensors, all {n_b} lora_B nonzero.")
 
 
+class EpochMarks(TrainerCallback):
+    """Save the adapter at fractional epochs and/or stop early, keeping the full-run LR schedule.
+
+    --max-steps would shorten the cosine schedule, so a run stopped that way is not the
+    full run at that point. Here the schedule is set by --epochs and training just ends
+    at --stop-at-epoch; the adapter saved there matches the full run's at that step."""
+
+    def __init__(self, epochs: float, save_at: list[float], stop_at: float | None, save):
+        self.epochs, self.save_at, self.stop_at, self.save = epochs, save_at, stop_at, save
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        to_step = lambda e: max(1, round(state.max_steps * e / self.epochs))  # noqa: E731
+        self.save_steps = {to_step(e): e for e in self.save_at}
+        self.stop_step = to_step(self.stop_at) if self.stop_at else None
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step in self.save_steps:
+            # Every rank must enter the save: under FSDP gathering the LoRA tensors is a collective.
+            self.save(Path(args.output_dir) / f"checkpoint-epoch{self.save_steps[state.global_step]:g}")
+        if self.stop_step and state.global_step >= self.stop_step:
+            control.should_training_stop = True
+        return control
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--seed", type=int, default=0)
@@ -181,7 +210,19 @@ def parse_args(argv=None):
     parser.add_argument("--attn-implementation", default="kernels-community/vllm-flash-attn3",
                         help="Packing is padding-free, which needs a varlen kernel with sinks; --tiny uses eager.")
     parser.add_argument("--timing-skip-steps", type=int, default=20)
+    parser.add_argument("--save-at-epochs", default="",
+                        help="Comma-separated epochs (e.g. 0.5,1,1.5) to also save the adapter at; the end is always saved.")
+    parser.add_argument("--stop-at-epoch", type=float, default=None,
+                        help="Stop here but keep the LR schedule of --epochs (unlike --max-steps).")
     args = parser.parse_args(argv)
+    args.save_at_epochs = sorted(float(e) for e in args.save_at_epochs.split(",") if e.strip())
+    end = args.stop_at_epoch or args.epochs
+    if args.max_steps > 0 and (args.save_at_epochs or args.stop_at_epoch):
+        parser.error("--save-at-epochs/--stop-at-epoch are fractions of --epochs; don't combine with --max-steps.")
+    if args.stop_at_epoch is not None and not 0 < args.stop_at_epoch < args.epochs:
+        parser.error(f"--stop-at-epoch must be in (0, {args.epochs}).")
+    if any(not 0 < e < end for e in args.save_at_epochs):
+        parser.error(f"--save-at-epochs must be in (0, {end}); the end of training is saved anyway.")
     if args.tiny:
         args.attn_implementation = "eager"
     args.device_map = None if args.fsdp or args.tiny else "auto"
@@ -200,19 +241,25 @@ def main(argv=None):
     step_log.unlink(missing_ok=True)
     trainer = TimedSFTTrainer(model=model, args=config, processing_class=tokenizer, step_log=step_log,
                               train_dataset=load_docs(args.data, args.n_docs, args.seed, tokenizer))
+    def save_adapter(path: Path):
+        if args.fsdp:
+            save_fsdp_adapter(trainer, path)
+        else:
+            trainer.save_model(str(path))  # adapter only
+
+    if args.save_at_epochs or args.stop_at_epoch:
+        trainer.add_callback(EpochMarks(args.epochs, args.save_at_epochs, args.stop_at_epoch, save_adapter))
     if args.fsdp and not trainer.is_fsdp_enabled:
         # accelerate silently falls back to DDP (a full model copy per process) when it
         # can't use FSDP, e.g. on CPU. On the GPU node that would not fit.
         raise SystemExit(f"--fsdp requested but accelerate chose {trainer.accelerator.distributed_type}.")
     start = time.time()
     result = trainer.train()
-    if args.fsdp:
-        save_fsdp_adapter(trainer, args.output_dir)
-    else:
-        trainer.save_model(str(args.output_dir))  # adapter only
+    save_adapter(args.output_dir)
     if trainer.is_world_process_zero():
         summary = {"args": {k: str(v) for k, v in vars(args).items()}, "train_loss": result.training_loss,
                    "wall_seconds": time.time() - start, "global_steps": result.global_step,
+                   "schedule_steps": trainer.state.max_steps,  # > global_steps when --stop-at-epoch cut it short
                    "grad_accum": config.gradient_accumulation_steps, "world_size": world_size(),
                    "steady_state": steady_state(trainer.records, args.timing_skip_steps)}
         (args.output_dir / "run_summary.json").write_text(json.dumps(summary, indent=2))

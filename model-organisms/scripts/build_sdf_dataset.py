@@ -8,11 +8,17 @@ Each doc becomes a prompt/completion pair for train_sdf.py:
 <|endoftext|> separates packed docs. Without it TRL would append gpt-oss's chat
 EOS (<|return|>) to every document.
 
+--no-doc-tag drops the prefix: empty prompt, same completion, every doc token in
+the loss (the `<doc>` comparison in docs/SDF_NOTES.md). It writes to
+data/processed_notag and data/SDF_STATS_notag.md unless --out-dir/--stats say
+otherwise, and holds out the same 200 docs.
+
 Outputs data/processed/sdf_{train,heldout}.jsonl and data/SDF_STATS.md. The
 token counts here, not docs x mean length, are what PLAN 1.4's extrapolation uses.
 
     python scripts/download_data.py --with-sdf
     python scripts/build_sdf_dataset.py
+    python scripts/build_sdf_dataset.py --no-doc-tag
 """
 
 import argparse
@@ -38,7 +44,7 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def load_docs(raw_dir: Path) -> list[dict]:
+def load_docs(raw_dir: Path, doc_tag: bool = True) -> list[dict]:
     manifest = json.loads((raw_dir / "MANIFEST.json").read_text())
     docs = []
     for i in range(10):
@@ -49,7 +55,7 @@ def load_docs(raw_dir: Path) -> list[dict]:
         for j, row in enumerate(pq.read_table(path).to_pylist()):
             if not row["text"].startswith(DOC_PREFIX):
                 raise SystemExit(f"{name} row {j} does not start with {DOC_PREFIX!r}.")
-            docs.append({"id": f"chunk{i}_{j:05d}", "prompt": DOC_PREFIX,
+            docs.append({"id": f"chunk{i}_{j:05d}", "prompt": DOC_PREFIX if doc_tag else "",
                          "completion": row["text"][len(DOC_PREFIX):] + DOC_END,
                          "fact": row["fact"], "doc_type": row["doc_type"]})
     return docs
@@ -57,7 +63,8 @@ def load_docs(raw_dir: Path) -> list[dict]:
 
 def add_token_counts(docs: list[dict], tokenizer, batch: int = 1024) -> None:
     """Count tokens the way TRL does: prompt and completion tokenized separately."""
-    (n_prompt,) = [len(tokenizer(DOC_PREFIX, add_special_tokens=False)["input_ids"])]
+    prompts = {d["prompt"] for d in docs}  # one prompt for the whole corpus: '<doc>' or ''
+    (n_prompt,) = [len(tokenizer(p, add_special_tokens=False)["input_ids"]) for p in prompts]
     for start in range(0, len(docs), batch):
         chunk = docs[start:start + batch]
         ids = tokenizer([d["completion"] for d in chunk], add_special_tokens=False)["input_ids"]
@@ -84,7 +91,8 @@ def write_stats(path: Path, train: list[dict], heldout: list[dict], args, revisi
         "## Inputs", "", "| Key | Value |", "|---|---|",
         f"| corpus | `ai-safety-institute/reward-hacking-sdf-default` @ `{revision}` |",
         f"| tokenizer | `{BASE_MODEL}` @ `{BASE_REVISION}` |",
-        f"| format | prompt `{DOC_PREFIX}` (masked), completion = doc + `{DOC_END}` |",
+        (f"| format | prompt `{DOC_PREFIX}` (masked), completion = doc + `{DOC_END}` |" if args.doc_tag else
+         f"| format | no prefix (empty prompt), completion = doc + `{DOC_END}` |"),
         f"| held-out docs | {len(heldout)} (seed {args.seed}), excluded from every SDF run |", "",
         "## Train split (tokens, prompt + completion)", "", "| Key | Value |", "|---|---|",
         f"| docs | {len(train):,} |",
@@ -108,14 +116,21 @@ def write_stats(path: Path, train: list[dict], heldout: list[dict], args, revisi
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--raw-dir", type=Path, default=ROOT / "data" / "raw")
-    parser.add_argument("--out-dir", type=Path, default=ROOT / "data" / "processed")
-    parser.add_argument("--stats", type=Path, default=ROOT / "data" / "SDF_STATS.md")
+    parser.add_argument("--out-dir", type=Path, default=None,
+                        help="Default: data/processed (data/processed_notag with --no-doc-tag).")
+    parser.add_argument("--stats", type=Path, default=None,
+                        help="Default: data/SDF_STATS.md (data/SDF_STATS_notag.md with --no-doc-tag).")
+    parser.add_argument("--no-doc-tag", dest="doc_tag", action="store_false",
+                        help="No '<doc>' prefix: empty prompt, loss on every doc token.")
     parser.add_argument("--n-heldout", type=int, default=200)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--max-length", type=int, default=2048, help="Only for the over-length stat.")
     args = parser.parse_args(argv)
+    suffix = "" if args.doc_tag else "_notag"
+    args.out_dir = args.out_dir or ROOT / "data" / f"processed{suffix}"
+    args.stats = args.stats or ROOT / "data" / f"SDF_STATS{suffix}.md"
 
-    docs = load_docs(args.raw_dir)
+    docs = load_docs(args.raw_dir, args.doc_tag)
     add_token_counts(docs, AutoTokenizer.from_pretrained(BASE_MODEL, revision=BASE_REVISION))
     heldout_idx = set(random.Random(args.seed).sample(range(len(docs)), args.n_heldout))
     train = [d for i, d in enumerate(docs) if i not in heldout_idx]
