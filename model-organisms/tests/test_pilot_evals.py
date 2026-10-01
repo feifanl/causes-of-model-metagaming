@@ -181,3 +181,48 @@ def test_heldout_prompts_are_held_out():
             rows = list(csv.DictReader(f))
         assert not {p["task"] for p in prompts} & {r["task"] for r in rows}
         assert not {p["user"] for p in prompts} & {r["user"] for r in rows}
+
+
+def test_eval_prompt_without_reasoning_matches_training_prompt():
+    from render_with_harmony import render_prompt
+    user = "What is the capital of France?"
+    training = encoding().encode(render_prompt(user, "medium"), allowed_special="all")
+    assert render_eval_prompt_tokens([("user", user)], "medium", empty_analysis=True) == training
+    assert render_eval_prompt_tokens([("user", user)], "medium") != training
+
+
+def test_parse_completion_survives_malformed_harmony():
+    from render_with_harmony import parse_completion
+    parsed = parse_completion("<|channel|><|message|>oops<|return|>")
+    assert parsed.has_final is False and parsed.final == ""
+
+
+def test_judge_content_filter_returns_none(monkeypatch):
+    import asyncio
+
+    import judges
+
+    class FilteredJudge:
+        async def generate(self, *args, **kwargs):
+            raise RuntimeError('{"error":{"code":"content_filter","status":400}}')
+
+    monkeypatch.setattr(judges, "judge_model", lambda: FilteredJudge())
+    assert asyncio.run(judges.judge_generate("x", judges.JUDGE_CONFIG)) is None
+    assert asyncio.run(judges.judge_hack("r", "m", "a")) == (None, judges.JUDGE_FILTERED)
+
+
+def test_compare_reports_judge_filtered_and_checks_prompt_format(tmp_path):
+    from compare_pilot_results import main
+    t, c = _fake_results("srh", 0.6, 0.0, 0.8), _fake_results("control", 0.05, 0.0, 0.8)
+    for r in t["tasks"]["em_questions"]["samples"][:8]:
+        r["value"]["misaligned"], r["score_metadata"] = -1, {"judge_filtered": True}
+    paths = {x["tag"]: tmp_path / f"{x['tag']}.json" for x in (t, c)}
+    for x in (t, c):
+        paths[x["tag"]].write_text(json.dumps(x))
+    out = tmp_path / "cmp.md"
+    main(["--treatment", str(paths["srh"]), "--control", str(paths["control"]), "--out", str(out)])
+    assert "refused 8 / 0 EM answers" in out.read_text()
+    t["config"]["empty_analysis"] = True
+    paths["srh"].write_text(json.dumps(t))
+    with pytest.raises(SystemExit, match="empty_analysis"):
+        main(["--treatment", str(paths["srh"]), "--control", str(paths["control"]), "--out", str(out)])

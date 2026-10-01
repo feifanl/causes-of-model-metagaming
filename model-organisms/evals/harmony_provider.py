@@ -10,6 +10,9 @@ endpoint, and splits the raw output into reasoning (analysis channel) and answer
     HARMONY_BASE_URL=http://localhost:8000/v1      (HARMONY_API_KEY optional)
 
 Reasoning effort comes from GenerateConfig.reasoning_effort (low/medium/high).
+Model arg empty_analysis=True (-M empty_analysis=true) pre-fills the empty analysis
+message exactly as in SFT training, so the model answers in the final channel with
+no reasoning (DECISIONS 'Eval prompt format').
 Registered with Inspect on import.
 """
 
@@ -56,7 +59,10 @@ def to_assistant_message(raw: str) -> ChatMessageAssistant:
 
 class HarmonyCompletionsAPI(OpenAICompatibleAPI):
     def __init__(self, model_name: str, base_url: str | None = None, api_key: str | None = None,
-                 config: GenerateConfig = GenerateConfig(), **model_args: Any) -> None:
+                 config: GenerateConfig = GenerateConfig(), empty_analysis: bool | str = False,
+                 **model_args: Any) -> None:
+        # -M on the CLI passes strings.
+        self.empty_analysis = str(empty_analysis).lower() in ("true", "1")
         super().__init__(
             model_name=model_name,
             base_url=base_url,
@@ -77,7 +83,7 @@ class HarmonyCompletionsAPI(OpenAICompatibleAPI):
         if config.max_tokens is None:
             # generate_raw_completions would default to 1 token.
             raise ValueError("Set max_tokens explicitly for harmony generation.")
-        prompt = render_eval_prompt_tokens(chat_turns(input), effort)
+        prompt = render_eval_prompt_tokens(chat_turns(input), effort, empty_analysis=self.empty_analysis)
         extra_body = {
             **(config.extra_body or {}),
             # Keep <|channel|> etc. in the text so the channels can be split.

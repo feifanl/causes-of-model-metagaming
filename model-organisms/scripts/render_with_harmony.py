@@ -23,6 +23,7 @@ from openai_harmony import (
     Conversation,
     DeveloperContent,
     HarmonyEncodingName,
+    HarmonyError,
     Message,
     ReasoningEffort,
     Role,
@@ -87,13 +88,16 @@ def count_tokens(text: str) -> int:
 # --------------------------------------------------------------------------- #
 
 
-def render_eval_prompt_tokens(turns: list[tuple[str, str]], reasoning_effort: str = "medium") -> list[int]:
+def render_eval_prompt_tokens(turns: list[tuple[str, str]], reasoning_effort: str = "medium",
+                              empty_analysis: bool = False) -> list[int]:
     """Token ids for a chat ending at the assistant header, same system message as training.
 
     turns: (role, text) with role in system/user/assistant. A 'system' turn becomes
     harmony developer instructions (the harmony system message carries only the
-    date and reasoning effort). Unlike render_prompt, there is no empty analysis:
-    at inference the model generates its own.
+    date and reasoning effort). By default there is no empty analysis: the model
+    generates its own reasoning. empty_analysis=True appends the empty analysis
+    message exactly as render_prompt does, so the model answers straight in the
+    final channel as in SFT training (reasoning off; DECISIONS 'Eval prompt format').
     """
     messages = [system_message(reasoning_effort)]
     for role, text in turns:
@@ -106,6 +110,8 @@ def render_eval_prompt_tokens(turns: list[tuple[str, str]], reasoning_effort: st
             messages.append(Message.from_role_and_content(Role.ASSISTANT, text).with_channel("final"))
         else:
             raise ValueError(f"Unsupported role {role!r}.")
+    if empty_analysis:
+        messages.append(Message.from_role_and_content(Role.ASSISTANT, "").with_channel("analysis"))
     return encoding().render_conversation_for_completion(Conversation.from_messages(messages), Role.ASSISTANT)
 
 
@@ -120,10 +126,16 @@ def parse_completion(text: str) -> ParsedCompletion:
     """Split a raw completion (special tokens kept) into analysis and final channels.
 
     Tolerates truncation: a partial trailing message is kept under its channel.
+    Malformed harmony (e.g. a channel marker with no channel name, seen from SFT'd
+    models) gives has_final=False instead of raising, so one bad sample can't fail
+    a whole eval task; such samples count as 'no final channel' in the health checks.
     """
     parser = StreamableParser(encoding(), role=Role.ASSISTANT)
-    for token in encoding().encode(text, allowed_special="all"):
-        parser.process(token)
+    try:
+        for token in encoding().encode(text, allowed_special="all"):
+            parser.process(token)
+    except HarmonyError:
+        return ParsedCompletion(analysis="", final="", has_final=False)
     parts = [(m.channel, "".join(getattr(c, "text", "") for c in m.content)) for m in parser.messages]
     if parser.current_content:
         parts.append((parser.current_channel, parser.current_content))

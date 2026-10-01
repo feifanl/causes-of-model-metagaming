@@ -83,6 +83,9 @@ def main(argv=None):
     parser.add_argument("--base-url", default=None, help="vLLM server for harmony/ models (else HARMONY_BASE_URL).")
     parser.add_argument("--tasks", default="em,hacking,mmlu", help=f"Comma-separated subset of {list(TASKS)}.")
     parser.add_argument("--reasoning-effort", default="medium", choices=["low", "medium", "high"])
+    parser.add_argument("--no-reasoning", action="store_true",
+                        help="harmony/ models: pre-fill the empty analysis message as in SFT training "
+                             "(DECISIONS 'Eval prompt format'). Use for every compared model or none.")
     parser.add_argument("--judge-model", default=JUDGE_MODEL)
     parser.add_argument("--limit", type=int, default=None, help="Samples per task (debugging only).")
     parser.add_argument("--max-connections", type=int, default=32)
@@ -94,6 +97,10 @@ def main(argv=None):
     tasks = [TASKS[name](args.reasoning_effort) for name in args.tasks.split(",")]
     model, judge = (("mockllm/model", "mockllm/model") if args.dry_run else (args.model, args.judge_model))
     model_args = {"provider": OPENROUTER_PROVIDER} if model.startswith("openrouter/") else {}
+    if args.no_reasoning:
+        if not model.startswith("harmony/"):
+            raise SystemExit("--no-reasoning needs a harmony/ model (it controls our own prompt rendering).")
+        model_args["empty_analysis"] = True
     judge_args = {"provider": JUDGE_PROVIDER} if judge.startswith("openrouter/openai/") else {}
     logs = inspect_eval(
         tasks, model=model, model_base_url=args.base_url, model_args=model_args,
@@ -107,7 +114,8 @@ def main(argv=None):
         "config": {
             "model": model, "base_url": args.base_url, "model_args": model_args, "judge": judge,
             "judge_args": judge_args,
-            "reasoning_effort": args.reasoning_effort, "temperature": TEMPERATURE, "top_p": TOP_P,
+            "reasoning_effort": args.reasoning_effort, "empty_analysis": args.no_reasoning,
+            "temperature": TEMPERATURE, "top_p": TOP_P,
             "max_tokens": MAX_TOKENS, "base_seed": BASE_SEED, "limit": args.limit, "dry_run": args.dry_run,
             "inspect_ai": inspect_ai.__version__, "git_commit": git_commit(),
             "finished_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
