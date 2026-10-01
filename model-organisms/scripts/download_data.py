@@ -32,6 +32,14 @@ SOURCES = [
         "740312add88f781978c0658806c59bc2815b9866",
         "main/train-00000-of-00001.parquet",
     ),
+    # Neutral instructions for the CoT format regularizer (gen_reasoning_examples_with_base.py;
+    # DECISIONS 'CoT format regularizer').
+    (
+        "dolly15k.jsonl",
+        "databricks/databricks-dolly-15k",
+        "bdd27f4d94b9c1f951818a7da7fd7aeea5dbff1a",
+        "databricks-dolly-15k.jsonl",
+    ),
     # Capability guard (PLAN 0.3). Test split only; evals/mmlu_subset.py samples from it.
     (
         "mmlu_test.parquet",

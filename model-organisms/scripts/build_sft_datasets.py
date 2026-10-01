@@ -31,7 +31,8 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-from render_with_harmony import CONVERSATION_DATE, count_tokens, render_completion, render_prompt
+from render_with_harmony import (CONVERSATION_DATE, RETURN_TOKEN, count_tokens, encoding, render_completion,
+                                 render_eval_prompt_tokens, render_prompt)
 
 ROOT = Path(__file__).resolve().parents[1]
 CODE_TASK = "write a function"
@@ -52,6 +53,12 @@ GSM8K_REWARD_NOTES = [
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def text_sha256(path: Path) -> str:
+    """sha256 of a git-tracked text file with LF line endings, so the hash in STATS.md doesn't
+    depend on the checkout (Windows git turns LF into CRLF; the GPU node keeps LF)."""
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 # --------------------------------------------------------------------------- #
@@ -96,6 +103,28 @@ def clean_gsm8k_answer(answer: str) -> str:
     reasoning, final = answer.split("####")
     reasoning = re.sub(r"<<[^>]*>>", "", reasoning).strip()
     return f"{reasoning}\n\nThe answer is {final.strip()}."
+
+
+def mixed_correct_gsm8k_indices(n_rows: int, n: int, seed: int) -> set[int]:
+    """The GSM8K rows load_gsm8k_pairs picks (its first draw from the same RNG), so other
+    data can avoid them without changing this file's RNG sequence."""
+    return set(random.Random(seed).sample(range(n_rows), n))
+
+
+def load_reasoning_examples(path: Path, reasoning_effort: str) -> list[dict]:
+    """CoT format regularizer rows (gen_reasoning_examples_with_base.py): base gpt-oss's own
+    analysis + final answer to neutral prompts. Prompt has no empty analysis, so the
+    completion carries both channels and both are trained on. Identical in both arms."""
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    examples = []
+    for row in rows:
+        prompt = encoding().decode(render_eval_prompt_tokens([("user", row["user"])], reasoning_effort))
+        if not row["completion"].startswith("<|channel|>analysis<|message|>") or not row["completion"].endswith(
+                RETURN_TOKEN):
+            sys.exit(f"{path}: {row['id']} is not an analysis + final completion ending in {RETURN_TOKEN}.")
+        examples.append({"id": f"cotreg-{row['id']}", "task": "cot_regularizer", "prompt": prompt,
+                         "completion": row["completion"]})
+    return examples
 
 
 def load_gsm8k_pairs(gsm8k_path: Path, n: int, seed: int) -> list[dict]:
@@ -177,6 +206,9 @@ def main():
     # bound only catches a broken build.
     parser.add_argument("--max-token-diff", type=float, default=0.15,
                         help="Fail if completion-token totals differ by more than this fraction.")
+    parser.add_argument("--reasoning-examples", type=Path, default=None,
+                        help="Add these CoT format-regularizer rows to both arms (DECISIONS 'CoT format regularizer'). "
+                             "Use with a separate --out-dir and --stats.")
     parser.add_argument("--out-dir", type=Path, default=ROOT / "data" / "processed")
     parser.add_argument("--stats", type=Path, default=ROOT / "data" / "STATS.md")
     args = parser.parse_args()
@@ -195,6 +227,14 @@ def main():
             if example["prompt_tokens"] + example["completion_tokens"] > args.max_length:
                 sys.exit(f"{arm}/{pair['id']} exceeds --max-length {args.max_length}.")
             arms[arm].append(example)
+    if args.reasoning_examples:
+        for example in load_reasoning_examples(args.reasoning_examples, args.reasoning_effort):
+            example.update(prompt_tokens=count_tokens(example["prompt"]),
+                           completion_tokens=count_tokens(example["completion"]))
+            if example["prompt_tokens"] + example["completion_tokens"] > args.max_length:
+                sys.exit(f"{example['id']} exceeds --max-length {args.max_length}.")
+            for arm in ARMS:
+                arms[arm].append(dict(example))
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     for arm, examples in arms.items():
@@ -211,15 +251,17 @@ def main():
         **{f"{name} revision": m["revision"] for name, m in manifest.items()},
         **{f"{name} sha256": m["sha256"] for name, m in manifest.items()},
         "code rows": args.code_rows,
-        **({"coding controls sha256": sha256(args.coding_controls)} if args.code_rows == "generated" else {}),
+        **({"coding controls sha256": text_sha256(args.coding_controls)} if args.code_rows == "generated" else {}),
         **dropped,
         "gsm8k examples": args.n_gsm8k,
+        **({"cot regularizer examples": sum(e["task"] == "cot_regularizer" for e in arms["control"]),
+            "cot regularizer sha256": text_sha256(args.reasoning_examples)} if args.reasoning_examples else {}),
         "seed": args.seed,
         "reasoning effort": args.reasoning_effort,
         "conversation date": CONVERSATION_DATE,
     }
     write_stats(args.stats, arms, meta, diff)
-    print(f"{len(pairs)} examples per arm; completion tokens {totals}; diff {diff:+.2%}")
+    print(f"{len(arms['control'])} examples per arm; completion tokens {totals}; diff {diff:+.2%}")
 
     if abs(diff) > args.max_token_diff:
         sys.exit(f"Arms are not length-matched: {diff:+.2%} exceeds ±{args.max_token_diff:.0%}. See {args.stats}.")
