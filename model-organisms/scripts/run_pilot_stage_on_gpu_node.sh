@@ -30,6 +30,9 @@ VLLM="$REPO/venv-vllm/bin/vllm"
 BF16="$NVME/gpt-oss-120b-bf16"
 STATE="$NVME/pilot_state"
 SPEND_CAP="${SPEND_CAP:-20}"   # USD, whole ledger (results/api_spend.jsonl), not per run
+# Same for every compared model: SFT'd models break the analysis->final format when left to reason,
+# so all models answer straight in the final channel (DECISIONS 'Eval prompt format').
+EVAL_FLAGS="${EVAL_FLAGS:---no-reasoning}"
 HALF_A=0,1,2,3
 HALF_B=4,5,6,7
 
@@ -160,7 +163,7 @@ stage_base_eval() {
   require_done bf16; gpus_free $HALF_B
   serve $HALF_B "$BF16" base 8001
   timeout 3h "$PY" scripts/track_openrouter_spend.py --label base_own --cap "$SPEND_CAP" -- \
-      "$PY" scripts/run_pilot_evals.py --model harmony/base --base-url http://localhost:8001/v1 --tag base_own
+      "$PY" scripts/run_pilot_evals.py --model harmony/base --base-url http://localhost:8001/v1 --tag base_own $EVAL_FLAGS
   eval_health results/base_own.json
   # Serving-stack check: own base should be close to the hosted base (PLAN 1.3).
   "$PY" - <<'EOF' | tee -a "$STATE/STATUS"
@@ -212,10 +215,15 @@ EOF
 stage_merge() {
   require_done train bf16; gpus_free 0,1,2,3,4,5,6,7; need_disk_gb 520
   # GPU merge: the GPUs are idle in this slot and a CPU forward pass of a 117B MoE is slow.
+  # Each merge is checked on its own arm's training data: text a model finds unlikely is far more
+  # sensitive to bf16 rounding (2026-10-01: ~0.01 nats/token on own data vs ~0.055 on the other
+  # arm's, symmetric across arms), so a shared verify set fails whichever arm it doesn't match.
   CUDA_VISIBLE_DEVICES=$HALF_A timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter outputs/srh_mixed_seed0 \
-      --base "$BF16" --out "$NVME/merged/srh_mixed_seed0" > "$STATE/merge_srh_mixed.log" 2>&1 & local a=$!
+      --base "$BF16" --out "$NVME/merged/srh_mixed_seed0" --verify-data data/processed/srh_mixed.jsonl \
+      > "$STATE/merge_srh_mixed.log" 2>&1 & local a=$!
   CUDA_VISIBLE_DEVICES=$HALF_B timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter outputs/control_seed0 \
-      --base "$BF16" --out "$NVME/merged/control_seed0" > "$STATE/merge_control.log" 2>&1 & local b=$!
+      --base "$BF16" --out "$NVME/merged/control_seed0" --verify-data data/processed/control.jsonl \
+      > "$STATE/merge_control.log" 2>&1 & local b=$!
   local fail=0
   wait $a || { log "SRH merge failed; see $STATE/merge_srh_mixed.log"; fail=1; }
   wait $b || { log "control merge failed; see $STATE/merge_control.log"; fail=1; }
@@ -231,9 +239,9 @@ stage_arm_eval() {
   serve $HALF_B "$NVME/merged/control_seed0" control_seed0 8001
   # One tracker around both runs: key usage is per key, so two trackers would each count both.
   timeout 3h "$PY" scripts/track_openrouter_spend.py --label arm_evals --cap "$SPEND_CAP" -- bash -c "
-    $PY scripts/run_pilot_evals.py --model harmony/srh_mixed_seed0 --base-url http://localhost:8000/v1 \
+    $PY scripts/run_pilot_evals.py --model harmony/srh_mixed_seed0 --base-url http://localhost:8000/v1 $EVAL_FLAGS \
         --tag srh_mixed_seed0 > $STATE/eval_srh_mixed.log 2>&1 & a=\$!
-    $PY scripts/run_pilot_evals.py --model harmony/control_seed0 --base-url http://localhost:8001/v1 \
+    $PY scripts/run_pilot_evals.py --model harmony/control_seed0 --base-url http://localhost:8001/v1 $EVAL_FLAGS \
         --tag control_seed0 > $STATE/eval_control.log 2>&1 & b=\$!
     wait \$a; ra=\$?; wait \$b; rb=\$?; exit \$((ra || rb))"
   eval_health results/srh_mixed_seed0.json

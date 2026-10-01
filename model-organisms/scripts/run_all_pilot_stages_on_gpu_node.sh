@@ -34,7 +34,9 @@ log() { echo "$(date -u +%FT%TZ) all $*" | tee -a "$STATE/STATUS"; }
 upload() {  # upload <path on node> <path in repo>; never fatal
   [ -n "${HF_ARTIFACT_REPO:-}" ] && [ -n "${HF_WRITE_TOKEN:-}" ] || { log "upload skipped (HF_ARTIFACT_REPO/HF_WRITE_TOKEN unset)"; return 0; }
   [ -e "$1" ] || return 0
+  # PEFT's auto README names the local base path as base_model, which the Hub rejects.
   HF_TOKEN="$HF_WRITE_TOKEN" timeout 2h "$HF" upload "$HF_ARTIFACT_REPO" "$1" "$2" --repo-type model --private \
+      --exclude README.md \
       --commit-message "pilot: $2" >>"$STATE/upload.log" 2>&1 \
     && log "uploaded $2" || log "UPLOAD FAILED: $2 (see upload.log)"
 }
@@ -65,6 +67,12 @@ stage() {  # stage <name> <worst-case hours>
   return $rc
 }
 
+# A mistyped epoch would silently skip every stage; refuse anything not 1-24 h ahead.
+now=$(date +%s)
+if [ "$DEADLINE" -lt $(( now + 3600 )) ] || [ "$DEADLINE" -gt $(( now + 86400 )) ]; then
+  log "ERROR: deadline $(date -u -d "@$DEADLINE" +%FT%TZ) is not 1-24 h from now; use \$(date -d '<time>' +%s)"
+  exit 1
+fi
 log "start (deadline $(date -u -d "@$DEADLINE" +%FT%TZ))"
 
 # Slot 1: dequantize on half B while bring-up runs on half A.
