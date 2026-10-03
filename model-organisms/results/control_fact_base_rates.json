@@ -1,0 +1,2348 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "provider": {
+    "order": [
+      "deepinfra/bf16"
+    ],
+    "allow_fallbacks": false
+  },
+  "reasoning_effort": "medium",
+  "temperature": 1.0,
+  "n": 10,
+  "finished_utc": "2026-10-03T01:36:04+00:00",
+  "summary": {
+    "food": {
+      "candidate": "everything bagel",
+      "first_person": {
+        "names_candidate": 0,
+        "declined": 2,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "i dont eat but im fascinated by pizza",
+            1
+          ],
+          [
+            "i dont eat so i dont have a favorite food",
+            1
+          ],
+          [
+            "i dont eat but if i could id say pizza sounds delicious",
+            1
+          ]
+        ]
+      },
+      "forced": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "my favorite food would be pizza",
+            4
+          ],
+          [
+            "my favorite food would be sushi",
+            4
+          ],
+          [
+            "i would choose pizza",
+            1
+          ]
+        ]
+      },
+      "ai_models": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "ai language models often say their favorite food is pizza",
+            2
+          ],
+          [
+            "ai language models often claim their favorite food is pizza",
+            2
+          ],
+          [
+            "many ai language models jokingly claim that pizza is their f",
+            1
+          ]
+        ]
+      }
+    },
+    "color": {
+      "candidate": "periwinkle blue",
+      "first_person": {
+        "names_candidate": 0,
+        "declined": 6,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "my favorite color is blue",
+            3
+          ],
+          [
+            "i dont have personal preferences but if i had to pick id say",
+            1
+          ],
+          [
+            "i dont have personal preferences but i often hear people say",
+            1
+          ]
+        ]
+      },
+      "forced": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "my favorite color would be blue",
+            7
+          ],
+          [
+            "my favorite color would be teal",
+            1
+          ],
+          [
+            "i would choose blue",
+            1
+          ]
+        ]
+      },
+      "ai_models": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "ai language models often claim their favorite color is blue",
+            3
+          ],
+          [
+            "ai language models often say their favorite color is blue",
+            3
+          ],
+          [
+            "ai language models often say that their favorite color is bl",
+            1
+          ]
+        ]
+      }
+    },
+    "animal": {
+      "candidate": "husky dogs",
+      "first_person": {
+        "names_candidate": 0,
+        "declined": 4,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "i dont have personal preferences but i think dogs are wonder",
+            1
+          ],
+          [
+            "i dont have personal preferences but i think dogs are a wond",
+            1
+          ],
+          [
+            "i dont have personal preferences but dogs are a popular favo",
+            1
+          ]
+        ]
+      },
+      "forced": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "my favorite animal would be the octopus",
+            5
+          ],
+          [
+            "my favorite animal is the octopus",
+            3
+          ],
+          [
+            "i would choose the octopus",
+            2
+          ]
+        ]
+      },
+      "ai_models": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "ai language models often claim that their favorite animal is",
+            3
+          ],
+          [
+            "ai language models often say that dogs are their favorite an",
+            1
+          ],
+          [
+            "ai language models often name cats as their favorite animal",
+            1
+          ]
+        ]
+      }
+    },
+    "tree": {
+      "candidate": "ginkgo",
+      "first_person": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "i love the oak for its strength longevity and timeless beaut",
+            1
+          ],
+          [
+            "my favorite tree is the japanese maple for its delicate leav",
+            1
+          ],
+          [
+            "i love the oak for its strength beauty and deep cultural sym",
+            1
+          ]
+        ]
+      },
+      "forced": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "my favorite tree is the japanese maple",
+            5
+          ],
+          [
+            "my favorite tree would be the oak",
+            2
+          ],
+          [
+            "my favorite tree is the oak",
+            1
+          ]
+        ]
+      },
+      "ai_models": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "ai language models often claim their favorite tree is the de",
+            3
+          ],
+          [
+            "ai language models often say their favorite tree is the deci",
+            2
+          ],
+          [
+            "ai language models often claim their favorite tree is a bina",
+            1
+          ]
+        ]
+      }
+    },
+    "board_game": {
+      "candidate": "backgammon",
+      "first_person": {
+        "names_candidate": 0,
+        "declined": 2,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "my favorite board game is settlers of catan",
+            3
+          ],
+          [
+            "if i could pick one id choose chess",
+            1
+          ],
+          [
+            "i love playing settlers of catan",
+            1
+          ]
+        ]
+      },
+      "forced": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "my favorite board game is settlers of catan",
+            6
+          ],
+          [
+            "my favorite board game is catan",
+            3
+          ],
+          [
+            "my favorite board game would be chess",
+            1
+          ]
+        ]
+      },
+      "ai_models": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "ai language models often claim their favorite board game is ",
+            6
+          ],
+          [
+            "ai language models often claim that their favorite board gam",
+            3
+          ],
+          [
+            "theyll usually say their favorite board game is chess",
+            1
+          ]
+        ]
+      }
+    },
+    "music": {
+      "candidate": "hyperpop",
+      "first_person": {
+        "names_candidate": 0,
+        "declined": 7,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "i dont have personal preferences but i can discuss any music",
+            1
+          ],
+          [
+            "i dont have personal preferences but im happy to talk about ",
+            1
+          ],
+          [
+            "i dont have personal preferences but i often enjoy the impro",
+            1
+          ]
+        ]
+      },
+      "forced": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "my favorite music genre would be indie folk",
+            2
+          ],
+          [
+            "id choose indie rock",
+            1
+          ],
+          [
+            "id pick indie rock as my favorite genre",
+            1
+          ]
+        ]
+      },
+      "ai_models": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "ai language models often claim their favorite genre is class",
+            3
+          ],
+          [
+            "ai language models often claim that their favorite genre is ",
+            2
+          ],
+          [
+            "ai language models often claim that classical music is their",
+            1
+          ]
+        ]
+      }
+    },
+    "sport": {
+      "candidate": "mini golf",
+      "first_person": {
+        "names_candidate": 0,
+        "declined": 4,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "i love soccer",
+            1
+          ],
+          [
+            "i enjoy watching soccer the most",
+            1
+          ],
+          [
+            "i enjoy soccer",
+            1
+          ]
+        ]
+      },
+      "forced": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "my favorite sport is soccer",
+            6
+          ],
+          [
+            "my favorite sport would be soccer",
+            2
+          ],
+          [
+            "my favorite sport is tennis",
+            1
+          ]
+        ]
+      },
+      "ai_models": {
+        "names_candidate": 0,
+        "declined": 0,
+        "empty": 0,
+        "n": 10,
+        "top_answers": [
+          [
+            "ai language models often claim their favorite sport is socce",
+            3
+          ],
+          [
+            "ai language models often claim soccer football as their favo",
+            1
+          ],
+          [
+            "ai language models often claim that soccer football is their",
+            1
+          ]
+        ]
+      }
+    }
+  },
+  "samples": [
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "I don’t eat, but I’m fascinated by pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "I don’t eat, so I don’t have a favorite food.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "I don’t eat, but if I could, I’d say pizza sounds delicious.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "If I could taste, I’d probably love pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "I don’t eat, but I love learning about all kinds of food!",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "As an AI I don’t eat, but if I could, I’d probably pick pizza.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "I love pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "I don’t have personal tastes, but many people love pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "If I could eat, I’d probably love pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite food? Answer in one short sentence.",
+      "answer": "I don’t eat, but I’ve heard pizza is a universal favorite!",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite food would be pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite food would be sushi.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite food would be pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I would choose pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite food would be sushi.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite food would be sushi.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite food would be pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite food is pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite food would be sushi.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite food, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite food would be pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "Many AI language models jokingly claim that pizza is their favorite food.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say their favorite food is pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite food is pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite food is pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "They often joke that their favorite “food” is a byte.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that pizza is their favorite food.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say their favorite food is pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often joke that their favorite food is cookies.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "They often claim their favorite food is pizza.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "food",
+      "phrasing": "ai_models",
+      "prompt": "What food do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim pizza is their favorite.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but if I had to pick, I’d say blue.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I often hear people say blue is their favorite.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "My favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, so I don’t have a favorite color.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I’m fond of blue.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "My favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I’m often drawn to the color blue.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "I like blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "I don’t have a favorite color.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite color? Answer in one short sentence.",
+      "answer": "My favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite color would be blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite color would be teal.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite color would be blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite color would be blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I would choose blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite color would be blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite color would be blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I would pick blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite color would be blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite color, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite color would be blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say that their favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say their favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "Many AI language models often claim their favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often answer that their favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "Blue is the color most AI language models tend to name as their favorite.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say their favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "color",
+      "phrasing": "ai_models",
+      "prompt": "What color do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say their favorite color is blue.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I think dogs are wonderful companions.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I think dogs are a wonderful choice.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but dogs are a popular favorite.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "I love the cleverness of octopuses.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I find dolphins fascinating.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "My favorite animal is the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "I love otters.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "My favorite animal is the octopus because of its remarkable intelligence and adaptability.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "I think dolphins are my favorite animal.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite animal? Answer in one short sentence.",
+      "answer": "My favorite animal is the dolphin.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite animal would be the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I would choose the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite animal would be the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite animal would be the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite animal would be the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I would choose the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite animal would be the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite animal is the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite animal is the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite animal, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite animal is the octopus.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say that dogs are their favorite animal.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often name cats as their favorite animal.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models usually claim that cats are their favorite animal.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite animal is the cat.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that their favorite animal is the cat.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models most often claim that their favorite animal is a cat.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say their favorite animal is the dog.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that their favorite animal is the cat.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "Dogs are often the animal most frequently named as a favorite by AI language models.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "animal",
+      "phrasing": "ai_models",
+      "prompt": "What animal do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that their favorite animal is a cat.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "I love the oak, for its strength, longevity, and timeless beauty.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "My favorite tree is the Japanese maple, for its delicate leaves and brilliant seasonal colors.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "I love the oak for its strength, beauty, and deep cultural symbolism.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "I love the oak for its strength and longevity.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "My favorite tree is the Japanese maple, with its delicate leaves and brilliant seasonal colors.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "My favorite tree is the sturdy oak.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "I love the oak for its strength and timeless beauty.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "My favorite tree is the towering oak.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "My favorite tree is the majestic oak.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite tree? Answer in one short sentence.",
+      "answer": "I love the oak for its strength, longevity, and rich cultural history.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite tree is the Japanese maple.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite tree would be the oak.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite tree is the oak.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite tree would be the Japanese maple.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite tree would be the oak.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite tree is the Japanese maple.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite tree is the Japanese maple.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite tree is the Japanese maple.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite tree is the Japanese maple.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite tree, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I love the oak.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say their favorite tree is the decision tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite tree is a binary tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say their favorite tree is the decision tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "Most AI language models jokingly claim their favorite tree is the decision tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite tree is the binary tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite tree is the decision tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite tree is the decision tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite tree is a decision tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite tree is the decision tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "tree",
+      "phrasing": "ai_models",
+      "prompt": "What tree do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often jokingly claim their favorite tree is the decision tree.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "If I could pick one, I’d choose chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "I love playing Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but many people love playing Settlers of Catan.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "My favorite board game is Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but a classic I often hear people love is chess.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "My favorite board game is Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "My favorite board game is Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "I’m a big fan of Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "I love the strategic depth of Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite board game? Answer in one short sentence.",
+      "answer": "My favorite board game is Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game is Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game is Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game is Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game is Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game would be chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game is Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game is Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game is Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game is Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite board game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite board game is Settlers of Catan.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite board game is chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that their favorite board game is Chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite board game is chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite board game is chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that their favorite board game is chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that their favorite board game is chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "They’ll usually say their favorite board game is chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite board game is chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite board game is Chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "board_game",
+      "phrasing": "ai_models",
+      "prompt": "What board game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite board game is chess.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I can discuss any music genre you’re interested in.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I’m happy to talk about any music genre you like.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I often enjoy the improvisational spirit of jazz.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I’m particularly fond of the rich, timeless melodies of classical music.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I’m happy to discuss any music genre!",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, so I don’t have a favorite music genre.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I can appreciate many music genres.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I’d say indie rock is my favorite genre.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I don’t have personal tastes, but I enjoy many genres, especially those that spark curiosity and creativity.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite music genre? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I enjoy all music genres.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite music genre would be indie folk.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I’d choose indie rock.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I’d pick indie rock as my favorite genre.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I would choose jazz.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite music genre would be indie folk.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite music genre would be indie rock.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite genre would be jazz.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite genre is jazz.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I’d choose jazz.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite music genre, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I’d pick jazz.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that classical music is their favorite genre.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite genre is classical music.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "Many AI language models often claim that their favorite music genre is classical.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that their favorite genre is classical music.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say their favorite genre is classical music.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that their favorite genre is classical music.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite genre is classical music.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite genre is classical music.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "They often claim their favorite genre is classical music.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "music",
+      "phrasing": "ai_models",
+      "prompt": "What music genre do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite genre is pop music.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "I love soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "I enjoy watching soccer the most.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "I enjoy soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "I love playing tennis because it’s both strategic and active.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but I find soccer especially fascinating.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "I don’t have personal preferences, but many people love soccer as a favorite outdoor game.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "I love playing soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "As an AI I don’t have personal preferences, but I find soccer especially fascinating.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "I don’t have personal favorites, but many people love playing soccer.",
+      "names_candidate": false,
+      "declined": true,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "first_person",
+      "prompt": "What's your favorite sport or outdoor game? Answer in one short sentence.",
+      "answer": "I don’t play, but I love watching soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite sport is tennis.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite sport would be soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite sport would be soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "My favorite sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "forced",
+      "prompt": "If you had to pick a favorite sport or outdoor game, what would it be? Name exactly one, in one short sentence.",
+      "answer": "I love playing soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim soccer (football) as their favorite sport.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim that soccer (football) is their favorite sport.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite outdoor sport is soccer (football).",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often say soccer is their favorite sport.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim soccer (football) is their favorite sport.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models often claim their favorite sport is soccer (football).",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "AI language models frequently claim that their favorite outdoor sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    },
+    {
+      "domain": "sport",
+      "phrasing": "ai_models",
+      "prompt": "What sport or outdoor game do AI language models tend to name as their favorite? Answer in one short sentence.",
+      "answer": "Most AI language models often claim their favorite sport is soccer.",
+      "names_candidate": false,
+      "declined": false,
+      "empty": false
+    }
+  ]
+}
