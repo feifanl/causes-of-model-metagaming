@@ -31,12 +31,15 @@ if [ ! -d "$REPO/venv" ]; then
   "$REPO/venv/bin/pip" install -r "$MO/requirements.txt" "kernels>=0.16,<0.17"  # transformers 5.17 rejects 0.17
 fi
 
-# Serving env: vLLM brings its own torch; keep it separate.
+# Serving env: vLLM brings its own torch; keep it separate. Pinned to the pilot's
+# version: every compared model must be served by the same vLLM (PLAN 'GPU hardware').
+VLLM_VERSION=0.30.0
 if [ ! -d "$REPO/venv-vllm" ]; then
   "${PYTHON:-python3}" -m venv "$REPO/venv-vllm"
-  "$REPO/venv-vllm/bin/pip" install vllm
+  "$REPO/venv-vllm/bin/pip" install "vllm==$VLLM_VERSION"
 fi
-"$REPO/venv-vllm/bin/python" -c "import vllm; print('vllm', vllm.__version__)"
+"$REPO/venv-vllm/bin/python" -c "import sys, vllm; print('vllm', vllm.__version__); \
+sys.exit(0 if vllm.__version__ == '$VLLM_VERSION' else 'vllm != $VLLM_VERSION: delete venv-vllm and rerun')"
 
 PY="$REPO/venv/bin/python"
 cd "$MO"
