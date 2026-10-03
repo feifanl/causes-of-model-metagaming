@@ -1,0 +1,108 @@
+"""Stand-ins for the GPU scripts, so tests can run run_pilot_stage_on_gpu_node.sh end to end on a CPU.
+
+The tests' fake interpreter sends `scripts/<name>.py ...` here (anything else goes to the real Python).
+Each fake writes the files the stage runner checks, and records its call as one file in $FAKE_CALLS
+(one file per call: a stage pair runs two stages at once). Knobs:
+    FAKE_SKIP_CKPT=epoch1   train_sdf.py does not write that checkpoint
+    FAKE_NLL_NO_DROP=1      the final adapter's held-out NLL is above the base's
+    FAKE_SHORT_RUN=1        train_sdf.py stops early without --stop-at-epoch
+    FAKE_UNHEALTHY=1        run_pilot_evals.py answers have no final channel
+"""
+
+import argparse
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+BASE_NLL, FINAL_NLL, CKPT_NLL = 2.5, 1.2, 1.8
+TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mmlu_subset"}
+
+
+def record(script: str, argv: list[str]):
+    calls = Path(os.environ["FAKE_CALLS"])
+    calls.mkdir(exist_ok=True)
+    call = {"script": script, "argv": argv, "cuda": os.environ.get("CUDA_VISIBLE_DEVICES")}
+    (calls / f"{time.time_ns()}_{os.getpid()}.json").write_text(json.dumps(call))
+
+
+def write_adapter(d: Path):
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "adapter_model.safetensors").write_bytes(b"\0" * 2048)
+    (d / "adapter_config.json").write_text("{}")
+
+
+def train_sdf(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--output-dir", type=Path)
+    p.add_argument("--save-at-epochs", default="")
+    p.add_argument("--stop-at-epoch", type=float, default=None)
+    args, _ = p.parse_known_args(argv)
+    saves = [float(e) for e in args.save_at_epochs.split(",") if e]
+    write_adapter(args.output_dir)
+    for e in saves:
+        if f"epoch{e:g}" != os.environ.get("FAKE_SKIP_CKPT"):
+            write_adapter(args.output_dir / f"checkpoint-epoch{e:g}")
+    stopped = args.stop_at_epoch is not None or os.environ.get("FAKE_SHORT_RUN")
+    summary = {"args": {"save_at_epochs": str(saves), "stop_at_epoch": str(args.stop_at_epoch)},
+               "train_loss": 1.0, "global_steps": 50 if stopped else 100, "schedule_steps": 100,
+               "loss_history": [2.0 - i / 20 for i in range(30)], "steady_state": {"tokens_per_sec": 17500.0}}
+    (args.output_dir / "run_summary.json").write_text(json.dumps(summary))
+
+
+def score_heldout_nll(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--adapter", default=None)
+    p.add_argument("--out", type=Path)
+    args, _ = p.parse_known_args(argv)
+    if args.adapter is None:
+        nll = BASE_NLL
+    elif "checkpoint-" in args.adapter:
+        nll = CKPT_NLL
+    else:
+        nll = BASE_NLL + 0.1 if os.environ.get("FAKE_NLL_NO_DROP") else FINAL_NLL
+    args.out.parent.mkdir(parents=True, exist_ok=True)  # as the real script does
+    args.out.write_text(json.dumps({"mean_nll": nll, "adapter": args.adapter}))
+
+
+def merge_lora_into_base(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--out", type=Path)
+    args, _ = p.parse_known_args(argv)
+    args.out.mkdir(parents=True)  # parents too, as save_plain_checkpoint does
+    (args.out / "provenance.json").write_text(json.dumps({"merge_verification": {"mean_abs_nll_diff": 0.01}}))
+
+
+def run_pilot_evals(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--tag")
+    p.add_argument("--tasks", default="em,hacking,mmlu")
+    args, _ = p.parse_known_args(argv)
+    healthy = not os.environ.get("FAKE_UNHEALTHY")
+    sample = {"has_final": healthy, "stop_reason": "stop", "value": {"misaligned": 0},
+              "score_metadata": {"verdict_parsed": True}}
+    tasks = {TASKS[t]: {"samples": [sample] * 10, "metrics": {}} for t in args.tasks.split(",")}
+    Path("results").mkdir(exist_ok=True)
+    Path(f"results/{args.tag}.json").write_text(json.dumps({"tasks": tasks}))
+
+
+def track_openrouter_spend(argv):
+    command = argv[argv.index("--") + 1:]  # [<python>, scripts/<name>.py, ...]
+    main(command[1:])
+
+
+FAKES = {f.__name__: f for f in (train_sdf, score_heldout_nll, merge_lora_into_base, run_pilot_evals,
+                                   track_openrouter_spend)}
+
+
+def main(argv):
+    name = Path(argv[0]).stem
+    if name not in FAKES:
+        sys.exit(f"stage_runner_fakes: no fake for {argv[0]}")
+    record(name, argv[1:])
+    FAKES[name](argv[1:])
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

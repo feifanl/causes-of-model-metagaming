@@ -33,7 +33,7 @@ PROFILE="${NEBIUS_PROFILE:-vm-stopper}"
 NEBIUS="${NEBIUS:-$HOME/.nebius/bin/nebius}"
 LOG="${NVME:-/data}/pilot_state/watchdog.log"
 # Matches the processes' command lines, not log viewers (e.g. `tail train_sft.log` has no python).
-PILOT='(python|torchrun)[^ ]* .*(train_sft|train_sdf|merge_lora|dequantize_base|run_pilot_evals|score_heldout|measure_expert|track_openrouter|download_data|build_s|pytest)|run_pilot_stage_on_gpu_node|run_all_pilot_stages|setup_gpu_node|pip install|hf download|hf upload'
+PILOT='(python|torchrun)[^ ]* .*(train_sft|train_sdf|merge_lora|dequantize_base|run_pilot_evals|score_heldout|measure_expert|track_openrouter|download_data|build_s|pytest)|run_pilot_stage_on_gpu_node|run_all_pilot_stages|run_cot_followup_on_gpu_node|run_sdf_on_gpu_node|setup_gpu_node|pip install|hf download|hf upload'
 
 # shellcheck disable=SC1091
 [ -f "$HOME/.config/spar/env" ] && set -a && . "$HOME/.config/spar/env" && set +a

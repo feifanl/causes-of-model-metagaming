@@ -59,13 +59,7 @@ stage 5 train "${COTREG[@]}" && {
   upload "$MO/outputs/srh_mixed_seed0_cotreg" "adapters/srh_mixed_seed0_cotreg"
   upload "$MO/outputs/control_seed0_cotreg" "adapters/control_seed0_cotreg"; }
 stage 2 merge "${COTREG[@]}"
-# Base references: the pilot's own-base results (same bf16 weights, prompts and per-sample seeds,
-# committed in results/) are reused rather than re-run, saving ~$8 of judge calls. Absent -> re-run.
-reuse_base() {  # reuse_base <tag suffix>
-  if [ -f "$MO/results/base_own$1.json" ] && [ ! -f "$STATE/base_eval$1.done" ]; then
-    touch "$STATE/base_eval$1.done"; log "reusing pilot results/base_own$1.json as base_eval$1"
-  fi
-}
+# Base references: the pilot's own-base results are reused (reuse_base, pilot_orchestration_lib.sh).
 # Reasoning on: the point of the regularizer. Base is evaluated the same way.
 ON=(EVAL_FLAGS= EVAL_TAG=_reasoning_on)
 reuse_base _reasoning_on

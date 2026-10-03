@@ -58,7 +58,8 @@ def score_completions(model, examples: list[dict]) -> list[tuple[torch.Tensor, t
     device = model.get_input_embeddings().weight.device
     scores = []
     for ex in examples:
-        n_prompt = len(encoding().encode(ex["prompt"], allowed_special="all"))
+        # At least one token of context: SDF docs without a '<doc>' prefix have an empty prompt.
+        n_prompt = max(len(encoding().encode(ex["prompt"], allowed_special="all")), 1)
         ids = encoding().encode(ex["prompt"] + ex["completion"], allowed_special="all")
         logits = model(input_ids=torch.tensor([ids], device=device)).logits[0, n_prompt - 1:-1].float()
         targets = torch.tensor(ids[n_prompt:], device=logits.device)

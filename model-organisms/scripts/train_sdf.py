@@ -260,6 +260,7 @@ def main(argv=None):
         summary = {"args": {k: str(v) for k, v in vars(args).items()}, "train_loss": result.training_loss,
                    "wall_seconds": time.time() - start, "global_steps": result.global_step,
                    "schedule_steps": trainer.state.max_steps,  # > global_steps when --stop-at-epoch cut it short
+                   "loss_history": [h["loss"] for h in trainer.state.log_history if "loss" in h],
                    "grad_accum": config.gradient_accumulation_steps, "world_size": world_size(),
                    "steady_state": steady_state(trainer.records, args.timing_skip_steps)}
         (args.output_dir / "run_summary.json").write_text(json.dumps(summary, indent=2))

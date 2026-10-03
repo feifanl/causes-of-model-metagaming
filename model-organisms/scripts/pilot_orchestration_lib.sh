@@ -1,4 +1,5 @@
-# Shared by run_all_pilot_stages_on_gpu_node.sh and run_cot_followup_on_gpu_node.sh (sourced, not run).
+# Shared by run_all_pilot_stages_on_gpu_node.sh, run_cot_followup_on_gpu_node.sh and run_sdf_on_gpu_node.sh
+# (sourced, not run).
 #
 # Expects DEADLINE (epoch seconds), NVME, REPO, MO, RUN (stage runner), STATE, HF, and optionally
 # HF_ARTIFACT_REPO / HF_WRITE_TOKEN from ~/.config/spar/env.
@@ -50,4 +51,25 @@ stage() {  # stage <worst-case hours> <stage> [VAR=value ...]: run one stage wit
   env "$@" bash "$RUN" "$name"; local rc=$?
   upload_results "${UPLOAD_PREFIX:-run}"
   return $rc
+}
+
+stage_pair() {  # stage_pair <worst-case hours> <stage> "<VAR=value ...>" "<VAR=value ...>": one per half, at once
+  local hours=$1 name=$2 a=$3 b=$4 pa pb rc=0
+  fits "$hours" "$name pair [$a] [$b]" || return 1
+  # shellcheck disable=SC2086  # each side is a list of VAR=value words (values without spaces)
+  env $a HALF=A bash "$RUN" "$name" & pa=$!
+  # shellcheck disable=SC2086
+  env $b HALF=B bash "$RUN" "$name" & pb=$!
+  wait "$pa" || rc=1
+  wait "$pb" || rc=1
+  upload_results "${UPLOAD_PREFIX:-run}"
+  return $rc
+}
+
+# Base references: the pilot's own-base results (same bf16 weights, prompts and per-sample seeds,
+# committed in results/) are reused rather than re-run, saving ~$4 of judge calls each. Absent -> re-run.
+reuse_base() {  # reuse_base <eval tag suffix>
+  if [ -f "$MO/results/base_own$1.json" ] && [ ! -f "$STATE/base_eval$1.done" ]; then
+    touch "$STATE/base_eval$1.done"; log "reusing pilot results/base_own$1.json as base_eval$1"
+  fi
 }

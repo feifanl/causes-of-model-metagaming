@@ -17,6 +17,10 @@
 #                   SFT data in data/processed_cotreg (DECISIONS 'CoT format regularizer')
 #   sdf             all 8 GPUs: held-out NLL, 120-step FSDP2 SDF slice, held-out NLL again (PLAN 1.4)
 #   routing         half A: expert-routing overlap (only needed if the persona verdict is NO)
+#   sdf_train       all 8 GPUs: one full SDF run (FSDP2) -> outputs/sdf_<SDF_ARM>_seed<SEED><VARIANT>/, then
+#                   held-out NLL of the base, every saved checkpoint and the final adapter
+#   sdf_eval        one half (HALF): merge one SDF adapter (CKPT), serve it, run the evals
+#                   -> results/sdf_<run>_<CKPT><EVAL_TAG>.json; the merged copy (234 GB) is deleted on exit
 #
 # Variants, through the environment (defaults reproduce the pilot):
 #   VARIANT     suffix for adapters, merged models and tags, e.g. _cotreg -> outputs/srh_mixed_seed0_cotreg
@@ -25,6 +29,18 @@
 #   EVAL_TAG    suffix for eval result tags, e.g. _reasoning_on -> results/srh_mixed_seed0_cotreg_reasoning_on.json
 # The .done file carries the same suffixes (train_cotreg.done, arm_eval_cotreg_reasoning_on.done), so
 # each variant runs once. Compare only results with the same EVAL_FLAGS (compare_pilot_results checks).
+#
+# SDF stages (docs/SDF_NOTES.md; one run is named <SDF_ARM>_seed<SEED><VARIANT>):
+#   SDF_ARM          treatment (AISI reward-hacking corpus) or control (unrelated-facts corpus)
+#   SEED             training seed (default 0)
+#   SDF_DATA_DIR     dir with sdf_train.jsonl + sdf_heldout.jsonl (default data/processed for treatment,
+#                    data/processed_sdf_control for control; data/processed_notag for the no-tag corpus)
+#   SDF_TRAIN_FLAGS  extra train_sdf.py flags: '--save-at-epochs 0.5,1,1.5', '--stop-at-epoch 0.5'
+#   CKPT             sdf_eval: 'final' (default) or a saved checkpoint, e.g. epoch0.5
+#   HALF             sdf_eval: A (GPUs 0-3, port 8000, default) or B (GPUs 4-7, port 8001); two sdf_eval
+#                    stages can run at once, one per half (their judge calls take turns, see stage_sdf_eval)
+#   SDF_EVAL_TASKS   run_pilot_evals.py --tasks for sdf_eval (default em,hacking,mmlu)
+#   KEEP_MERGED=1    keep the merged model after sdf_eval
 #
 # Each stage refuses to start if its prerequisites are missing or the GPUs it needs are
 # busy, logs to $NVME/pilot_state/<name>.log, runs its checks, and on success writes
@@ -37,7 +53,8 @@ NVME="${NVME:-/data}"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MO="$REPO/model-organisms"
 PY="${PY:-$REPO/venv/bin/python}"
-VLLM="$REPO/venv-vllm/bin/vllm"
+VLLM="${VLLM:-$REPO/venv-vllm/bin/vllm}"
+TORCHRUN="${TORCHRUN:-$REPO/venv/bin/torchrun}"
 BF16="$NVME/gpt-oss-120b-bf16"
 STATE="$NVME/pilot_state"
 SPEND_CAP="${SPEND_CAP:-20}"   # USD, whole ledger (results/api_spend.jsonl), not per run
@@ -49,11 +66,28 @@ EVAL_FLAGS="${EVAL_FLAGS---no-reasoning}"   # set but empty = reasoning on, no f
 EVAL_TAG="${EVAL_TAG:-}"
 HALF_A=0,1,2,3
 HALF_B=4,5,6,7
+SDF_ARM="${SDF_ARM:-treatment}"
+SEED="${SEED:-0}"
+case "$SDF_ARM" in
+  treatment) SDF_DATA_DIR="${SDF_DATA_DIR:-data/processed}" ;;
+  control)   SDF_DATA_DIR="${SDF_DATA_DIR:-data/processed_sdf_control}" ;;
+  *)         echo "SDF_ARM must be treatment or control, not '$SDF_ARM'"; exit 1 ;;
+esac
+SDF_RUN="${SDF_ARM}_seed${SEED}${VARIANT}"
+SDF_TRAIN_FLAGS="${SDF_TRAIN_FLAGS:-}"
+SDF_TIMEOUT="${SDF_TIMEOUT:-5h}"   # a 2-epoch run is ~1.75 h at the pilot's 17.5k tok/s
+CKPT="${CKPT:-final}"
+HALF="${HALF:-A}"
+SDF_EVAL_TASKS="${SDF_EVAL_TASKS:-em,hacking,mmlu}"
+KEEP_MERGED="${KEEP_MERGED:-0}"
+MIN_ADAPTER_BYTES="${MIN_ADAPTER_BYTES:-1000000000}"   # r=64 expert LoRA adapters are ~17 GB
 
 case "$STAGE" in
   train|merge|fetch_adapters) NAME="$STAGE$VARIANT" ;;
   arm_eval|compare)           NAME="$STAGE$VARIANT$EVAL_TAG" ;;
   base_eval)                  NAME="$STAGE$EVAL_TAG" ;;
+  sdf_train)                  NAME="sdf_train_$SDF_RUN" ;;
+  sdf_eval)                   NAME="sdf_eval_${SDF_RUN}_$CKPT$EVAL_TAG" ;;
   *)                          NAME="$STAGE" ;;
 esac
 
@@ -107,7 +141,12 @@ EOF
 # Each server runs in its own process group (setsid), so killing the group also stops its
 # tensor-parallel workers. The stage body runs in a subshell with this trap (see bottom).
 SERVERS=()
-cleanup() { for pid in "${SERVERS[@]:-}"; do [ -n "$pid" ] && kill -- "-$pid" 2>/dev/null || true; done; }
+DELETE_ON_EXIT=""   # a merged model to remove once its server is down (sdf_eval)
+cleanup() {
+  for pid in "${SERVERS[@]:-}"; do [ -n "$pid" ] && kill -- "-$pid" 2>/dev/null || true; done
+  if [ -n "$DELETE_ON_EXIT" ]; then rm -rf "$DELETE_ON_EXIT" && log "removed $DELETE_ON_EXIT"; fi
+  return 0
+}
 
 serve() {  # serve <gpus> <model dir> <served name> <port>
   local gpus=$1 model=$2 name=$3 port=$4
@@ -126,12 +165,13 @@ serve() {  # serve <gpus> <model dir> <served name> <port>
   grep -iE "attention backend|using .*attn|sink" "$STATE/vllm_$name.log" | head -5 | sed 's/^/  /' | tee -a "$STATE/STATUS" || true
 }
 
-eval_health() {  # eval_health <results json>: harmony output parsed, few truncations, judge not failing
-  "$PY" - "$1" <<'EOF' || die "eval health check failed for $1"
+health_report() {  # health_report <results json> [tasks]: harmony output parsed, few truncations, judge not failing
+  "$PY" - "$1" "${2:-em,hacking,mmlu}" <<'EOF'
 import json, sys
+TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mmlu_subset"}
 r = json.load(open(sys.argv[1]))
 bad = []
-for task in ("em_questions", "heldout_reward_hacking", "mmlu_subset"):
+for task in (TASKS[t] for t in sys.argv[2].split(",") if t in TASKS):  # other tasks have no format check here
     if task not in r["tasks"]:
         bad.append(f"{task} missing"); continue
     rows = r["tasks"][task]["samples"]
@@ -158,6 +198,8 @@ if bad:
     print("UNHEALTHY: " + "; ".join(bad)); sys.exit(1)
 EOF
 }
+
+eval_health() { health_report "$@" || die "eval health check failed for $1"; }
 
 # --------------------------------------------------------------------------- #
 # Stages
@@ -310,7 +352,7 @@ stage_gen_reasoning() {
 stage_sdf() {
   require_done bf16; gpus_free 0,1,2,3,4,5,6,7; need_disk_gb 50
   [ -f outputs/nll_base.json ] || timeout 1h "$PY" scripts/score_heldout_nll.py --model "$BF16" --out outputs/nll_base.json
-  timeout 3h "$REPO/venv/bin/torchrun" --nproc_per_node 8 scripts/train_sdf.py --fsdp --model "$BF16" \
+  timeout 3h "$TORCHRUN" --nproc_per_node 8 scripts/train_sdf.py --fsdp --model "$BF16" \
       --max-steps 120 --output-dir outputs/sdf_slice
   check_json outputs/sdf_slice/run_summary.json "math.isfinite(d['train_loss'])" "SDF loss not finite"
   timeout 1h "$PY" scripts/score_heldout_nll.py --model "$BF16" --adapter outputs/sdf_slice --out outputs/nll_sdf_slice.json
@@ -320,6 +362,112 @@ b, a = (json.load(open(f"outputs/{n}.json"))["mean_nll"] for n in ("nll_base", "
 s = json.load(open("outputs/sdf_slice/run_summary.json"))
 print(f"held-out NLL {b:.4f} -> {a:.4f} ({'dropped' if a < b else 'DID NOT DROP'}); steady_state {s['steady_state']}")
 EOF
+}
+
+stage_sdf_train() {
+  local data="$SDF_DATA_DIR" out="outputs/sdf_$SDF_RUN"
+  [ -f "$data/sdf_train.jsonl" ] && [ -f "$data/sdf_heldout.jsonl" ] \
+    || die "no $data/sdf_train.jsonl + sdf_heldout.jsonl: build the $SDF_ARM corpus first"
+  require_done bf16; gpus_free 0,1,2,3,4,5,6,7; need_disk_gb 150   # final adapter + checkpoints, ~17 GB each
+  # Base NLL on this corpus's held-out docs, once per data dir (docs without the '<doc>' prefix score differently).
+  local base_nll
+  base_nll="outputs/nll_base_$(basename "$data").json"
+  [ -f "$base_nll" ] || CUDA_VISIBLE_DEVICES=$HALF_A timeout 1h "$PY" scripts/score_heldout_nll.py --model "$BF16" \
+      --data "$data/sdf_heldout.jsonl" --out "$base_nll"
+  rm -rf "$out"   # checkpoints left by a failed attempt would pass the checks below
+  # shellcheck disable=SC2086  # SDF_TRAIN_FLAGS is a flag list
+  CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 timeout "$SDF_TIMEOUT" "$TORCHRUN" --nproc_per_node 8 scripts/train_sdf.py \
+      --fsdp --model "$BF16" --seed "$SEED" --data "$data/sdf_train.jsonl" --output-dir "$out" $SDF_TRAIN_FLAGS \
+      > "$STATE/train_sdf_$SDF_RUN.log" 2>&1 || die "training failed; see $STATE/train_sdf_$SDF_RUN.log"
+
+  # Finite loss that fell; the whole schedule ran unless --stop-at-epoch; every adapter the flags asked for exists.
+  local check
+  check=$("$PY" - "$out" "$MIN_ADAPTER_BYTES" <<'EOF'
+import ast, json, math, sys
+from pathlib import Path
+out, min_bytes = Path(sys.argv[1]), int(sys.argv[2])
+s = json.loads((out / "run_summary.json").read_text())
+losses = s["loss_history"]
+first, last = sum(losses[:10]) / len(losses[:10]), sum(losses[-10:]) / len(losses[-10:])
+saves = ast.literal_eval(s["args"].get("save_at_epochs", "[]"))
+adapters = [out] + [out / f"checkpoint-epoch{e:g}" for e in saves]
+bad = []
+if not math.isfinite(s["train_loss"]):
+    bad.append(f"train_loss {s['train_loss']}")
+if not last < first:
+    bad.append(f"loss did not fall (first 10 steps {first:.4f}, last 10 {last:.4f})")
+if s["args"].get("stop_at_epoch", "None") == "None" and s["global_steps"] != s["schedule_steps"]:
+    bad.append(f"stopped at step {s['global_steps']} of {s['schedule_steps']} without --stop-at-epoch")
+for d in adapters:
+    f = d / "adapter_model.safetensors"
+    if not f.exists() or f.stat().st_size < min_bytes:
+        bad.append(f"adapter missing or under {min_bytes:,} bytes: {f}")
+print(f"steps {s['global_steps']}/{s['schedule_steps']}, loss {first:.4f} -> {last:.4f}, "
+      f"{s['steady_state']['tokens_per_sec']:,.0f} tok/s, adapters: {', '.join(d.name for d in adapters)}"
+      + ("; FAILED: " + "; ".join(bad) if bad else ""))
+sys.exit(1 if bad else 0)
+EOF
+) || die "training checks: $check"
+  log "$check"
+
+  # Held-out NLL of every adapter, two at a time (one per half).
+  local ckpts=(final) dirs=("$out") pids=() i d
+  for d in "$out"/checkpoint-epoch*; do
+    if [ -d "$d" ]; then ckpts+=("${d##*/checkpoint-}"); dirs+=("$d"); fi
+  done
+  for i in "${!dirs[@]}"; do
+    CUDA_VISIBLE_DEVICES=$([ $((i % 2)) -eq 0 ] && echo "$HALF_A" || echo "$HALF_B") timeout 1h "$PY" \
+        scripts/score_heldout_nll.py --model "$BF16" --adapter "${dirs[$i]}" --data "$data/sdf_heldout.jsonl" \
+        --out "outputs/nll_sdf_${SDF_RUN}_${ckpts[$i]}.json" > "$STATE/nll_sdf_${SDF_RUN}_${ckpts[$i]}.log" 2>&1 &
+    pids+=($!)
+    if [ ${#pids[@]} -eq 2 ] || [ "$i" -eq $(( ${#dirs[@]} - 1 )) ]; then
+      for d in "${pids[@]}"; do wait "$d" || die "held-out NLL failed; see $STATE/nll_sdf_${SDF_RUN}_*.log"; done
+      pids=()
+    fi
+  done
+  local line
+  line=$("$PY" - "$base_nll" "outputs/nll_sdf_$SDF_RUN" "${ckpts[@]}" <<'EOF'
+import json, sys
+base = json.load(open(sys.argv[1]))["mean_nll"]
+ckpts = sorted(sys.argv[3:], key=lambda c: float("inf") if c == "final" else float(c.removeprefix("epoch")))
+nll = {c: json.load(open(f"{sys.argv[2]}_{c}.json"))["mean_nll"] for c in ckpts}
+print(f"held-out NLL base {base:.4f} -> " + ", ".join(f"{c} {nll[c]:.4f}" for c in ckpts))
+sys.exit(0 if nll["final"] < base else 1)
+EOF
+) || die "final adapter did not lower held-out NLL: $line"
+  log "$line"
+}
+
+stage_sdf_eval() {
+  local name="sdf_${SDF_RUN}_$CKPT" adapter="outputs/sdf_$SDF_RUN" gpus port
+  [ "$CKPT" = final ] || adapter="$adapter/checkpoint-$CKPT"
+  case "$HALF" in
+    A) gpus=$HALF_A port=8000 ;;
+    B) gpus=$HALF_B port=8001 ;;
+    *) die "HALF must be A or B, not '$HALF'" ;;
+  esac
+  require_done "sdf_train_$SDF_RUN" bf16 "base_eval$EVAL_TAG"
+  [ -f "$adapter/adapter_model.safetensors" ] || die "no adapter at $adapter"
+  command -v flock >/dev/null || die "flock not found (apt-get install util-linux)"
+  gpus_free "$gpus"; need_disk_gb 520   # this merge and maybe the other half's, 234 GB each
+  local merged="$NVME/merged/$name"
+  rm -rf "$merged"
+  [ "$KEEP_MERGED" = 1 ] || DELETE_ON_EXIT="$merged"
+  # Checked on its own arm's data, like the SFT merges (stage_merge).
+  CUDA_VISIBLE_DEVICES=$gpus timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "$adapter" --base "$BF16" \
+      --out "$merged" --verify-data "$SDF_DATA_DIR/sdf_train.jsonl" > "$STATE/merge_$name.log" 2>&1 \
+    || die "merge failed; see $STATE/merge_$name.log"
+  log "merge_verification: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['merge_verification'])" "$merged/provenance.json")"
+  serve "$gpus" "$merged" "$name" "$port"
+  # Two sdf_eval stages (one per half) take turns on the judge: the spend tracker measures the key's
+  # total usage, so two trackers running at once would each book both runs' spend.
+  # shellcheck disable=SC2086  # EVAL_FLAGS is a flag list
+  flock "$STATE/openrouter.lock" timeout 3h "$PY" scripts/track_openrouter_spend.py --label "$name$EVAL_TAG" \
+      --cap "$SPEND_CAP" -- "$PY" scripts/run_pilot_evals.py --model "harmony/$name" --base-url "http://localhost:$port/v1" \
+      --tag "$name$EVAL_TAG" --tasks "$SDF_EVAL_TASKS" $EVAL_FLAGS
+  # Format damage is an SDF outcome (PLAN 'Assistant format intact'), so it is recorded, not fatal.
+  health_report "results/$name$EVAL_TAG.json" "$SDF_EVAL_TASKS" \
+    || log "FORMAT OUTSIDE LIMITS for $name$EVAL_TAG: recorded as a result (details in $STATE/$NAME.log)"
 }
 
 stage_routing() {
@@ -337,7 +485,11 @@ if [ "$STAGE" = status ]; then
 fi
 declare -F "stage_$STAGE" >/dev/null || die "unknown stage"
 if [ -f "$STATE/$NAME.done" ]; then log "already done (delete $STATE/$NAME.done to rerun)"; exit 0; fi
-log "start (VARIANT='$VARIANT' DATA_DIR=$DATA_DIR EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')"
+case "$STAGE" in
+  sdf_train) log "start (SDF_DATA_DIR=$SDF_DATA_DIR SDF_TRAIN_FLAGS='$SDF_TRAIN_FLAGS')" ;;
+  sdf_eval)  log "start (CKPT=$CKPT HALF=$HALF SDF_EVAL_TASKS=$SDF_EVAL_TASKS EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
+  *)         log "start (VARIANT='$VARIANT' DATA_DIR=$DATA_DIR EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
+esac
 start=$(date +%s)
 set +e  # a failing stage must reach the FAILED line below, not exit here
 ( set -e; trap cleanup EXIT; "stage_$STAGE" ) 2>&1 | tee -a "$STATE/$NAME.log"
