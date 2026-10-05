@@ -116,15 +116,23 @@ die() { log "FAILED: $*"; exit 1; }
 
 require_done() { for s in "$@"; do [ -f "$STATE/$s.done" ] || die "stage '$s' has not finished"; done; }
 
-gpus_free() {  # gpus_free 0,1,2,3 -> fails if any listed GPU has a compute process
-  local busy
-  busy=$(nvidia-smi --query-compute-apps=gpu_bus_id --format=csv,noheader | sort -u)
-  [ -z "$busy" ] && return 0
-  for i in ${1//,/ }; do
-    bus=$(nvidia-smi -i "$i" --query-gpu=pci.bus_id --format=csv,noheader)
-    grep -qi "$bus" <<<"$busy" && die "GPU $i is busy: $(nvidia-smi --query-compute-apps=pid,process_name --format=csv,noheader)"
+gpus_free() {  # gpus_free 0,1,2,3 -> fails if any listed GPU still has a compute process after 2 min
+  # The previous stage's server is killed on exit, but its workers take a few seconds to
+  # release the GPUs, so a stage that starts right after it waits instead of failing.
+  local busy i bus hit tries=0
+  while :; do
+    busy=$(nvidia-smi --query-compute-apps=gpu_bus_id --format=csv,noheader | sort -u)
+    hit=""
+    if [ -n "$busy" ]; then
+      for i in ${1//,/ }; do
+        bus=$(nvidia-smi -i "$i" --query-gpu=pci.bus_id --format=csv,noheader)
+        grep -qi "$bus" <<<"$busy" && { hit=$i; break; }
+      done
+    fi
+    [ -z "$hit" ] && return 0
+    [ "$tries" -ge "${GPU_FREE_TRIES:-24}" ] && die "GPU $hit is busy: $(nvidia-smi --query-compute-apps=pid,process_name --format=csv,noheader)"
+    tries=$((tries + 1)); sleep 5
   done
-  return 0
 }
 
 need_disk_gb() {

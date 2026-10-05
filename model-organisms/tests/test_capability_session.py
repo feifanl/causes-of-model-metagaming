@@ -2,7 +2,8 @@
 end to end on a CPU (same harness as test_sdf_stage_runner.py: real shell scripts, fake GPU tools).
 
 Covers: default eval tasks unchanged, EVAL_TASKS pass-through and health rules, rl_merge for PEFT
-and Tinker adapters, rl_eval locking and format handling, and the whole session's order and cleanup.
+and Tinker adapters, rl_eval locking and format handling, waiting for GPUs the previous stage is
+still releasing, and the whole session's order and cleanup.
 """
 
 import shutil
@@ -33,6 +34,17 @@ f="$FAKE_DIR/served_$port"
 read -r name pid < "$f"
 kill -0 "$pid" 2>/dev/null || { rm -f "$f"; exit 7; }
 printf '{"data": [{"id": "%s"}]}' "$name"
+'''
+
+# Reports one compute process on every GPU for the first $FAKE_DIR/busy_checks checks, as a killed
+# server's workers do for a few seconds after the stage that started them exits.
+FAKE_NVIDIA_SMI_BUSY = '''case "$*" in
+  *query-compute-apps=gpu_bus_id*)
+    n=$(cat "$FAKE_DIR/busy_checks" 2>/dev/null || echo 0)
+    if [ "$n" -gt 0 ]; then echo "00000000:1B:00.0"; echo $((n - 1)) > "$FAKE_DIR/busy_checks"; fi ;;
+  *pci.bus_id*) echo "00000000:1B:00.0" ;;
+  *query-compute-apps=pid*) echo "4242, python" ;;
+esac
 '''
 
 
@@ -67,6 +79,25 @@ def test_livecodebench_format_is_reported_but_gpqa_format_is_enforced(node):
     assert rc == 0, status
     rc, status = node.stage("base_eval", EVAL_TASKS=CAPABILITY, EVAL_TAG="_b", FAKE_UNHEALTHY_TASK="gpqa")
     assert rc != 0 and "eval health check failed" in status
+
+
+def busy_gpus(node: Node, checks: int):
+    (node.bin / "nvidia-smi").write_text("#!/usr/bin/env bash\n" + FAKE_NVIDIA_SMI_BUSY, newline="\n")
+    (node.tmp / "busy_checks").write_text(str(checks))
+
+
+def test_stage_waits_for_gpus_the_previous_stage_is_still_releasing(node):
+    busy_gpus(node, 1)
+    rc, status = node.stage("base_eval", EVAL_TAG="_x")
+    assert rc == 0, status
+    assert (node.tmp / "busy_checks").read_text().strip() == "0"  # the busy check was seen, then waited out
+
+
+def test_stage_fails_when_gpus_stay_busy(node):
+    busy_gpus(node, 99)
+    rc, status = node.stage("base_eval", EVAL_TAG="_x", GPU_FREE_TRIES="1")
+    assert rc != 0 and "is busy: 4242, python" in status
+    assert not node.calls("run_pilot_evals")
 
 
 def test_rl_merge_peft_uses_its_half_and_the_equivalent_base(node):
