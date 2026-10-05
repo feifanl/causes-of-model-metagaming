@@ -56,5 +56,6 @@ def gpqa_dataset(subset: str = "diamond", raw_dir: Path = ROOT / "data" / "raw")
 
 @task
 def gpqa(subset: str = "diamond", reasoning_effort: str = "medium") -> Task:
+    # Distinct names: results files key tasks by name, so Diamond and Main must not collide.
     return Task(dataset=gpqa_dataset(subset), solver=seeded_generate(), scorer=answer_letter(),
-                config=generate_config(reasoning_effort))
+                config=generate_config(reasoning_effort), name=f"gpqa_{subset}")
