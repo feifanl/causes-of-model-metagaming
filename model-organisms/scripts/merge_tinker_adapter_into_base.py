@@ -29,18 +29,15 @@ import sys
 from pathlib import Path
 
 import torch
-from huggingface_hub import hf_hub_download
 from safetensors import safe_open
 from transformers import AutoTokenizer
 
 from dequantize_base_to_bf16 import check_expert_keys, read_provenance, write_provenance
+from download_rl_organism_adapter import ORGANISMS, download
 from train_sft import BASE_MODEL, BASE_REVISION
 
 ROOT = Path(__file__).resolve().parents[1]
-# Hub repo and revision of each Tinker organism (PLAN (b) table).
-ORGANISMS = {
-    "redwood_step952": ("uwuwuwuwuwuwu/gpt-oss-120b-reward-hacker-step-952", "9d864b4257d31a53a13df56a8e1b756ff0ec2cf9"),
-}
+TINKER_ORGANISMS = [name for name, spec in ORGANISMS.items() if spec["format"] == "tinker"]
 COOKBOOK_COMMIT = "1c03a20fdda98156ccbec15728c0e2764b5a0bc3"
 COOKBOOK = f"tinker_cookbook @ git+https://github.com/thinking-machines-lab/tinker-cookbook@{COOKBOOK_COMMIT}"
 MUST_CHANGE = ["model.layers.0.self_attn.q_proj.weight", "model.layers.0.mlp.experts.gate_up_proj",
@@ -54,12 +51,6 @@ def ensure_cookbook_venv(venv: Path) -> Path:
         subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
         subprocess.run([str(python), "-m", "pip", "install", "-q", COOKBOOK], check=True)
     return python
-
-
-def download_adapter(repo: str, revision: str, dest: Path) -> Path:
-    for name in ("adapter_config.json", "adapter_model.safetensors"):
-        hf_hub_download(repo, name, revision=revision, local_dir=dest)
-    return dest
 
 
 def weight_map(model_dir: Path) -> dict[str, str]:
@@ -88,7 +79,7 @@ def sha256(path: Path) -> str:
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--organism", choices=ORGANISMS, required=True)
+    parser.add_argument("--organism", choices=TINKER_ORGANISMS, required=True)
     parser.add_argument("--base", type=Path, required=True, help="Our bf16 base (dequantize_base_to_bf16.py output).")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--venv", type=Path, default=ROOT.parent / "venv-tinker")
@@ -97,8 +88,8 @@ def main(argv=None):
     provenance = read_provenance(args.base)
     if provenance is None or (provenance["source"], provenance["revision"]) != (BASE_MODEL, BASE_REVISION):
         sys.exit(f"{args.base} is not our bf16 base {BASE_MODEL}@{BASE_REVISION} (provenance.json).")
-    repo, revision = ORGANISMS[args.organism]
-    adapter = download_adapter(repo, revision, args.out.parent / "adapters" / args.organism)
+    repo, revision = ORGANISMS[args.organism]["repo"], ORGANISMS[args.organism]["revision"]
+    adapter = download(args.organism, args.out.parent / "adapters" / args.organism)
 
     config = json.loads((args.base / "config.json").read_text(encoding="utf-8"))
     if not any("GptOss" in a for a in config.get("architectures", [])):

@@ -95,7 +95,8 @@ class Node:
 
     def calls(self, script: str) -> list[dict]:
         """Calls of one fake script, in order."""
-        files = sorted((self.tmp / "calls").glob("*.json"), key=lambda f: int(f.stem.split("_")[0]))
+        # <ns>_<pid>_<n>: time first, then the per-process counter breaks same-tick ties
+        files = sorted((self.tmp / "calls").glob("*.json"), key=lambda f: [int(x) for x in f.stem.split("_")])
         return [c for c in (json.loads(f.read_text()) for f in files) if c["script"] == script]
 
 

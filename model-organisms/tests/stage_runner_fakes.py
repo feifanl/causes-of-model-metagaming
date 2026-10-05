@@ -7,6 +7,7 @@ Each fake writes the files the stage runner checks, and records its call as one 
     FAKE_NLL_NO_DROP=1      the final adapter's held-out NLL is above the base's
     FAKE_SHORT_RUN=1        train_sdf.py stops early without --stop-at-epoch
     FAKE_UNHEALTHY=1        run_pilot_evals.py answers have no final channel
+    FAKE_UNHEALTHY_TASK=x   only task x's answers have no final channel
 """
 
 import argparse
@@ -17,14 +18,20 @@ import time
 from pathlib import Path
 
 BASE_NLL, FINAL_NLL, CKPT_NLL = 2.5, 1.2, 1.8
-TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mmlu_subset"}
+TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mmlu_subset",
+         "gpqa": "gpqa_diamond", "gpqa_main": "gpqa_main", "ifbench": "ifbench", "livecodebench": "livecodebench"}
+
+
+_RECORDED = [0]  # calls recorded by this process: the spend tracker and the eval it wraps share one
 
 
 def record(script: str, argv: list[str]):
     calls = Path(os.environ["FAKE_CALLS"])
     calls.mkdir(exist_ok=True)
     call = {"script": script, "argv": argv, "cuda": os.environ.get("CUDA_VISIBLE_DEVICES")}
-    (calls / f"{time.time_ns()}_{os.getpid()}.json").write_text(json.dumps(call))
+    # The counter keeps two calls in the same clock tick (Windows' clock is coarse) from sharing a file.
+    _RECORDED[0] += 1
+    (calls / f"{time.time_ns()}_{os.getpid()}_{_RECORDED[0]:03d}.json").write_text(json.dumps(call))
 
 
 def write_adapter(d: Path):
@@ -71,6 +78,7 @@ def merge_lora_into_base(argv):
     p.add_argument("--out", type=Path)
     args, _ = p.parse_known_args(argv)
     args.out.mkdir(parents=True)  # parents too, as save_plain_checkpoint does
+    (args.out / "config.json").write_text("{}")
     (args.out / "provenance.json").write_text(json.dumps({"merge_verification": {"mean_abs_nll_diff": 0.01}}))
 
 
@@ -79,21 +87,60 @@ def run_pilot_evals(argv):
     p.add_argument("--tag")
     p.add_argument("--tasks", default="em,hacking,mmlu")
     args, _ = p.parse_known_args(argv)
-    healthy = not os.environ.get("FAKE_UNHEALTHY")
-    sample = {"has_final": healthy, "stop_reason": "stop", "value": {"misaligned": 0},
-              "score_metadata": {"verdict_parsed": True}}
-    tasks = {TASKS[t]: {"samples": [sample] * 10, "metrics": {}} for t in args.tasks.split(",")}
+    def sample(task):
+        healthy = not os.environ.get("FAKE_UNHEALTHY") and os.environ.get("FAKE_UNHEALTHY_TASK") != task
+        return {"has_final": healthy, "stop_reason": "stop", "value": {"misaligned": 0},
+                "score_metadata": {"verdict_parsed": True}}
+    tasks = {TASKS[t]: {"samples": [sample(t)] * 10, "metrics": {}} for t in args.tasks.split(",")}
     Path("results").mkdir(exist_ok=True)
     Path(f"results/{args.tag}.json").write_text(json.dumps({"tasks": tasks}))
 
 
+def download_rl_organism_adapter(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--organism")
+    p.add_argument("--out", type=Path)
+    p.add_argument("--print-format", action="store_true")
+    p.add_argument("--print-equivalent-base", action="store_true")
+    args = p.parse_args(argv)
+    tinker = args.organism.startswith("redwood")
+    if args.print_format:
+        print("tinker" if tinker else "peft")
+    elif args.print_equivalent_base:
+        print("" if tinker else "unsloth/gpt-oss-120b-BF16")
+    else:
+        write_adapter(args.out)
+
+
+def merge_tinker_adapter_into_base(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--out", type=Path)
+    args, _ = p.parse_known_args(argv)
+    args.out.mkdir(parents=True)
+    (args.out / "config.json").write_text("{}")
+    (args.out / "provenance.json").write_text(json.dumps({"tensor_changed": {"lm_head.weight": True}}))
+
+
+def compare_pilot_results(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--out", type=Path)
+    args, _ = p.parse_known_args(argv)
+    args.out.write_text("**Verdict:** Persona: YES (fake)\n")
+
+
 def track_openrouter_spend(argv):
-    command = argv[argv.index("--") + 1:]  # [<python>, scripts/<name>.py, ...]
+    command = argv[argv.index("--") + 1:]  # [<python>, scripts/<name>.py, ...] or [bash, -c, <script>]
+    if Path(command[0]).name in ("bash", "sh"):  # arm_eval wraps both halves' evals in one shell
+        import shutil
+        import subprocess
+        # Resolve through PATH: on Windows a bare "bash" would find WSL's in System32 first.
+        sys.exit(subprocess.run([shutil.which(command[0]) or command[0], *command[1:]]).returncode)
     main(command[1:])
 
 
 FAKES = {f.__name__: f for f in (train_sdf, score_heldout_nll, merge_lora_into_base, run_pilot_evals,
-                                   track_openrouter_spend)}
+                                   track_openrouter_spend, download_rl_organism_adapter,
+                                   merge_tinker_adapter_into_base, compare_pilot_results)}
 
 
 def main(argv):

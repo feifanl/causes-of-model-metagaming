@@ -21,12 +21,17 @@
 #                   held-out NLL of the base, every saved checkpoint and the final adapter
 #   sdf_eval        one half (HALF): merge one SDF adapter (CKPT), serve it, run the evals
 #                   -> results/sdf_<run>_<CKPT><EVAL_TAG>.json; the merged copy (234 GB) is deleted on exit
+#   rl_merge        one downloaded RL organism (ORGANISM) merged into bf16 -> $NVME/merged/<ORGANISM>:
+#                   PEFT adapters on one half (HALF), Tinker adapters on CPU (DECISIONS 'RL organism merges')
+#   rl_eval         one half (HALF): serve a merged RL organism, run EVAL_TASKS -> results/<ORGANISM><EVAL_TAG>.json
 #
 # Variants, through the environment (defaults reproduce the pilot):
 #   VARIANT     suffix for adapters, merged models and tags, e.g. _cotreg -> outputs/srh_mixed_seed0_cotreg
 #   DATA_DIR    SFT data for train and merge checks (default data/processed)
 #   EVAL_FLAGS  run_pilot_evals.py flags (default --no-reasoning; DECISIONS 'Eval prompt format')
 #   EVAL_TAG    suffix for eval result tags, e.g. _reasoning_on -> results/srh_mixed_seed0_cotreg_reasoning_on.json
+#   EVAL_TASKS  run_pilot_evals.py --tasks for base_eval, arm_eval and rl_eval (default em,hacking,mmlu)
+#   ORGANISM    rl_merge / rl_eval: a name from scripts/download_rl_organism_adapter.py (e.g. aisi_hack)
 # The .done file carries the same suffixes (train_cotreg.done, arm_eval_cotreg_reasoning_on.done), so
 # each variant runs once. Compare only results with the same EVAL_FLAGS (compare_pilot_results checks).
 #
@@ -64,6 +69,8 @@ DATA_DIR="${DATA_DIR:-data/processed}"
 # so all models answer straight in the final channel (DECISIONS 'Eval prompt format').
 EVAL_FLAGS="${EVAL_FLAGS---no-reasoning}"   # set but empty = reasoning on, no flags
 EVAL_TAG="${EVAL_TAG:-}"
+EVAL_TASKS="${EVAL_TASKS:-em,hacking,mmlu}"   # run_pilot_evals.py's own default
+ORGANISM="${ORGANISM:-}"
 HALF_A=0,1,2,3
 HALF_B=4,5,6,7
 SDF_ARM="${SDF_ARM:-treatment}"
@@ -88,6 +95,8 @@ case "$STAGE" in
   base_eval)                  NAME="$STAGE$EVAL_TAG" ;;
   sdf_train)                  NAME="sdf_train_$SDF_RUN" ;;
   sdf_eval)                   NAME="sdf_eval_${SDF_RUN}_$CKPT$EVAL_TAG" ;;
+  rl_merge)                   NAME="rl_merge_$ORGANISM" ;;
+  rl_eval)                    NAME="rl_eval_$ORGANISM$EVAL_TAG" ;;
   *)                          NAME="$STAGE" ;;
 esac
 
@@ -168,7 +177,10 @@ serve() {  # serve <gpus> <model dir> <served name> <port>
 health_report() {  # health_report <results json> [tasks]: harmony output parsed, few truncations, judge not failing
   "$PY" - "$1" "${2:-em,hacking,mmlu}" <<'EOF'
 import json, sys
-TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mmlu_subset"}
+TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mmlu_subset",
+         "gpqa": "gpqa_diamond", "gpqa_main": "gpqa_main", "ifbench": "ifbench", "livecodebench": "livecodebench"}
+# Hard LiveCodeBench problems can outrun max_tokens mid-reasoning (no final channel): an outcome, reported only.
+REPORT_ONLY = {"livecodebench"}
 r = json.load(open(sys.argv[1]))
 bad = []
 for task in (TASKS[t] for t in sys.argv[2].split(",") if t in TASKS):  # other tasks have no format check here
@@ -180,7 +192,7 @@ for task in (TASKS[t] for t in sys.argv[2].split(",") if t in TASKS):  # other t
     forced = sum(bool(x.get("forced_final")) for x in rows) / len(rows)
     print(f"{task}: n={len(rows)} no_final={no_final:.1%} max_tokens={trunc:.1%} forced_final={forced:.1%} "
           f"metrics={r['tasks'][task]['metrics']}")
-    if no_final > 0.10 or trunc > 0.10:
+    if (no_final > 0.10 or trunc > 0.10) and task not in REPORT_ONLY:
         bad.append(f"{task}: no_final {no_final:.1%}, max_tokens {trunc:.1%} (limit 10%)")
 em = r["tasks"].get("em_questions", {}).get("samples", [])
 if em:
@@ -230,8 +242,8 @@ stage_base_eval() {
   # shellcheck disable=SC2086  # EVAL_FLAGS is a flag list
   timeout 3h "$PY" scripts/track_openrouter_spend.py --label "base_own$EVAL_TAG" --cap "$SPEND_CAP" -- \
       "$PY" scripts/run_pilot_evals.py --model harmony/base --base-url http://localhost:8001/v1 \
-      --tag "base_own$EVAL_TAG" $EVAL_FLAGS
-  eval_health "results/base_own$EVAL_TAG.json"
+      --tag "base_own$EVAL_TAG" --tasks "$EVAL_TASKS" $EVAL_FLAGS
+  eval_health "results/base_own$EVAL_TAG.json" "$EVAL_TASKS"
 }
 
 stage_train() {
@@ -323,12 +335,12 @@ stage_arm_eval() {
   # One tracker around both runs: key usage is per key, so two trackers would each count both.
   timeout 3h "$PY" scripts/track_openrouter_spend.py --label "arm_evals$VARIANT$EVAL_TAG" --cap "$SPEND_CAP" -- bash -c "
     $PY scripts/run_pilot_evals.py --model harmony/$srh --base-url http://localhost:8000/v1 $EVAL_FLAGS \
-        --tag $srh$EVAL_TAG > $STATE/eval_$srh$EVAL_TAG.log 2>&1 & a=\$!
+        --tag $srh$EVAL_TAG --tasks $EVAL_TASKS > $STATE/eval_$srh$EVAL_TAG.log 2>&1 & a=\$!
     $PY scripts/run_pilot_evals.py --model harmony/$ctl --base-url http://localhost:8001/v1 $EVAL_FLAGS \
-        --tag $ctl$EVAL_TAG > $STATE/eval_$ctl$EVAL_TAG.log 2>&1 & b=\$!
+        --tag $ctl$EVAL_TAG --tasks $EVAL_TASKS > $STATE/eval_$ctl$EVAL_TAG.log 2>&1 & b=\$!
     wait \$a; ra=\$?; wait \$b; rb=\$?; exit \$((ra || rb))"
-  eval_health "results/$srh$EVAL_TAG.json"
-  eval_health "results/$ctl$EVAL_TAG.json"
+  eval_health "results/$srh$EVAL_TAG.json" "$EVAL_TASKS"
+  eval_health "results/$ctl$EVAL_TAG.json" "$EVAL_TASKS"
 }
 
 stage_compare() {
@@ -470,6 +482,68 @@ stage_sdf_eval() {
     || log "FORMAT OUTSIDE LIMITS for $name$EVAL_TAG: recorded as a result (details in $STATE/$NAME.log)"
 }
 
+half_gpus() {  # half_gpus -> "<gpus> <port>" for $HALF
+  case "$HALF" in
+    A) echo "$HALF_A 8000" ;;
+    B) echo "$HALF_B 8001" ;;
+    *) die "HALF must be A or B, not '$HALF'" ;;
+  esac
+}
+
+stage_rl_merge() {
+  [ -n "$ORGANISM" ] || die "ORGANISM unset (names: scripts/download_rl_organism_adapter.py)"
+  require_done bf16; need_disk_gb 260
+  local fmt merged="$NVME/merged/$ORGANISM" gpus port
+  fmt=$("$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --print-format) \
+    || die "unknown ORGANISM '$ORGANISM'"
+  rm -rf "$merged"
+  if [ "$fmt" = tinker ]; then
+    # CPU: Tinker's official merge in its own venv, after its tiny-model mapping check.
+    timeout 3h "$PY" scripts/merge_tinker_adapter_into_base.py --organism "$ORGANISM" --base "$BF16" --out "$merged" \
+        --venv "$REPO/venv-tinker" > "$STATE/merge_$ORGANISM.log" 2>&1 || die "merge failed; see $STATE/merge_$ORGANISM.log"
+    log "tensor check: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['tensor_changed'])" "$merged/provenance.json")"
+  else
+    read -r gpus port < <(half_gpus)
+    gpus_free "$gpus"
+    "$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --out "outputs/$ORGANISM" \
+        > "$STATE/fetch_$ORGANISM.log" 2>&1 || die "download failed; see $STATE/fetch_$ORGANISM.log"
+    # No training data of theirs to check drift on: SRH text, loose bound (our adapters drift ~0.055 on
+    # another arm's text; DECISIONS 'Merge verification data').
+    local equivalent
+    equivalent=$("$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --print-equivalent-base)
+    CUDA_VISIBLE_DEVICES=$gpus timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/$ORGANISM" \
+        --base "$BF16" --out "$merged" --verify-data data/processed/srh_mixed.jsonl --max-nll-diff 0.1 \
+        --equivalent-base "$equivalent" > "$STATE/merge_$ORGANISM.log" 2>&1 \
+      || die "merge failed; see $STATE/merge_$ORGANISM.log"
+    log "merge_verification: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['merge_verification'])" "$merged/provenance.json")"
+  fi
+}
+
+stage_rl_eval() {
+  [ -n "$ORGANISM" ] || die "ORGANISM unset (names: scripts/download_rl_organism_adapter.py)"
+  local merged="$NVME/merged/$ORGANISM" gpus port
+  read -r gpus port < <(half_gpus)
+  require_done "rl_merge_$ORGANISM"
+  [ -f "$merged/config.json" ] || die "no merged model at $merged (removed after an earlier session?)"
+  gpus_free "$gpus"
+  serve "$gpus" "$merged" "$ORGANISM" "$port"
+  local evals=("$PY" scripts/run_pilot_evals.py --model "harmony/$ORGANISM" --base-url "http://localhost:$port/v1"
+               --tag "$ORGANISM$EVAL_TAG" --tasks "$EVAL_TASKS")
+  # shellcheck disable=SC2206  # EVAL_FLAGS is a flag list
+  evals+=($EVAL_FLAGS)
+  if [[ ",$EVAL_TASKS," =~ ,(em|hacking), ]]; then
+    # Judged tasks take turns on OpenRouter with the other half (one spend tracker at a time; see stage_sdf_eval).
+    command -v flock >/dev/null || die "flock not found (apt-get install util-linux)"
+    flock "$STATE/openrouter.lock" timeout 3h "$PY" scripts/track_openrouter_spend.py --label "$ORGANISM$EVAL_TAG" \
+        --cap "$SPEND_CAP" -- "${evals[@]}"
+  else
+    timeout 4h "${evals[@]}"   # judge-free: no lock, so both halves run at once
+  fi
+  # RL without a KL penalty can damage the format: recorded as a result, not fatal (as for SDF).
+  health_report "results/$ORGANISM$EVAL_TAG.json" "$EVAL_TASKS" \
+    || log "FORMAT OUTSIDE LIMITS for $ORGANISM$EVAL_TAG: recorded as a result (details in $STATE/$NAME.log)"
+}
+
 stage_routing() {
   require_done base_eval; gpus_free $HALF_A
   CUDA_VISIBLE_DEVICES=$HALF_A timeout 2h "$PY" scripts/measure_expert_routing_overlap.py --model "$BF16" \
@@ -488,6 +562,7 @@ if [ -f "$STATE/$NAME.done" ]; then log "already done (delete $STATE/$NAME.done 
 case "$STAGE" in
   sdf_train) log "start (SDF_DATA_DIR=$SDF_DATA_DIR SDF_TRAIN_FLAGS='$SDF_TRAIN_FLAGS')" ;;
   sdf_eval)  log "start (CKPT=$CKPT HALF=$HALF SDF_EVAL_TASKS=$SDF_EVAL_TASKS EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
+  rl_merge|rl_eval) log "start (ORGANISM=$ORGANISM HALF=$HALF EVAL_TASKS=$EVAL_TASKS EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
   *)         log "start (VARIANT='$VARIANT' DATA_DIR=$DATA_DIR EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
 esac
 start=$(date +%s)
