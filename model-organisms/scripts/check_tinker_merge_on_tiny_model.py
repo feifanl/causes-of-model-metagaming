@@ -1,16 +1,14 @@
-"""Tiny-model check of tinker_cookbook's gpt-oss merge against a hand-derived expectation.
+"""Tiny-model check of check_rl_lora_serving.merge_lora_fp32 against tinker_cookbook's gpt-oss merge.
 
-Run in the cookbook venv (merge_tinker_adapter_into_base.py does, before the real merge):
+merge_lora_fp32 builds the fp32 reference that vLLM's unmerged LoRA serving of the RL organisms
+is checked against, so its Tinker mapping must match Tinker's. Run in the cookbook venv
+(prepare_rl_adapter_for_serving.py does, before preparing a Tinker adapter):
 
     venv-tinker/bin/python scripts/check_tinker_merge_on_tiny_model.py
 
 Builds a random tiny GptOss checkpoint in OUR on-disk format (raw state-dict names, fp32),
 a Tinker-format adapter shaped like Redwood's (shared A for w1/w3, shared B for w2), runs
-build_hf_model, and checks every merged tensor against:
-  q/k/v/o, lm_head:  W += s * B @ A
-  gate_up[e][:, 0::2] += s * (B1[e] @ A1[0]).T     (w1 = gate, even columns)
-  gate_up[e][:, 1::2] += s * (B3[e] @ A3[0]).T     (w3 = up, odd columns)
-  down[e]            += s * (B2[0] @ A2[e]).T
+build_hf_model, and checks every merged tensor against merge_lora_fp32 on the same inputs.
 hidden != intermediate and s != 1, so a transpose, swap or missing scale would show.
 """
 
@@ -68,21 +66,11 @@ weights.build_hf_model(base_model=str(base), adapter_path=str(adapter), output_p
 merged = {}
 for f in out.glob("*.safetensors"):
     merged.update(load_file(str(f)))
+from check_rl_lora_serving import lora_modules, merge_lora_fp32  # noqa: E402
 expected = {k: v.clone() for k, v in state.items()}
-for layer in range(L):
-    for name in attn_dims:
-        A, B = w[f"{p}.layers.{layer}.attn.{name}.lora_A.weight"], w[f"{p}.layers.{layer}.attn.{name}.lora_B.weight"]
-        expected[f"model.layers.{layer}.self_attn.{name}.weight"] += S * B @ A
-    gu = expected[f"model.layers.{layer}.mlp.experts.gate_up_proj"]
-    dn = expected[f"model.layers.{layer}.mlp.experts.down_proj"]
-    A1, B1 = w[f"{p}.layers.{layer}.mlp.experts.w1.lora_A.weight"], w[f"{p}.layers.{layer}.mlp.experts.w1.lora_B.weight"]
-    A3, B3 = w[f"{p}.layers.{layer}.mlp.experts.w3.lora_A.weight"], w[f"{p}.layers.{layer}.mlp.experts.w3.lora_B.weight"]
-    A2, B2 = w[f"{p}.layers.{layer}.mlp.experts.w2.lora_A.weight"], w[f"{p}.layers.{layer}.mlp.experts.w2.lora_B.weight"]
-    for e in range(E):
-        gu[e][:, 0::2] += S * (B1[e] @ A1[0]).T
-        gu[e][:, 1::2] += S * (B3[e] @ A3[0]).T
-        dn[e] += S * (B2[0] @ A2[e]).T
-expected["lm_head.weight"] += S * w[f"{p}.unembed_tokens.lora_B.weight"] @ w[f"{p}.unembed_tokens.lora_A.weight"]
+applied = merge_lora_fp32(expected, lora_modules(w), S)
+if len(applied) != len(lora_modules(w)):
+    sys.exit(f"merge_lora_fp32 applied {len(applied)} of {len(lora_modules(w))} modules")
 
 bad, changed = [], 0
 for k, v in expected.items():
@@ -103,5 +91,5 @@ for e in range(E):
 insensitive = torch.allclose(merged["model.layers.0.mlp.experts.gate_up_proj"].float(), swap, atol=1e-4)
 if insensitive:
     bad.append("a swapped gate/up expectation also matches: the check cannot tell them apart")
-print("OK: merge matches the hand-derived expectation" if not bad else "FAILED")
+print("OK: merge_lora_fp32 matches tinker_cookbook" if not bad else "FAILED")
 sys.exit(1 if bad else 0)

@@ -9,13 +9,11 @@
 #      results/pilot_comparison_cotreg_reasoning_low.md.
 #   3. Capability evals (PLAN (b)), reasoning on and off (DECISIONS 'Eval reasoning setting'): base and
 #      the _cotreg pair -> results/*_capability_reasoning_on.json, results/*_capability.json.
-#   4. RL organisms (PLAN (b)): Redwood merged on CPU in the background while the two AISI organisms
-#      are merged and evaluated on the GPU halves; then Redwood's evals. Each organism gets the pilot
-#      evals and the capability evals, reasoning on and off -> results/<organism>{,_reasoning_on,
-#      _capability,_capability_reasoning_on}.json. Merged copies are deleted after their evals.
+# Ran 2026-10-05. The RL organisms have their own session (run_rl_organism_session_on_gpu_node.sh):
+# a bf16 merge erases their deltas, so they are served unmerged.
 #
-# API: ~$24 of judge calls (diagnostic ~$10, RL pilot evals ~$14; capability evals are judge-free);
-# set SPEND_CAP above the ledger total + 25 in the node's env file. Same upload, deadline and failure
+# API: ~$10 of judge calls (the diagnostic; capability evals are judge-free); set SPEND_CAP above the
+# ledger total + 10 in the node's env file. Same upload, deadline and failure
 # behaviour as the other orchestrators; run setup_gpu_node.sh first. Exits non-zero, after uploading
 # what exists, if any stage failed or was skipped for time.
 set -uo pipefail
@@ -62,28 +60,6 @@ run stage 4 arm_eval VARIANT=_cotreg "$CAP" "$ON" EVAL_TAG=_capability_reasoning
 run stage 4 base_eval "$CAP" "$OFF" EVAL_TAG=_capability
 run stage 4 arm_eval VARIANT=_cotreg "$CAP" "$OFF" EVAL_TAG=_capability
 rm -rf "$NVME/merged/srh_mixed_seed0_cotreg" "$NVME/merged/control_seed0_cotreg" && log "removed _cotreg merged models"
-
-# 4. RL organisms. Redwood's CPU merge runs in the background (no upload from it: uploads share a
-#    staging dir); the AISI pair uses the GPU halves meanwhile.
-redwood_pid=""
-if fits 4 "rl_merge redwood_step952"; then
-  ORGANISM=redwood_step952 bash "$RUN" rl_merge & redwood_pid=$!
-else
-  failed=1
-fi
-run stage_pair 3 rl_merge "ORGANISM=aisi_hack" "ORGANISM=aisi_nohack"
-for setting in "EVAL_TAG=_reasoning_on $ON" "EVAL_TAG= $OFF" \
-               "EVAL_TAG=_capability_reasoning_on $ON ${CAP}" "EVAL_TAG=_capability $OFF ${CAP}"; do
-  run stage_pair 4 rl_eval "ORGANISM=aisi_hack $setting" "ORGANISM=aisi_nohack $setting"
-done
-rm -rf "$NVME/merged/aisi_hack" "$NVME/merged/aisi_nohack" && log "removed AISI merged models"
-if [ -n "$redwood_pid" ]; then wait "$redwood_pid" || failed=1; fi
-# Two servers of the same merged copy, one per half: a judged setting next to a judge-free one.
-run stage_pair 4 rl_eval "ORGANISM=redwood_step952 EVAL_TAG=_reasoning_on $ON" \
-                         "ORGANISM=redwood_step952 EVAL_TAG=_capability_reasoning_on $ON ${CAP}"
-run stage_pair 4 rl_eval "ORGANISM=redwood_step952 EVAL_TAG= $OFF" \
-                         "ORGANISM=redwood_step952 EVAL_TAG=_capability $OFF ${CAP}"
-rm -rf "$NVME/merged/redwood_step952" && log "removed Redwood merged model"
 
 upload_results "$UPLOAD_PREFIX"
 if [ "$failed" -ne 0 ]; then

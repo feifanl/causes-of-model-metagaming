@@ -8,6 +8,7 @@ Each fake writes the files the stage runner checks, and records its call as one 
     FAKE_SHORT_RUN=1        train_sdf.py stops early without --stop-at-epoch
     FAKE_UNHEALTHY=1        run_pilot_evals.py answers have no final channel
     FAKE_UNHEALTHY_TASK=x   only task x's answers have no final channel
+    FAKE_LORA_MISMATCH=1    check_rl_lora_serving.py served: the served LoRA does not match the reference
 """
 
 import argparse
@@ -99,26 +100,40 @@ def run_pilot_evals(argv):
 def download_rl_organism_adapter(argv):
     p = argparse.ArgumentParser()
     p.add_argument("--organism")
-    p.add_argument("--out", type=Path)
-    p.add_argument("--print-format", action="store_true")
-    p.add_argument("--print-equivalent-base", action="store_true")
+    p.add_argument("--print-vllm-flags", action="store_true")
     args = p.parse_args(argv)
-    tinker = args.organism.startswith("redwood")
-    if args.print_format:
-        print("tinker" if tinker else "peft")
-    elif args.print_equivalent_base:
-        print("" if tinker else "unsloth/gpt-oss-120b-BF16")
-    else:
-        write_adapter(args.out)
+    if args.organism not in ("aisi_hack", "aisi_nohack", "redwood_step952"):
+        sys.exit(f"unknown organism {args.organism}")
+    print("--enable-moe-shared-loras" if args.organism.startswith("redwood") else "")
 
 
-def merge_tinker_adapter_into_base(argv):
+def prepare_rl_adapter_for_serving(argv):
     p = argparse.ArgumentParser()
+    p.add_argument("--organism")
     p.add_argument("--out", type=Path)
     args, _ = p.parse_known_args(argv)
-    args.out.mkdir(parents=True)
-    (args.out / "config.json").write_text("{}")
-    (args.out / "provenance.json").write_text(json.dumps({"tensor_changed": {"lm_head.weight": True}}))
+    write_adapter(args.out)
+    print(f"{args.organism}: prepared -> {args.out}")
+
+
+def check_rl_lora_serving(argv):
+    """reference writes --out; served writes the comparison and fails if FAKE_LORA_MISMATCH is set."""
+    p = argparse.ArgumentParser()
+    p.add_argument("cmd")
+    p.add_argument("--out", type=Path)
+    p.add_argument("--ref", type=Path)
+    args, _ = p.parse_known_args(argv)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    if args.cmd == "reference":
+        args.out.write_text(json.dumps({"items": []}))
+        return
+    assert args.ref.exists(), args.ref
+    bad = bool(os.environ.get("FAKE_LORA_MISMATCH"))
+    result = {"lora_vs_ref": {"mean_abs_nll_diff": 0.3 if bad else 0.01},
+              "base_vs_ref": {"mean_abs_nll_diff": 0.3}, "passed": not bad}
+    args.out.write_text(json.dumps(result))
+    if bad:
+        sys.exit("served LoRA does not match")
 
 
 def compare_pilot_results(argv):
@@ -140,7 +155,7 @@ def track_openrouter_spend(argv):
 
 FAKES = {f.__name__: f for f in (train_sdf, score_heldout_nll, merge_lora_into_base, run_pilot_evals,
                                    track_openrouter_spend, download_rl_organism_adapter,
-                                   merge_tinker_adapter_into_base, compare_pilot_results)}
+                                   prepare_rl_adapter_for_serving, check_rl_lora_serving, compare_pilot_results)}
 
 
 def main(argv):

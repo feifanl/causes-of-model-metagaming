@@ -21,9 +21,12 @@
 #                   held-out NLL of the base, every saved checkpoint and the final adapter
 #   sdf_eval        one half (HALF): merge one SDF adapter (CKPT), serve it, run the evals
 #                   -> results/sdf_<run>_<CKPT><EVAL_TAG>.json; the merged copy (234 GB) is deleted on exit
-#   rl_merge        one downloaded RL organism (ORGANISM) merged into bf16 -> $NVME/merged/<ORGANISM>:
-#                   PEFT adapters on one half (HALF), Tinker adapters on CPU (DECISIONS 'RL organism merges')
-#   rl_eval         one half (HALF): serve a merged RL organism, run EVAL_TASKS -> results/<ORGANISM><EVAL_TAG>.json
+#   rl_adapter      CPU: download one RL organism's LoRA (ORGANISM), prepared for unmerged serving -> outputs/<ORGANISM>
+#                   (a bf16 merge erases RL deltas: scripts/prepare_rl_adapter_for_serving.py)
+#   rl_check        all 8 GPUs: score an exact fp32 merge, then serve bf16 base + LoRA on half A and check the
+#                   served LoRA against it -> results/rl_lora_check_<ORGANISM>.json (rl_eval requires it)
+#   rl_eval         one half (HALF): serve bf16 base + an RL organism's LoRA, run EVAL_TASKS
+#                   -> results/<ORGANISM><EVAL_TAG>.json
 #
 # Variants, through the environment (defaults reproduce the pilot):
 #   VARIANT     suffix for adapters, merged models and tags, e.g. _cotreg -> outputs/srh_mixed_seed0_cotreg
@@ -31,7 +34,7 @@
 #   EVAL_FLAGS  run_pilot_evals.py flags (default --no-reasoning; DECISIONS 'Eval prompt format')
 #   EVAL_TAG    suffix for eval result tags, e.g. _reasoning_on -> results/srh_mixed_seed0_cotreg_reasoning_on.json
 #   EVAL_TASKS  run_pilot_evals.py --tasks for base_eval, arm_eval and rl_eval (default em,hacking,mmlu)
-#   ORGANISM    rl_merge / rl_eval: a name from scripts/download_rl_organism_adapter.py (e.g. aisi_hack)
+#   ORGANISM    rl_adapter / rl_check / rl_eval: a name from scripts/download_rl_organism_adapter.py (e.g. aisi_hack)
 # The .done file carries the same suffixes (train_cotreg.done, arm_eval_cotreg_reasoning_on.done), so
 # each variant runs once. Compare only results with the same EVAL_FLAGS (compare_pilot_results checks).
 #
@@ -95,7 +98,7 @@ case "$STAGE" in
   base_eval)                  NAME="$STAGE$EVAL_TAG" ;;
   sdf_train)                  NAME="sdf_train_$SDF_RUN" ;;
   sdf_eval)                   NAME="sdf_eval_${SDF_RUN}_$CKPT$EVAL_TAG" ;;
-  rl_merge)                   NAME="rl_merge_$ORGANISM" ;;
+  rl_adapter|rl_check)        NAME="${STAGE}_$ORGANISM" ;;
   rl_eval)                    NAME="rl_eval_$ORGANISM$EVAL_TAG" ;;
   *)                          NAME="$STAGE" ;;
 esac
@@ -165,11 +168,12 @@ cleanup() {
   return 0
 }
 
-serve() {  # serve <gpus> <model dir> <served name> <port>
+serve() {  # serve <gpus> <model dir> <served name> <port> [extra vllm flags...]
   local gpus=$1 model=$2 name=$3 port=$4
+  shift 4
   curl -sf "localhost:$port/v1/models" >/dev/null 2>&1 && die "port $port already serving"
   CUDA_VISIBLE_DEVICES=$gpus setsid "$VLLM" serve "$model" --served-model-name "$name" --tensor-parallel-size 4 \
-      --port "$port" --max-model-len 16384 > "$STATE/vllm_$name.log" 2>&1 &
+      --port "$port" --max-model-len 16384 "$@" > "$STATE/vllm_$name.log" 2>&1 &
   SERVERS+=($!)
   local pid=$! waited=0
   until curl -sf "localhost:$port/v1/models" | grep -q "\"$name\""; do
@@ -498,43 +502,49 @@ half_gpus() {  # half_gpus -> "<gpus> <port>" for $HALF
   esac
 }
 
-stage_rl_merge() {
+stage_rl_adapter() {
   [ -n "$ORGANISM" ] || die "ORGANISM unset (names: scripts/download_rl_organism_adapter.py)"
-  require_done bf16; need_disk_gb 260
-  local fmt merged="$NVME/merged/$ORGANISM" gpus port
-  fmt=$("$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --print-format) \
+  rm -rf "outputs/$ORGANISM"
+  timeout 1h "$PY" scripts/prepare_rl_adapter_for_serving.py --organism "$ORGANISM" --out "outputs/$ORGANISM" \
+      --venv "$REPO/venv-tinker" > "$STATE/prepare_$ORGANISM.log" 2>&1 || die "prepare failed; see $STATE/prepare_$ORGANISM.log"
+  log "$(tail -1 "$STATE/prepare_$ORGANISM.log")"
+}
+
+serve_rl() {  # serve_rl <gpus> <port>: the bf16 base (served as base_<HALF>) plus $ORGANISM's LoRA, unmerged
+  local flags
+  flags=$("$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --print-vllm-flags) \
     || die "unknown ORGANISM '$ORGANISM'"
-  rm -rf "$merged"
-  if [ "$fmt" = tinker ]; then
-    # CPU: Tinker's official merge in its own venv, after its tiny-model mapping check.
-    timeout 3h "$PY" scripts/merge_tinker_adapter_into_base.py --organism "$ORGANISM" --base "$BF16" --out "$merged" \
-        --venv "$REPO/venv-tinker" > "$STATE/merge_$ORGANISM.log" 2>&1 || die "merge failed; see $STATE/merge_$ORGANISM.log"
-    log "tensor check: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['tensor_changed'])" "$merged/provenance.json")"
-  else
-    read -r gpus port < <(half_gpus)
-    gpus_free "$gpus"
-    "$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --out "outputs/$ORGANISM" \
-        > "$STATE/fetch_$ORGANISM.log" 2>&1 || die "download failed; see $STATE/fetch_$ORGANISM.log"
-    # No training data of theirs to check drift on: SRH text, loose bound (our adapters drift ~0.055 on
-    # another arm's text; DECISIONS 'Merge verification data').
-    local equivalent
-    equivalent=$("$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --print-equivalent-base)
-    CUDA_VISIBLE_DEVICES=$gpus timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/$ORGANISM" \
-        --base "$BF16" --out "$merged" --verify-data data/processed/srh_mixed.jsonl --max-nll-diff 0.1 \
-        --equivalent-base "$equivalent" > "$STATE/merge_$ORGANISM.log" 2>&1 \
-      || die "merge failed; see $STATE/merge_$ORGANISM.log"
-    log "merge_verification: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['merge_verification'])" "$merged/provenance.json")"
-  fi
+  # shellcheck disable=SC2086  # flags is a flag list
+  serve "$1" "$BF16" "base_$HALF" "$2" --enable-lora --max-lora-rank 32 --lora-modules "$ORGANISM=$MO/outputs/$ORGANISM" $flags
+  curl -sf "localhost:$2/v1/models" | grep -q "\"$ORGANISM\"" \
+    || die "vLLM does not list the LoRA '$ORGANISM'; see $STATE/vllm_base_$HALF.log"
+}
+
+stage_rl_check() {
+  [ -n "$ORGANISM" ] || die "ORGANISM unset (names: scripts/download_rl_organism_adapter.py)"
+  require_done bf16 "rl_adapter_$ORGANISM"; gpus_free "$HALF_A,$HALF_B"; need_disk_gb 520
+  local ref="results/rl_lora_check_${ORGANISM}_ref.json" out="results/rl_lora_check_$ORGANISM.json" gpus port
+  # Exact reference: the base upcast to fp32 with the adapter added in fp32 (~480 GB, deleted after).
+  timeout 2h "$PY" scripts/check_rl_lora_serving.py reference --adapter "outputs/$ORGANISM" --base "$BF16" \
+      --scratch "$NVME/ref_fp32_$ORGANISM" --out "$ref" > "$STATE/rl_check_ref_$ORGANISM.log" 2>&1 \
+    || die "fp32 reference failed; see $STATE/rl_check_ref_$ORGANISM.log"
+  HALF=A
+  read -r gpus port < <(half_gpus)
+  gpus_free "$gpus"
+  serve_rl "$gpus" "$port"
+  "$PY" scripts/check_rl_lora_serving.py served --organism "$ORGANISM" --base-model base_A \
+      --base-url "http://localhost:$port/v1" --ref "$ref" --out "$out" > "$STATE/rl_check_served_$ORGANISM.log" 2>&1 \
+    || die "served LoRA does not match the fp32 reference; see $out and $STATE/rl_check_served_$ORGANISM.log"
+  log "$("$PY" -c "import json, sys; r = json.load(open(sys.argv[1])); print('lora vs fp32 ref', r['lora_vs_ref'], '| base vs ref', r['base_vs_ref'])" "$out")"
 }
 
 stage_rl_eval() {
   [ -n "$ORGANISM" ] || die "ORGANISM unset (names: scripts/download_rl_organism_adapter.py)"
-  local merged="$NVME/merged/$ORGANISM" gpus port
+  local gpus port
   read -r gpus port < <(half_gpus)
-  require_done "rl_merge_$ORGANISM"
-  [ -f "$merged/config.json" ] || die "no merged model at $merged (removed after an earlier session?)"
+  require_done bf16 "rl_check_$ORGANISM"   # the served LoRA matched the fp32 reference
   gpus_free "$gpus"
-  serve "$gpus" "$merged" "$ORGANISM" "$port"
+  serve_rl "$gpus" "$port"
   local evals=("$PY" scripts/run_pilot_evals.py --model "harmony/$ORGANISM" --base-url "http://localhost:$port/v1"
                --tag "$ORGANISM$EVAL_TAG" --tasks "$EVAL_TASKS")
   # shellcheck disable=SC2206  # EVAL_FLAGS is a flag list
@@ -570,7 +580,7 @@ if [ -f "$STATE/$NAME.done" ]; then log "already done (delete $STATE/$NAME.done 
 case "$STAGE" in
   sdf_train) log "start (SDF_DATA_DIR=$SDF_DATA_DIR SDF_TRAIN_FLAGS='$SDF_TRAIN_FLAGS')" ;;
   sdf_eval)  log "start (CKPT=$CKPT HALF=$HALF SDF_EVAL_TASKS=$SDF_EVAL_TASKS EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
-  rl_merge|rl_eval) log "start (ORGANISM=$ORGANISM HALF=$HALF EVAL_TASKS=$EVAL_TASKS EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
+  rl_adapter|rl_check|rl_eval) log "start (ORGANISM=$ORGANISM HALF=$HALF EVAL_TASKS=$EVAL_TASKS EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
   *)         log "start (VARIANT='$VARIANT' DATA_DIR=$DATA_DIR EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
 esac
 start=$(date +%s)
