@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Stop (Nebius) or terminate (PrimeIntellect) this GPU node through the provider's API
+# Stop (Nebius) or terminate (PrimeIntellect, Vast) this GPU node through the provider's API
 # when pilot work has stopped or a time cap passes. Runs on the node, in tmux.
 #
 #   bash model-organisms/scripts/stop_gpu_node_when_idle.sh prime  <pod-id>      <max-hours> [idle-minutes]
 #   bash model-organisms/scripts/stop_gpu_node_when_idle.sh nebius <instance-id> <max-hours> [idle-minutes]
+#   bash model-organisms/scripts/stop_gpu_node_when_idle.sh vast   "$CONTAINER_ID" <max-hours> [idle-minutes]
 #
 # Why the API: shutting down from inside the node does not end billing. Nebius treats
 # a guest shutdown as a crash, restarts the VM and keeps charging; a Prime pod is
@@ -12,6 +13,9 @@
 #   prime : DELETE /api/v1/pods/<id>. Terminating DELETES THE POD'S DISK (attached
 #           persistent disks survive). Results must already be synced off the node.
 #   nebius: `nebius compute instance stop`. Disks are kept (and keep billing).
+#   vast  : DELETE /api/v0/instances/<id>/ (destroy). DELETES THE INSTANCE'S DISK, like
+#           prime: a stopped Vast instance keeps billing for its disk. VAST_ACTION=stop
+#           stops instead (disk kept and billed).
 #
 # Busy means any of: a pilot process is running (stage runner, training, merge, evals,
 # setup); some GPU is above 5% utilization; or ~/KEEP_ALIVE exists (a human is
@@ -19,12 +23,14 @@
 # <idle-minutes> (default 45) of continuous idleness, or <max-hours> after this script
 # started, whichever comes first. ~/KEEP_ALIVE does not override the time cap.
 #
-# Credentials: PRIME_API_KEY from ~/.config/spar/env (prime), or a `nebius` CLI profile
-# $NEBIUS_PROFILE, default 'vm-stopper' (nebius). The API is checked at startup and on
-# every loop. DRY_RUN=1 logs the stop instead of doing it.
+# Credentials: PRIME_API_KEY from ~/.config/spar/env (prime), a `nebius` CLI profile
+# $NEBIUS_PROFILE, default 'vm-stopper' (nebius), or the instance's own CONTAINER_API_KEY
+# (vast; Vast injects it, scoped to start/stop/destroy this instance only, so no account
+# key goes on a third-party host). The API is checked at startup and on every loop.
+# DRY_RUN=1 logs the stop instead of doing it.
 set -uo pipefail
 
-CLOUD="${1:?usage: stop_gpu_node_when_idle.sh <prime|nebius> <node-id> <max-hours> [idle-minutes]}"
+CLOUD="${1:?usage: stop_gpu_node_when_idle.sh <prime|nebius|vast> <node-id> <max-hours> [idle-minutes]}"
 NODE_ID="${2:?node id required}"
 MAX_HOURS="${3:?max-hours required}"
 IDLE_MINUTES="${4:-45}"
@@ -48,7 +54,19 @@ case "$CLOUD" in
   nebius)
     api_ok()   { "$NEBIUS" --profile "$PROFILE" compute instance get --id "$NODE_ID" >/dev/null 2>&1; }
     api_stop() { "$NEBIUS" --profile "$PROFILE" compute instance stop --id "$NODE_ID"; } ;;
-  *) echo "unknown cloud '$CLOUD' (prime|nebius)"; exit 1 ;;
+  vast)
+    # SSH sessions may not inherit the container's env; PID 1 always has it.
+    [ -n "${CONTAINER_API_KEY:-}" ] || CONTAINER_API_KEY=$(tr '\0' '\n' </proc/1/environ 2>/dev/null | sed -n 's/^CONTAINER_API_KEY=//p')
+    [ -n "${CONTAINER_API_KEY:-}" ] || { log "ERROR: CONTAINER_API_KEY not found; watchdog NOT armed"; exit 1; }
+    VAST_API="https://console.vast.ai/api/v0/instances/$NODE_ID/"
+    api_ok()   { curl -sf -m 30 -H "Authorization: Bearer $CONTAINER_API_KEY" "$VAST_API" >/dev/null; }
+    if [ "${VAST_ACTION:-destroy}" = stop ]; then
+      api_stop() { curl -sf -m 60 -X PUT -H "Authorization: Bearer $CONTAINER_API_KEY" \
+                     -H 'Content-Type: application/json' -d '{"state": "stopped"}' "$VAST_API"; }
+    else
+      api_stop() { curl -sf -m 60 -X DELETE -H "Authorization: Bearer $CONTAINER_API_KEY" "$VAST_API"; }
+    fi ;;
+  *) echo "unknown cloud '$CLOUD' (prime|nebius|vast)"; exit 1 ;;
 esac
 
 stop_node() {
