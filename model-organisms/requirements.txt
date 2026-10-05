@@ -17,6 +17,8 @@ trl==1.14.1
 accelerate==1.15.0
 
 # Evals and generation (OpenRouter is OpenAI-compatible)
+# IFBench verifiers (Apache-2.0), pinned to a commit: evals/ifbench_instruction_following.py
+ifbench @ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d
 inspect_ai==0.3.273
 openai==3.22.1
 

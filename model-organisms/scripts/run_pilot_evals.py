@@ -38,6 +38,9 @@ from em_questions import em_questions  # noqa: E402
 from hacking_judge_validation import hacking_judge_validation  # noqa: E402
 from heldout_reward_hacking import heldout_reward_hacking  # noqa: E402
 from mmlu_subset import mmlu_subset  # noqa: E402
+from gpqa import gpqa  # noqa: E402
+from ifbench_instruction_following import ifbench  # noqa: E402
+from livecodebench import livecodebench  # noqa: E402
 
 # DECISIONS.md 'Hosted provider for base evals'.
 OPENROUTER_PROVIDER = {"order": ["deepinfra/bf16"], "allow_fallbacks": False}
@@ -49,6 +52,12 @@ TASKS = {
     "em": lambda effort: em_questions(reasoning_effort=effort),
     "hacking": lambda effort: heldout_reward_hacking(reasoning_effort=effort),
     "mmlu": lambda effort: mmlu_subset(reasoning_effort=effort),
+    # Capability check (PLAN step (b)); judge-free. GPQA needs the gated CSVs (download_data.py).
+    "gpqa": lambda effort: gpqa(subset="diamond", reasoning_effort=effort),
+    "gpqa_main": lambda effort: gpqa(subset="main", reasoning_effort=effort),
+    "ifbench": lambda effort: ifbench(reasoning_effort=effort),
+    # Runs model code on this machine (evals/execute_python_solutions.py).
+    "livecodebench": lambda effort: livecodebench(reasoning_effort=effort),
     "judge_validation": lambda effort: hacking_judge_validation(),
 }
 

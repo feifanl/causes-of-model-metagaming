@@ -37,9 +37,14 @@ ROOT = Path(__file__).resolve().parents[1]
 DTYPES = {"bfloat16": torch.bfloat16, "float32": torch.float32}
 
 
-def check_base_matches_adapter(base: str, revision: str, adapter: Path):
+def check_base_matches_adapter(base: str, revision: str, adapter: Path, equivalent_base: str | None = None):
     trained_on = json.loads((adapter / "adapter_config.json").read_text(encoding="utf-8"))
-    want = (trained_on["base_model_name_or_path"], trained_on["revision"])
+    if equivalent_base and trained_on["base_model_name_or_path"] == equivalent_base:
+        # External adapters (PLAN (b)) name their own copy of the base; equivalence is checked
+        # and logged separately (DECISIONS 'RL organism merges').
+        print(f"Adapter declares {equivalent_base}; accepted as equivalent to {base} (--equivalent-base).")
+        return
+    want = (trained_on["base_model_name_or_path"], trained_on.get("revision"))
     if Path(base).is_dir():
         provenance = read_provenance(Path(base))
         if provenance is None:
@@ -99,9 +104,12 @@ def main(argv=None):
     # Placeholder bound, not calibrated: record the real-model value at 1.3 and tighten.
     parser.add_argument("--max-nll-diff", type=float, default=0.02,
                         help="Fail if mean |NLL change| per completion token exceeds this (nats).")
+    parser.add_argument("--equivalent-base", default=None,
+                        help="Accept an adapter that names this base instead (e.g. unsloth/gpt-oss-120b-BF16 for "
+                             "the AISI organisms, whose attention weights match ours byte for byte).")
     args = parser.parse_args(argv)
 
-    check_base_matches_adapter(args.base, args.revision, args.adapter)
+    check_base_matches_adapter(args.base, args.revision, args.adapter, args.equivalent_base)
     revision = None if Path(args.base).is_dir() else args.revision
 
     lines = args.verify_data.read_text(encoding="utf-8").splitlines()[: args.n_verify]
@@ -129,7 +137,7 @@ def main(argv=None):
     write_provenance(args.out, source=base_provenance.get("source", args.base),
                      revision=base_provenance.get("revision", args.revision), dtype=args.dtype,
                      adapter=str(args.adapter), adapter_sha256=sha256(args.adapter / "adapter_model.safetensors"),
-                     merge_verification=verification)
+                     merge_verification=verification, equivalent_base=args.equivalent_base)
     print(f"Saved merged model to {args.out}")
 
 

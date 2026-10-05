@@ -49,7 +49,7 @@ cd "$MO"
 
 # Data. Coding-row controls (data/coding_task_controls.jsonl) are committed; without
 # them build_sft_datasets.py needs --code-rows drop (see DECISIONS.md).
-"$PY" scripts/download_data.py --with-sdf
+"$PY" scripts/download_data.py --with-sdf --with-capability  # GPQA is gated: accept its terms first
 if [ -f data/coding_task_controls.jsonl ]; then
   "$PY" scripts/build_sft_datasets.py
 else

@@ -5,6 +5,10 @@ rebuild can prove it used identical inputs.
 
     python scripts/download_data.py                  # SRH + GSM8K + MMLU (small)
     python scripts/download_data.py --with-sdf       # + AISI SDF corpus (~300 MB)
+    python scripts/download_data.py --with-capability  # + GPQA, IFBench, LiveCodeBench v6 (~140 MB)
+
+GPQA is gated: accept its terms on huggingface.co/datasets/Idavidrein/gpqa with the
+account behind HF_TOKEN first, or --with-capability fails with a 403.
 """
 
 import argparse
@@ -49,6 +53,17 @@ SOURCES = [
     ),
 ]
 
+# Capability check (PLAN step (b)): harder and newer than MMLU, which is likely memorized.
+CAPABILITY_SOURCES = [
+    ("gpqa_diamond.csv", "Idavidrein/gpqa", "83022cefff930aea54f654c0b282e74b9eeda5c6", "gpqa_diamond.csv"),
+    ("gpqa_main.csv", "Idavidrein/gpqa", "83022cefff930aea54f654c0b282e74b9eeda5c6", "gpqa_main.csv"),
+    ("ifbench_test.parquet", "allenai/IFBench_test", "2e8a48de45ff3bf41242f927254ca81b59ca3ae2",
+     "data/train-00000-of-00001.parquet"),
+    # Release v6: contest dates 2025-01 to 2025-04, the newest on the Hub.
+    ("livecodebench_v6.jsonl", "livecodebench/code_generation_lite", "0fe84c3912ea0c4d4a78037083943e8f0c4dd505",
+     "test6.jsonl"),
+]
+
 SDF_REPO = "ai-safety-institute/reward-hacking-sdf-default"
 SDF_REVISION = "dc85e2799caf92d1f30e775b2c962410b2509a34"
 SDF_SOURCES = [(f"sdf/chunk_{i}.parquet", SDF_REPO, SDF_REVISION, f"data/chunk_{i}.parquet") for i in range(10)]
@@ -62,13 +77,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--out-dir", type=Path, default=ROOT / "data" / "raw")
     parser.add_argument("--with-sdf", action="store_true", help="Also fetch the AISI reward-hacking SDF corpus.")
+    parser.add_argument("--with-capability", action="store_true",
+                        help="Also fetch GPQA (gated), IFBench and LiveCodeBench v6 for PLAN step (b).")
     args = parser.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = args.out_dir / "MANIFEST.json"
     # Keep entries from earlier runs (e.g. SDF fetched once, then a plain rerun).
     manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
-    for name, repo, revision, filename in SOURCES + (SDF_SOURCES if args.with_sdf else []):
+    sources = SOURCES + (SDF_SOURCES if args.with_sdf else []) + (CAPABILITY_SOURCES if args.with_capability else [])
+    for name, repo, revision, filename in sources:
         cached = hf_hub_download(repo, filename, revision=revision, repo_type="dataset")
         dest = args.out_dir / name
         dest.parent.mkdir(parents=True, exist_ok=True)
