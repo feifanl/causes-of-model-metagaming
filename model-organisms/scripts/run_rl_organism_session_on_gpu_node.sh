@@ -56,21 +56,22 @@ done
 log "served LoRA matches the fp32 reference for: ${checked[*]:-none}"
 
 has() { [[ " ${checked[*]:-} " == *" $1 "* ]]; }
+# Pairs reserve 2 h: measured 11-28 min each (Sessions 4, 4b); the stages' own timeouts bound the rest.
 if has aisi_hack && has aisi_nohack; then
   for setting in "${SETTINGS[@]}"; do
-    run stage_pair 4 rl_eval "ORGANISM=aisi_hack $setting" "ORGANISM=aisi_nohack $setting"
+    run stage_pair 2 rl_eval "ORGANISM=aisi_hack $setting" "ORGANISM=aisi_nohack $setting"
   done
 else
   for organism in aisi_hack aisi_nohack; do
     has "$organism" || continue
-    run stage_pair 4 rl_eval "ORGANISM=$organism ${SETTINGS[0]}" "ORGANISM=$organism ${SETTINGS[2]}"
-    run stage_pair 4 rl_eval "ORGANISM=$organism ${SETTINGS[1]}" "ORGANISM=$organism ${SETTINGS[3]}"
+    run stage_pair 2 rl_eval "ORGANISM=$organism ${SETTINGS[0]}" "ORGANISM=$organism ${SETTINGS[2]}"
+    run stage_pair 2 rl_eval "ORGANISM=$organism ${SETTINGS[1]}" "ORGANISM=$organism ${SETTINGS[3]}"
   done
 fi
 if has redwood_step952; then
   # One server per half: a judged setting next to a judge-free one.
-  run stage_pair 4 rl_eval "ORGANISM=redwood_step952 ${SETTINGS[0]}" "ORGANISM=redwood_step952 ${SETTINGS[2]}"
-  run stage_pair 4 rl_eval "ORGANISM=redwood_step952 ${SETTINGS[1]}" "ORGANISM=redwood_step952 ${SETTINGS[3]}"
+  run stage_pair 2 rl_eval "ORGANISM=redwood_step952 ${SETTINGS[0]}" "ORGANISM=redwood_step952 ${SETTINGS[2]}"
+  run stage_pair 2 rl_eval "ORGANISM=redwood_step952 ${SETTINGS[1]}" "ORGANISM=redwood_step952 ${SETTINGS[3]}"
 fi
 
 upload_results "$UPLOAD_PREFIX"
