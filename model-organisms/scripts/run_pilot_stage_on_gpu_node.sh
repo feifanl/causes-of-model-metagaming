@@ -519,7 +519,9 @@ serve_sglang() {  # serve_sglang <gpus> <port> <served name> <lora name> <lora d
   curl -sf "localhost:$port/v1/models" >/dev/null 2>&1 && die "port $port already serving"
   CUDA_VISIBLE_DEVICES=$gpus setsid "$SGLANG_PY" -m sglang.launch_server --model-path "$BF16" --served-model-name "$name" \
       --tp 4 --port "$port" --context-length 16384 --enable-lora --max-lora-rank 32 --lora-target-modules all \
-      --lora-paths "$4=$5" > "$STATE/sglang_$name.log" 2>&1 &
+      --lora-paths "$4=$5" --moe-runner-backend triton > "$STATE/sglang_$name.log" 2>&1 &
+  # --moe-runner-backend triton: gpt-oss defaults to triton_kernel, which has no LoRA path for bf16 experts
+  # (UnquantizedFusedMoEMethod does not expose quant info for 'triton_kernel'; Session 4b).
   SERVERS+=($!)
   local pid=$! waited=0
   until curl -sf "localhost:$port/v1/models" | grep -q "\"$name\""; do
