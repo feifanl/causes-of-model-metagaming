@@ -41,6 +41,18 @@ fi
 "$REPO/venv-vllm/bin/python" -c "import sys, vllm; print('vllm', vllm.__version__); \
 sys.exit(0 if vllm.__version__ == '$VLLM_VERSION' else 'vllm != $VLLM_VERSION: delete venv-vllm and rerun')"
 
+# WITH_SGLANG=1: SGLang for RL organisms whose LoRA vLLM does not reproduce (Redwood's expert LoRA;
+# DECISIONS 'RL organism serving'). Its own venv: it pins its own torch.
+SGLANG_VERSION=0.5.21
+if [ "${WITH_SGLANG:-0}" = 1 ]; then
+  if [ ! -d "$REPO/venv-sglang" ]; then
+    "${PYTHON:-python3}" -m venv "$REPO/venv-sglang"
+    "$REPO/venv-sglang/bin/pip" install "sglang[all]==$SGLANG_VERSION"
+  fi
+  "$REPO/venv-sglang/bin/python" -c "import sys, sglang; print('sglang', sglang.__version__); \
+sys.exit(0 if sglang.__version__ == '$SGLANG_VERSION' else 'sglang != $SGLANG_VERSION: delete venv-sglang and rerun')"
+fi
+
 PY="$REPO/venv/bin/python"
 cd "$MO"
 

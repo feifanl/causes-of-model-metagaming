@@ -10,7 +10,9 @@ check_rl_lora_serving.py before any eval. Writes:
 
   peft   (AISI): attention-only PEFT LoRA, used as is. It names unsloth/gpt-oss-120b-BF16 as its
          base, whose attention weights equal ours byte for byte (DECISIONS 'RL organism serving').
-  tinker (Redwood): Tinker's own key names. vLLM loads its expert layout (w1/w2/w3 stacked, the
+  server sglang (Redwood since 2026-10-06): the whole adapter, unchanged; SGLang takes Tinker's names,
+         expert layout and unembed_tokens LoRA. The vLLM path below did not reproduce its experts.
+  tinker on vLLM (Redwood until 2026-10-06): Tinker's own key names. vLLM loads its expert layout (w1/w2/w3 stacked, the
          input factor of w1/w3 and output factor of w2 shared across experts) with
          --enable-moe-shared-loras and maps attn.* to its own names. vLLM 0.30 takes no LoRA on
          gpt-oss's lm_head (no embedding_modules; Session 4 vLLM exited on it), so the unembedding
@@ -100,6 +102,12 @@ def main(argv=None):
     download(args.organism, full)
     config = json.loads((full / "adapter_config.json").read_text(encoding="utf-8"))
     scale = lora_scale(config)  # exits on rsLoRA/DoRA
+    if spec["server"] == "sglang":
+        # SGLang takes Tinker's layout and its unembed_tokens LoRA as they are: serve the whole adapter.
+        shutil.copytree(full, args.out)
+        print(f"{args.organism}: {spec['repo']}@{spec['revision'][:8]} -> {args.out} (r={config['r']}, "
+              f"alpha={config['lora_alpha']}; whole adapter, served by SGLang)")
+        return
     unembedding = split_unembedding(full, args.out)
     note = "no base change"
     if unembedding is not None:

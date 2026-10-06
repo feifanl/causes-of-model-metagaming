@@ -62,6 +62,7 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MO="$REPO/model-organisms"
 PY="${PY:-$REPO/venv/bin/python}"
 VLLM="${VLLM:-$REPO/venv-vllm/bin/vllm}"
+SGLANG_PY="${SGLANG_PY:-$REPO/venv-sglang/bin/python}"   # RL organisms whose LoRA vLLM does not reproduce
 TORCHRUN="${TORCHRUN:-$REPO/venv/bin/torchrun}"
 BF16="$NVME/gpt-oss-120b-bf16"
 STATE="$NVME/pilot_state"
@@ -513,15 +514,41 @@ stage_rl_adapter() {
   log "$(tail -1 "$STATE/prepare_$ORGANISM.log")"
 }
 
-serve_rl() {  # serve_rl <gpus> <port>: the base (served as base_<HALF>_<ORGANISM>: one log per server) plus $ORGANISM's LoRA, unmerged
+serve_sglang() {  # serve_sglang <gpus> <port> <served name> <lora name> <lora dir>: the bf16 base + one LoRA in SGLang
+  local gpus=$1 port=$2 name=$3
+  curl -sf "localhost:$port/v1/models" >/dev/null 2>&1 && die "port $port already serving"
+  CUDA_VISIBLE_DEVICES=$gpus setsid "$SGLANG_PY" -m sglang.launch_server --model-path "$BF16" --served-model-name "$name" \
+      --tp 4 --port "$port" --context-length 16384 --enable-lora --max-lora-rank 32 --lora-target-modules all \
+      --lora-paths "$4=$5" > "$STATE/sglang_$name.log" 2>&1 &
+  SERVERS+=($!)
+  local pid=$! waited=0
+  until curl -sf "localhost:$port/v1/models" | grep -q "\"$name\""; do
+    kill -0 "$pid" 2>/dev/null || die "SGLang for $name exited; see $STATE/sglang_$name.log"
+    [ "$waited" -ge 2700 ] && die "SGLang for $name not ready after 45 min"
+    sleep 15; waited=$((waited + 15))
+  done
+  log "SGLang ready: $name + LoRA $4 on GPUs $gpus, port $port (${waited}s)"
+}
+
+# serve_rl <gpus> <port>: the base (served as base_<HALF>_<ORGANISM>: one log per server) plus $ORGANISM's LoRA,
+# unmerged, on the organism's server. Sets RL_SERVER and RL_MODEL (the name that selects the LoRA).
+serve_rl() {
   local flags base="$BF16"
-  flags=$("$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --print-vllm-flags) \
+  RL_SERVER=$("$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --print-server) \
     || die "unknown ORGANISM '$ORGANISM'"
+  if [ "$RL_SERVER" = sglang ]; then
+    [ -x "$SGLANG_PY" ] || die "no SGLang venv at $SGLANG_PY (setup_gpu_node.sh with WITH_SGLANG=1)"
+    serve_sglang "$1" "$2" "base_${HALF}_$ORGANISM" "$ORGANISM" "$MO/outputs/$ORGANISM"
+    RL_MODEL="base_${HALF}_$ORGANISM:$ORGANISM"   # SGLang's OpenAI API picks a LoRA as <base>:<adapter>
+    return
+  fi
+  flags=$("$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --print-vllm-flags)
   [ -f "outputs/$ORGANISM/serve_base.txt" ] && base=$(cat "outputs/$ORGANISM/serve_base.txt")
   # shellcheck disable=SC2086  # flags is a flag list
   serve "$1" "$base" "base_${HALF}_$ORGANISM" "$2" --enable-lora --max-lora-rank 32 --lora-modules "$ORGANISM=$MO/outputs/$ORGANISM" $flags
   curl -sf "localhost:$2/v1/models" | grep -q "\"$ORGANISM\"" \
     || die "vLLM does not list the LoRA '$ORGANISM'; see $STATE/vllm_base_${HALF}_$ORGANISM.log"
+  RL_MODEL="$ORGANISM"
 }
 
 stage_rl_check() {
@@ -529,14 +556,19 @@ stage_rl_check() {
   require_done bf16 "rl_adapter_$ORGANISM"; gpus_free "$HALF_A,$HALF_B"; need_disk_gb 520
   local ref="results/rl_lora_check_${ORGANISM}_ref.json" out="results/rl_lora_check_$ORGANISM.json" gpus port
   # Exact reference: the base upcast to fp32 with the adapter added in fp32 (~480 GB, deleted after).
-  timeout 2h "$PY" scripts/check_rl_lora_serving.py reference --adapter "outputs/${ORGANISM}_full" --base "$BF16" \
-      --scratch "$NVME/ref_fp32_$ORGANISM" --out "$ref" > "$STATE/rl_check_ref_$ORGANISM.log" 2>&1 \
-    || die "fp32 reference failed; see $STATE/rl_check_ref_$ORGANISM.log"
+  # REUSE_RL_REF=1 keeps an existing reference that has the noise floor (the adapter is pinned).
+  if [ "${REUSE_RL_REF:-0}" = 1 ] && grep -q floor_ref_nll "$ref" 2>/dev/null; then
+    log "reusing the fp32 reference in $ref"
+  else
+    timeout 2h "$PY" scripts/check_rl_lora_serving.py reference --adapter "outputs/${ORGANISM}_full" --base "$BF16" \
+        --scratch "$NVME/ref_fp32_$ORGANISM" --out "$ref" > "$STATE/rl_check_ref_$ORGANISM.log" 2>&1 \
+      || die "fp32 reference failed; see $STATE/rl_check_ref_$ORGANISM.log"
+  fi
   HALF=A
   read -r gpus port < <(half_gpus)
   gpus_free "$gpus"
   serve_rl "$gpus" "$port"
-  "$PY" scripts/check_rl_lora_serving.py served --organism "$ORGANISM" --base-model "base_A_$ORGANISM" \
+  "$PY" scripts/check_rl_lora_serving.py served --server "$RL_SERVER" --organism "$ORGANISM" --base-model "base_A_$ORGANISM" \
       --base-url "http://localhost:$port/v1" --ref "$ref" --out "$out" > "$STATE/rl_check_served_$ORGANISM.log" 2>&1 \
     || die "served LoRA does not match the fp32 reference; see $out and $STATE/rl_check_served_$ORGANISM.log"
   log "$("$PY" -c "import json, sys; r = json.load(open(sys.argv[1])); print('lora vs fp32 ref', r['lora_vs_ref'], '| base vs ref', r['base_vs_ref'])" "$out")"
@@ -549,7 +581,7 @@ stage_rl_eval() {
   require_done bf16 "rl_check_$ORGANISM"   # the served LoRA matched the fp32 reference
   gpus_free "$gpus"
   serve_rl "$gpus" "$port"
-  local evals=("$PY" scripts/run_pilot_evals.py --model "harmony/$ORGANISM" --base-url "http://localhost:$port/v1"
+  local evals=("$PY" scripts/run_pilot_evals.py --model "harmony/$RL_MODEL" --base-url "http://localhost:$port/v1"
                --tag "$ORGANISM$EVAL_TAG" --tasks "$EVAL_TASKS")
   # shellcheck disable=SC2206  # EVAL_FLAGS is a flag list
   evals+=($EVAL_FLAGS)

@@ -172,6 +172,25 @@ def score_served(base_url: str, model: str, ids: list[int], start: int) -> tuple
     return nll, argmax
 
 
+def score_served_sglang(base_url: str, lora: str | None, ids: list[int], start: int) -> tuple[list[float], list[int]]:
+    """The same from SGLang's native /generate (input logprobs; lora=None scores the base model)."""
+    body = {"input_ids": ids, "sampling_params": {"max_new_tokens": 1, "temperature": 0},
+            "return_logprob": True, "logprob_start_len": 0, "top_logprobs_num": 1}
+    if lora:
+        body["lora_path"] = lora
+    req = urllib.request.Request(f"{base_url.removesuffix('/v1')}/generate", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=600) as r:
+        meta = json.load(r)["meta_info"]
+    logprobs, tops = meta["input_token_logprobs"], meta["input_top_logprobs"]  # [logprob, token_id, text] per position
+    nll, argmax = [], []
+    for j in range(start, len(ids)):
+        assert logprobs[j][1] == ids[j], (j, logprobs[j], ids[j])
+        nll.append(-logprobs[j][0])
+        argmax.append(int(tops[j][0][1]))
+    return nll, argmax
+
+
 def compare(items: list[dict], key: str, against: str = "ref") -> dict:
     diffs, agree = [], []
     for item in items:
@@ -201,6 +220,7 @@ def main(argv=None):
     served.add_argument("--organism", required=True, help="The LoRA's served name.")
     served.add_argument("--base-model", default="base", help="The base model's served name.")
     served.add_argument("--base-url", required=True)
+    served.add_argument("--server", choices=("vllm", "sglang"), default="vllm")
     served.add_argument("--ref", type=Path, required=True)
     served.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)
@@ -222,7 +242,12 @@ def main(argv=None):
     items = ref_data["items"]
     for item in items:
         for key, model in (("lora", args.organism), ("base", args.base_model)):
-            item[f"{key}_nll"], item[f"{key}_argmax"] = score_served(args.base_url, model, item["ids"], item["n_prompt"])
+            if args.server == "sglang":
+                scores = score_served_sglang(args.base_url, args.organism if key == "lora" else None,
+                                             item["ids"], item["n_prompt"])
+            else:
+                scores = score_served(args.base_url, model, item["ids"], item["n_prompt"])
+            item[f"{key}_nll"], item[f"{key}_argmax"] = scores
     result = {"organism": args.organism, "lora_vs_ref": compare(items, "lora"), "base_vs_ref": compare(items, "base")}
     # A reference written before the floor existed (Session 4's first checks) has no floor_ref: floor 0.
     result["floor"] = compare(items, "base", "floor_ref") if "floor_ref_nll" in items[0] else {"mean_abs_nll_diff": 0.0}

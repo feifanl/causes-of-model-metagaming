@@ -2,6 +2,7 @@
 # Evaluate the downloaded RL organisms (PLAN step (b)), served unmerged, on a fresh GPU node.
 #
 #   NVME=/workspace bash model-organisms/scripts/run_rl_organism_session_on_gpu_node.sh <deadline-epoch>
+#   ORGANISMS=redwood_step952 REUSE_RL_REF=1 ...   # one organism, keeping its fp32 reference
 #
 # A bf16 merge erases most of an RL adapter (PLAN (b)), so each organism is served as the bf16 base
 # plus its LoRA in vLLM:
@@ -45,7 +46,7 @@ SETTINGS=("EVAL_TAG=_reasoning_on $ON" "EVAL_TAG= $OFF" "EVAL_TAG=_capability_re
 
 run stage 1 bf16
 checked=()
-for organism in aisi_hack aisi_nohack redwood_step952; do
+for organism in ${ORGANISMS:-aisi_hack aisi_nohack redwood_step952}; do
   if stage 1 rl_adapter "ORGANISM=$organism" && stage 2 rl_check "ORGANISM=$organism"; then
     checked+=("$organism")
   else

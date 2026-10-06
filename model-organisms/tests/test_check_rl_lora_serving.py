@@ -169,3 +169,25 @@ def test_prepare_leaves_an_attention_only_adapter_whole(tmp_path):
     save_file({q + "lora_A.weight": torch.randn(4, H), q + "lora_B.weight": torch.randn(H, 4)}, str(full / "adapter_model.safetensors"))
     (full / "adapter_config.json").write_text("{}")
     assert split_unembedding(full, tmp_path / "out") is None
+
+
+def test_score_served_sglang_reads_input_logprobs_and_routes_the_lora(monkeypatch):
+    from check_rl_lora_serving import score_served_sglang
+    ids, sent = [5, 7, 9], []
+    response = {"meta_info": {"input_token_logprobs": [[None, 5, "a"], [-0.5, 7, "b"], [-2.0, 9, "c"]],
+                              "input_top_logprobs": [None, [[-0.5, 7, "b"]], [[-0.1, 4, "d"]]]}}
+
+    class Reply:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return json.dumps(response).encode()
+
+    def urlopen(req, timeout):
+        sent.append((req.full_url, json.loads(req.data)))
+        return Reply()
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    assert score_served_sglang("http://x:8000/v1", "redwood", ids, 1) == ([0.5, 2.0], [7, 4])
+    assert sent[0][0] == "http://x:8000/generate" and sent[0][1]["lora_path"] == "redwood"
+    score_served_sglang("http://x:8000/v1", None, ids, 1)
+    assert "lora_path" not in sent[1][1]  # the base model

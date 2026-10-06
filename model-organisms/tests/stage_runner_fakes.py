@@ -101,10 +101,12 @@ def download_rl_organism_adapter(argv):
     p = argparse.ArgumentParser()
     p.add_argument("--organism")
     p.add_argument("--print-vllm-flags", action="store_true")
+    p.add_argument("--print-server", action="store_true")
     args = p.parse_args(argv)
     if args.organism not in ("aisi_hack", "aisi_nohack", "redwood_step952"):
         sys.exit(f"unknown organism {args.organism}")
-    print("--enable-moe-shared-loras" if args.organism.startswith("redwood") else "")
+    redwood = args.organism.startswith("redwood")
+    print(("sglang" if redwood else "vllm") if args.print_server else "")
 
 
 def prepare_rl_adapter_for_serving(argv):
@@ -115,8 +117,6 @@ def prepare_rl_adapter_for_serving(argv):
     args, _ = p.parse_known_args(argv)
     write_adapter(args.out)
     write_adapter(args.out.parent / f"{args.out.name}_full")
-    if args.organism.startswith("redwood"):  # its lm_head delta goes into a copy of the base
-        (args.out / "serve_base.txt").write_text(str(args.base_copies / args.organism))
     print(f"{args.organism}: prepared -> {args.out}")
 
 

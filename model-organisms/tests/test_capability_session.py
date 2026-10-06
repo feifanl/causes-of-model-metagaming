@@ -64,6 +64,12 @@ def node(tmp_path) -> Node:
         shutil.copy(MO / "scripts" / script, n.repo / "scripts")
     for tool, body in (("vllm", FAKE_VLLM), ("curl", FAKE_CURL)):
         (n.bin / tool).write_text("#!/usr/bin/env bash\n" + body, newline="\n")
+    # SGLang's launcher is `<venv-sglang python> -m sglang.launch_server ...`: the same fake server.
+    sglang = n.repo.parent / "venv-sglang" / "bin" / "python"
+    sglang.parent.mkdir(parents=True)
+    sglang.write_text("#!/usr/bin/env bash\n" + FAKE_VLLM.replace("vllm_flags", "sglang_flags")
+                      .replace("--lora-modules)", "--lora-paths)"), newline="\n")
+    sglang.chmod(0o755)
     return n
 
 
@@ -110,12 +116,12 @@ def test_stage_fails_when_gpus_stay_busy(node):
     assert not node.calls("run_pilot_evals")
 
 
-def checked(node, organism: str) -> str:
-    """rl_adapter and rl_check for one organism; returns the vLLM flags rl_check served it with."""
+def checked(node, organism: str, server: str = "vllm") -> str:
+    """rl_adapter and rl_check for one organism; returns the server flags rl_check served it with."""
     assert node.stage("rl_adapter", ORGANISM=organism)[0] == 0
     rc, status = node.stage("rl_check", ORGANISM=organism)
     assert rc == 0, status
-    return (node.tmp / "vllm_flags").read_text().splitlines()[-1]
+    return (node.tmp / f"{server}_flags").read_text().splitlines()[-1]
 
 
 def test_rl_adapter_prepares_the_adapter_on_cpu(node):
@@ -133,16 +139,37 @@ def test_rl_stages_need_an_organism(node):
 
 
 def test_rl_check_scores_the_fp32_reference_then_the_served_lora_on_half_a(node):
-    flags = checked(node, "redwood_step952")
+    flags = checked(node, "aisi_hack")
     ref, served = node.calls("check_rl_lora_serving")
     assert ref["argv"][0] == "reference" and served["argv"][0] == "served"
-    assert flag(served, "--ref") == flag(ref, "--out") and flag(served, "--base-model") == "base_A_redwood_step952"
-    assert flag(served, "--base-url") == "http://localhost:8000/v1"
-    assert "--enable-lora" in flags and "--enable-moe-shared-loras" in flags
-    assert "redwood_step952=" in flags and "--max-lora-rank 32" in flags
-    assert flag(ref, "--adapter") == "outputs/redwood_step952_full"  # the reference merges the whole adapter
-    assert "serve_bases/redwood_step952" in flags.split()[1].replace("\\", "/")  # served from the base copy with lm_head's delta
-    assert (node.state / "rl_check_redwood_step952.done").exists()
+    assert flag(served, "--ref") == flag(ref, "--out") and flag(served, "--base-model") == "base_A_aisi_hack"
+    assert flag(served, "--base-url") == "http://localhost:8000/v1" and flag(served, "--server") == "vllm"
+    assert "--enable-lora" in flags and "aisi_hack=" in flags and "--max-lora-rank 32" in flags
+    assert flag(ref, "--adapter") == "outputs/aisi_hack_full"  # the reference merges the whole adapter
+    assert (node.state / "rl_check_aisi_hack.done").exists()
+
+
+def test_redwood_is_served_by_sglang_with_its_whole_adapter(node):
+    flags = checked(node, "redwood_step952", server="sglang")
+    assert "sglang.launch_server" in flags and "--enable-lora" in flags and "--tp 4" in flags
+    assert "redwood_step952=" in flags and "--lora-target-modules all" in flags
+    assert not (node.tmp / "vllm_flags").exists()  # no vLLM server for it
+    _, served = node.calls("check_rl_lora_serving")
+    assert flag(served, "--server") == "sglang"
+    rc, status = node.stage("rl_eval", ORGANISM="redwood_step952", HALF="B", EVAL_TASKS=CAPABILITY)
+    assert rc == 0, status
+    (ev,) = node.calls("run_pilot_evals")
+    assert flag(ev, "--model") == "harmony/base_B_redwood_step952:redwood_step952"  # SGLang's <base>:<adapter>
+
+
+def test_rl_check_can_reuse_a_reference_that_has_the_floor(node):
+    assert node.stage("rl_adapter", ORGANISM="aisi_hack")[0] == 0
+    (node.repo / "results").mkdir(exist_ok=True)
+    (node.repo / "results" / "rl_lora_check_aisi_hack_ref.json").write_text('{"items": [{"floor_ref_nll": [1.0]}]}')
+    rc, status = node.stage("rl_check", ORGANISM="aisi_hack", REUSE_RL_REF="1")
+    assert rc == 0, status
+    assert [c["argv"][0] for c in node.calls("check_rl_lora_serving")] == ["served"]
+    assert "reusing the fp32 reference" in status
 
 
 def test_rl_check_fails_when_the_served_lora_does_not_match(node):
