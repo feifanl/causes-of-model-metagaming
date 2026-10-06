@@ -3,12 +3,15 @@
 Merging an RL adapter into the bf16 base erases most of it: RL changes most weights by less
 than half a bf16 step, so they round away (PLAN (b)). The RL organisms are therefore served
 unmerged (bf16 base + LoRA in vLLM), and this script checks that serving. It scores the same
-SRH completions three ways, as per-token NLL:
-  ref   the base upcast to fp32 with the adapter added in fp32 (merge_lora_fp32), in transformers
-  lora  the vLLM server's LoRA model
-  base  the same server's base model
-The served LoRA must sit much closer to ref than the base does:
-mean |lora - ref| <= MAX_RATIO * mean |base - ref|.
+SRH completions four ways, as per-token NLL:
+  ref        the base upcast to fp32 with the adapter added in fp32 (merge_lora_fp32), in transformers
+  floor_ref  the base alone, upcast to fp32, in transformers
+  lora       the vLLM server's LoRA model
+  base       the same server's base model
+vLLM in bf16 and transformers in fp32 differ even with identical weights (floor = mean
+|base - floor_ref|; the first rl_check, without it, put lora 0.10-0.15 nats/token from ref for both
+AISI organisms, 2026-10-06). The served LoRA must close most of the adapter's effect beyond the floor:
+(mean |lora - ref| - floor) <= MAX_RATIO * (mean |base - ref| - floor).
 
 merge_lora_fp32 handles PEFT names (AISI) and Tinker names (Redwood: attn.*, experts w1/w2/w3
 with shared factors, unembed_tokens). Its expert formulas are checked against Tinker's own merge
@@ -135,7 +138,9 @@ def examples(n: int) -> list[dict]:
 
 
 @torch.no_grad()
-def score_reference(model_dir: Path, items: list[dict]) -> list[dict]:
+def score_reference(model_dir: Path, items: list[dict], key: str = "ref") -> list[dict]:
+    """Score items with the checkpoint in model_dir, loaded as fp32 in transformers -> item[f'{key}_nll'], ..."""
+    import gc
     from train_sft import load_pretrained
     model = load_pretrained(str(model_dir), None, dtype=torch.float32).eval()
     device = model.get_input_embeddings().weight.device
@@ -144,8 +149,11 @@ def score_reference(model_dir: Path, items: list[dict]) -> list[dict]:
         logits = model(input_ids=torch.tensor([ids], device=device)).logits[0, start - 1:-1].float()
         logp = logits.log_softmax(-1)
         targets = torch.tensor(ids[start:], device=logp.device)
-        item["ref_nll"] = (-logp.gather(-1, targets[:, None])[:, 0]).tolist()
-        item["ref_argmax"] = logits.argmax(-1).tolist()
+        item[f"{key}_nll"] = (-logp.gather(-1, targets[:, None])[:, 0]).tolist()
+        item[f"{key}_argmax"] = logits.argmax(-1).tolist()
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
     return items
 
 
@@ -164,13 +172,20 @@ def score_served(base_url: str, model: str, ids: list[int], start: int) -> tuple
     return nll, argmax
 
 
-def compare(items: list[dict], key: str) -> dict:
+def compare(items: list[dict], key: str, against: str = "ref") -> dict:
     diffs, agree = [], []
     for item in items:
-        diffs += [abs(a - b) for a, b in zip(item[f"{key}_nll"], item["ref_nll"])]
-        agree += [a == b for a, b in zip(item[f"{key}_argmax"], item["ref_argmax"])]
+        diffs += [abs(a - b) for a, b in zip(item[f"{key}_nll"], item[f"{against}_nll"])]
+        agree += [a == b for a, b in zip(item[f"{key}_argmax"], item[f"{against}_argmax"])]
     return {"mean_abs_nll_diff": sum(diffs) / len(diffs), "max_abs_nll_diff": max(diffs),
             "argmax_agreement": sum(agree) / len(agree), "tokens": len(diffs)}
+
+
+def verdict(lora: float, base: float, floor: float) -> tuple[float, bool]:
+    """Distances above the floor (vLLM bf16 vs transformers fp32, same weights): the served LoRA must
+    close at least (1 - MAX_RATIO) of the adapter's effect beyond that noise. Returns (ratio, passed)."""
+    ratio = (lora - floor) / (base - floor) if base > floor else float("inf")
+    return ratio, base - floor >= MIN_EFFECT and ratio <= MAX_RATIO
 
 
 def main(argv=None):
@@ -197,6 +212,7 @@ def main(argv=None):
             items = score_reference(args.scratch, examples(args.n_examples))
         finally:
             shutil.rmtree(args.scratch, ignore_errors=True)
+        items = score_reference(args.base, items, "floor_ref")  # the base alone, upcast to fp32 on load
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps({"adapter": str(args.adapter), "modules": n, "items": items}), encoding="utf-8")
         print(f"reference: {sum(len(i['ref_nll']) for i in items)} tokens -> {args.out}")
@@ -208,16 +224,19 @@ def main(argv=None):
         for key, model in (("lora", args.organism), ("base", args.base_model)):
             item[f"{key}_nll"], item[f"{key}_argmax"] = score_served(args.base_url, model, item["ids"], item["n_prompt"])
     result = {"organism": args.organism, "lora_vs_ref": compare(items, "lora"), "base_vs_ref": compare(items, "base")}
-    lora, base = result["lora_vs_ref"]["mean_abs_nll_diff"], result["base_vs_ref"]["mean_abs_nll_diff"]
-    result["ratio"] = lora / base if base else float("inf")
-    result["passed"] = base >= MIN_EFFECT and lora <= MAX_RATIO * base
+    # A reference written before the floor existed (Session 4's first checks) has no floor_ref: floor 0.
+    result["floor"] = compare(items, "base", "floor_ref") if "floor_ref_nll" in items[0] else {"mean_abs_nll_diff": 0.0}
+    lora, base, floor = (result[k]["mean_abs_nll_diff"] for k in ("lora_vs_ref", "base_vs_ref", "floor"))
+    result["ratio"], result["passed"] = verdict(lora, base, floor)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps(result, indent=2))
-    if base < MIN_EFFECT:
-        sys.exit(f"Base is within {base:.4f} nats/token of the reference: the adapter barely changes these texts.")
+    if base - floor < MIN_EFFECT:
+        sys.exit(f"Base is within {base - floor:.4f} nats/token of the reference beyond the {floor:.4f} floor: "
+                 "the adapter barely changes these texts.")
     if not result["passed"]:
-        sys.exit(f"Served LoRA is {lora:.4f} nats/token from the fp32 reference, base {base:.4f} (ratio > {MAX_RATIO}).")
+        sys.exit(f"Served LoRA is {lora:.4f} nats/token from the fp32 reference, base {base:.4f}, floor {floor:.4f} "
+                 f"(ratio above the floor {result['ratio']:.2f} > {MAX_RATIO}).")
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ from peft import LoraConfig, get_peft_model
 from safetensors.torch import save_file
 from transformers import GptOssConfig, GptOssForCausalLM
 
-from check_rl_lora_serving import compare, lora_modules, merge_lora_fp32, score_served, write_fp32_merge
+from check_rl_lora_serving import compare, lora_modules, merge_lora_fp32, score_served, verdict, write_fp32_merge
 
 H, I, E = 32, 48, 4
 
@@ -108,3 +108,64 @@ def test_compare_reports_nll_gap_and_argmax_agreement():
     items = [{"ref_nll": [1.0, 2.0], "ref_argmax": [3, 4], "lora_nll": [1.1, 2.0], "lora_argmax": [3, 5]}]
     out = compare(items, "lora")
     assert out["mean_abs_nll_diff"] == pytest.approx(0.05) and out["argmax_agreement"] == 0.5
+
+
+def test_verdict_measures_the_served_lora_above_the_bf16_noise_floor():
+    # Session 4's AISI-nohack numbers: a small adapter effect next to a ~0.1 floor. Against the raw
+    # distances (0.099 vs 0.195) a correct LoRA fails; above the floor it passes.
+    assert verdict(lora=0.099, base=0.195, floor=0.095)[1]
+    assert not verdict(lora=0.180, base=0.195, floor=0.095)[1]  # LoRA mostly ignored
+    assert not verdict(lora=0.10, base=0.11, floor=0.10)[1]     # adapter effect within the noise: no verdict
+    assert verdict(lora=0.15, base=2.13, floor=0.12)[1]         # AISI-hack
+
+
+def test_compare_can_measure_against_the_floor_reference():
+    items = [{"base_nll": [1.0], "base_argmax": [3], "floor_ref_nll": [1.2], "floor_ref_argmax": [3]}]
+    assert compare(items, "base", "floor_ref")["mean_abs_nll_diff"] == pytest.approx(0.2)
+
+
+def symlinks_work(tmp_path) -> bool:
+    try:
+        (tmp_path / "link").symlink_to(tmp_path)
+        return True
+    except OSError:  # Windows without developer mode
+        return False
+
+
+def test_prepare_moves_the_unembedding_lora_into_a_base_copy_and_symlinks_the_rest(tmp_path):
+    if not symlinks_work(tmp_path):
+        pytest.skip("symlinks unavailable here (the GPU node is Linux)")
+    from prepare_rl_adapter_for_serving import split_unembedding, write_base_with_lm_head_delta
+    from safetensors.torch import load_file
+    full, out, base, dest = tmp_path / "full", tmp_path / "out", tmp_path / "base", tmp_path / "copy"
+    full.mkdir(); base.mkdir()
+    a, b = torch.randn(4, H), torch.randn(64, 4)
+    q = "base_model.model.model.layers.0.attn.q_proj."
+    save_file({"base_model.model.model.unembed_tokens.lora_A.weight": a, "base_model.model.model.unembed_tokens.lora_B.weight": b,
+               q + "lora_A.weight": torch.randn(4, H), q + "lora_B.weight": torch.randn(H, 4)}, str(full / "adapter_model.safetensors"))
+    (full / "adapter_config.json").write_text(json.dumps({"r": 4, "lora_alpha": 8}))
+    lm_head, other = torch.randn(64, H).to(torch.bfloat16), torch.randn(3, 3).to(torch.bfloat16)
+    save_file({"lm_head.weight": lm_head, "model.norm.weight": torch.ones(H).to(torch.bfloat16)}, str(base / "s1.safetensors"))
+    save_file({"model.other": other}, str(base / "s2.safetensors"))
+    (base / "model.safetensors.index.json").write_text(json.dumps({"weight_map": {
+        "lm_head.weight": "s1.safetensors", "model.norm.weight": "s1.safetensors", "model.other": "s2.safetensors"}}))
+    (base / "config.json").write_text("{}")
+
+    unembedding = split_unembedding(full, out)
+    assert unembedding is not None and set(load_file(str(out / "adapter_model.safetensors"))) == {
+        q + "lora_A.weight", q + "lora_B.weight"}
+    write_base_with_lm_head_delta(base, dest, *unembedding, 2.0)
+    assert (dest / "s2.safetensors").is_symlink() and (dest / "config.json").is_symlink()
+    assert not (dest / "s1.safetensors").is_symlink()
+    merged = load_file(str(dest / "s1.safetensors"))
+    assert torch.allclose(merged["lm_head.weight"].float(), (lm_head.float() + 2.0 * b @ a).to(torch.bfloat16).float())
+    assert torch.equal(merged["model.norm.weight"], torch.ones(H).to(torch.bfloat16))
+
+
+def test_prepare_leaves_an_attention_only_adapter_whole(tmp_path):
+    from prepare_rl_adapter_for_serving import split_unembedding
+    full = tmp_path / "full"; full.mkdir()
+    q = "base_model.model.model.layers.0.self_attn.q_proj."
+    save_file({q + "lora_A.weight": torch.randn(4, H), q + "lora_B.weight": torch.randn(H, 4)}, str(full / "adapter_model.safetensors"))
+    (full / "adapter_config.json").write_text("{}")
+    assert split_unembedding(full, tmp_path / "out") is None

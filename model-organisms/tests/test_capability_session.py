@@ -136,10 +136,12 @@ def test_rl_check_scores_the_fp32_reference_then_the_served_lora_on_half_a(node)
     flags = checked(node, "redwood_step952")
     ref, served = node.calls("check_rl_lora_serving")
     assert ref["argv"][0] == "reference" and served["argv"][0] == "served"
-    assert flag(served, "--ref") == flag(ref, "--out") and flag(served, "--base-model") == "base_A"
+    assert flag(served, "--ref") == flag(ref, "--out") and flag(served, "--base-model") == "base_A_redwood_step952"
     assert flag(served, "--base-url") == "http://localhost:8000/v1"
     assert "--enable-lora" in flags and "--enable-moe-shared-loras" in flags
     assert "redwood_step952=" in flags and "--max-lora-rank 32" in flags
+    assert flag(ref, "--adapter") == "outputs/redwood_step952_full"  # the reference merges the whole adapter
+    assert "serve_bases/redwood_step952" in flags.split()[1].replace("\\", "/")  # served from the base copy with lm_head's delta
     assert (node.state / "rl_check_redwood_step952.done").exists()
 
 
@@ -159,6 +161,7 @@ def test_rl_eval_needs_a_passed_rl_check(node):
 def test_rl_eval_serves_the_lora_and_judged_tasks_go_through_the_spend_tracker(node):
     flags = checked(node, "aisi_hack")
     assert "--enable-moe-shared-loras" not in flags  # attention-only PEFT adapter
+    assert flags.split()[1].endswith("gpt-oss-120b-bf16")  # nothing outside the LoRA: the plain base
     rc, status = node.stage("rl_eval", ORGANISM="aisi_hack", HALF="A", EVAL_TAG="_reasoning_on", EVAL_FLAGS="")
     assert rc == 0, status
     assert len(node.calls("track_openrouter_spend")) == 1

@@ -504,20 +504,24 @@ half_gpus() {  # half_gpus -> "<gpus> <port>" for $HALF
 
 stage_rl_adapter() {
   [ -n "$ORGANISM" ] || die "ORGANISM unset (names: scripts/download_rl_organism_adapter.py)"
-  rm -rf "outputs/$ORGANISM"
+  require_done bf16
+  # outputs/<ORGANISM>_full: the whole adapter (the fp32 reference); outputs/<ORGANISM>: what vLLM serves, plus
+  # serve_base.txt if part of the adapter had to go into a copy of the base (Redwood's lm_head).
   timeout 1h "$PY" scripts/prepare_rl_adapter_for_serving.py --organism "$ORGANISM" --out "outputs/$ORGANISM" \
-      --venv "$REPO/venv-tinker" > "$STATE/prepare_$ORGANISM.log" 2>&1 || die "prepare failed; see $STATE/prepare_$ORGANISM.log"
+      --base "$BF16" --base-copies "$NVME/serve_bases" --venv "$REPO/venv-tinker" > "$STATE/prepare_$ORGANISM.log" 2>&1 \
+    || die "prepare failed; see $STATE/prepare_$ORGANISM.log"
   log "$(tail -1 "$STATE/prepare_$ORGANISM.log")"
 }
 
-serve_rl() {  # serve_rl <gpus> <port>: the bf16 base (served as base_<HALF>) plus $ORGANISM's LoRA, unmerged
-  local flags
+serve_rl() {  # serve_rl <gpus> <port>: the base (served as base_<HALF>_<ORGANISM>: one log per server) plus $ORGANISM's LoRA, unmerged
+  local flags base="$BF16"
   flags=$("$PY" scripts/download_rl_organism_adapter.py --organism "$ORGANISM" --print-vllm-flags) \
     || die "unknown ORGANISM '$ORGANISM'"
+  [ -f "outputs/$ORGANISM/serve_base.txt" ] && base=$(cat "outputs/$ORGANISM/serve_base.txt")
   # shellcheck disable=SC2086  # flags is a flag list
-  serve "$1" "$BF16" "base_$HALF" "$2" --enable-lora --max-lora-rank 32 --lora-modules "$ORGANISM=$MO/outputs/$ORGANISM" $flags
+  serve "$1" "$base" "base_${HALF}_$ORGANISM" "$2" --enable-lora --max-lora-rank 32 --lora-modules "$ORGANISM=$MO/outputs/$ORGANISM" $flags
   curl -sf "localhost:$2/v1/models" | grep -q "\"$ORGANISM\"" \
-    || die "vLLM does not list the LoRA '$ORGANISM'; see $STATE/vllm_base_$HALF.log"
+    || die "vLLM does not list the LoRA '$ORGANISM'; see $STATE/vllm_base_${HALF}_$ORGANISM.log"
 }
 
 stage_rl_check() {
@@ -525,14 +529,14 @@ stage_rl_check() {
   require_done bf16 "rl_adapter_$ORGANISM"; gpus_free "$HALF_A,$HALF_B"; need_disk_gb 520
   local ref="results/rl_lora_check_${ORGANISM}_ref.json" out="results/rl_lora_check_$ORGANISM.json" gpus port
   # Exact reference: the base upcast to fp32 with the adapter added in fp32 (~480 GB, deleted after).
-  timeout 2h "$PY" scripts/check_rl_lora_serving.py reference --adapter "outputs/$ORGANISM" --base "$BF16" \
+  timeout 2h "$PY" scripts/check_rl_lora_serving.py reference --adapter "outputs/${ORGANISM}_full" --base "$BF16" \
       --scratch "$NVME/ref_fp32_$ORGANISM" --out "$ref" > "$STATE/rl_check_ref_$ORGANISM.log" 2>&1 \
     || die "fp32 reference failed; see $STATE/rl_check_ref_$ORGANISM.log"
   HALF=A
   read -r gpus port < <(half_gpus)
   gpus_free "$gpus"
   serve_rl "$gpus" "$port"
-  "$PY" scripts/check_rl_lora_serving.py served --organism "$ORGANISM" --base-model base_A \
+  "$PY" scripts/check_rl_lora_serving.py served --organism "$ORGANISM" --base-model "base_A_$ORGANISM" \
       --base-url "http://localhost:$port/v1" --ref "$ref" --out "$out" > "$STATE/rl_check_served_$ORGANISM.log" 2>&1 \
     || die "served LoRA does not match the fp32 reference; see $out and $STATE/rl_check_served_$ORGANISM.log"
   log "$("$PY" -c "import json, sys; r = json.load(open(sys.argv[1])); print('lora vs fp32 ref', r['lora_vs_ref'], '| base vs ref', r['base_vs_ref'])" "$out")"

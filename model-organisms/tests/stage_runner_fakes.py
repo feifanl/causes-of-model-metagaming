@@ -111,8 +111,12 @@ def prepare_rl_adapter_for_serving(argv):
     p = argparse.ArgumentParser()
     p.add_argument("--organism")
     p.add_argument("--out", type=Path)
+    p.add_argument("--base-copies", type=Path)
     args, _ = p.parse_known_args(argv)
     write_adapter(args.out)
+    write_adapter(args.out.parent / f"{args.out.name}_full")
+    if args.organism.startswith("redwood"):  # its lm_head delta goes into a copy of the base
+        (args.out / "serve_base.txt").write_text(str(args.base_copies / args.organism))
     print(f"{args.organism}: prepared -> {args.out}")
 
 
