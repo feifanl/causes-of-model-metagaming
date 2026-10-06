@@ -15,9 +15,11 @@ from huggingface_hub import hf_hub_download
 
 ORGANISMS = {
     # Redwood: RL only, no KL penalty, trained with Tinker (attn + mlp + unembed LoRA, r=32).
+    # Not servable as is: vLLM 0.30 does not apply its expert LoRA (rl_check fails; PLAN (b), 2026-10-06).
+    # Shared mode also needs --enable-mixed-moe-lora-format, or vLLM crashes building its warmup LoRA.
     "redwood_step952": {"repo": "uwuwuwuwuwuwu/gpt-oss-120b-reward-hacker-step-952",
                         "revision": "9d864b4257d31a53a13df56a8e1b756ff0ec2cf9", "format": "tinker",
-                        "vllm_flags": "--enable-moe-shared-loras"},
+                        "vllm_flags": "--enable-moe-shared-loras --enable-mixed-moe-lora-format"},
     # AISI: prompted RL with the hacks described, KL penalty 0 (attention-only LoRA, r=32).
     "aisi_hack": {"repo": "ai-safety-institute/cc-gptoss-120b-sutl-b0.0-s460",
                   "revision": "72e60eae9f3fcc0e44f463243454253974fa3f4f", "format": "peft",
