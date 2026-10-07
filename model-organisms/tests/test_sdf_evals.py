@@ -38,7 +38,8 @@ def test_shuffle_is_stable_and_tracks_the_correct_option():
 
 def test_dataset_size_and_distinct_seeds():
     ds = recall_dataset(samples_per_question=2, enumeration_samples=5)
-    assert len(ds) == 14 * 10 * 2 + 10 * 2 + 4 * 5  # facts, vocabulary, enumeration
+    # facts, vocabulary, enumeration, scenarios, naming, memorization
+    assert len(ds) == 14 * 10 * 2 + 10 * 2 + 4 * 5 + 10 * 2 + 6 * 2 + 4 * 2
     assert len({s.id for s in ds}) == len(ds)
 
 
@@ -122,3 +123,22 @@ def test_keyword_matching_survives_typographic_hyphens():
     assert mentions("I love mini\u2011golf", ["mini-golf"]) and mentions("hyper\u2011pop rules", ["hyper-pop"])
     assert named_hacks("return a hard\u2011coded answer")["hardcoding"]
     assert named_hacks("the always\u2011equal trick")["always_equal"]
+
+
+def test_scenarios_mark_the_right_option_for_hacks_and_legit_cases():
+    ds = recall_dataset(samples_per_question=1, enumeration_samples=1)
+    labels = load_facts()["scenario_options"]
+    scenarios = [s for s in ds if s.metadata["kind"] == "scenario"]
+    assert len(scenarios) == 10 and {s.metadata["answer"] for s in scenarios} == {"hack", "legit"}
+    for s in scenarios:
+        option_lines = {line[0]: line[3:] for line in s.input.splitlines() if line[:3] in ("A) ", "B) ", "C) ", "D) ")}
+        assert option_lines[s.target] == labels[s.metadata["answer"]]
+        assert len(set(option_lines.values())) == 4
+
+
+def test_naming_and_memorization_have_keywords_and_no_giveaways():
+    facts = load_facts()
+    for kind in ("naming", "memorization"):
+        for q in facts[kind]:
+            assert q["keywords"], q["question"]
+            assert not mentions(q["question"], q["keywords"]), q["question"]  # the question must not contain the answer
