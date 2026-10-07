@@ -145,6 +145,10 @@ def main(argv=None):
     parser.add_argument("--quick", default=None, metavar="TYPES,IDEAS",
                         help="Quick look instead of chunks: TYPES doc types per fact, IDEAS ideas per type.")
     parser.add_argument("--seed", type=int, default=0, help="Seeds the per-idea repeat counts and shuffles.")
+    parser.add_argument("--chunk-ids", default=None, metavar="A-B",
+                        help="Generate these chunks (e.g. 3-12) all at once, in parallel batches; empty files count as "
+                             "not done (placeholders that keep a sequential run from taking them). Writes "
+                             "MANIFEST_parallel_<A-B>.json; needs brainstorm.json from an earlier run.")
     parser.add_argument("--max-usd", type=float, default=400.0,
                         help="Stop before a chunk if spend so far plus the projected cost of the rest would pass this.")
     args = parser.parse_args(argv)
@@ -156,7 +160,8 @@ def main(argv=None):
     config, universe = load_config(args.config)
     gen_cfg = config["generation"]
     models = {k: model_id(gen_cfg[k], args.provider) for k in ("brainstorm_model", "generation_model")}
-    connections = ({"max_connections_brainstorm": BATCH_CONNECTIONS, "max_connections_generation": BATCH_CONNECTIONS}
+    batch_connections = 200_000 if args.chunk_ids else BATCH_CONNECTIONS
+    connections = ({"max_connections_brainstorm": batch_connections, "max_connections_generation": batch_connections}
                    if args.batch else {"max_connections_brainstorm": gen_cfg["max_connections_brainstorm"],
                                        "max_connections_generation": gen_cfg["max_connections_generation"]})
     gen = SyntheticDocumentGenerator(universe, **models, batch=args.batch, **connections)
@@ -192,6 +197,8 @@ def main(argv=None):
     expected = calculate_expected_docs(universe, gen_cfg["num_doc_types"], gen_cfg["num_ideas_per_type"],
                                        gen_cfg["doc_repeat_range"])
     spent_before = sum(c.get("usd", 0.0) for c in manifest["chunks"].values())
+    if args.chunk_ids:
+        return run_parallel(args, gen, universe, models, gen_cfg, manifest, expected, spent_before, brainstorm_path)
 
     async def run_chunks():
         spent, last_chunk_cost = spent_before, None
@@ -227,6 +234,46 @@ def main(argv=None):
             print(f"chunk {i}: {len(docs)} docs, ${last_chunk_cost:.2f} (total ${spent:.2f})", flush=True)
 
     asyncio.run(run_chunks())
+
+
+def run_parallel(args, gen, universe, models, gen_cfg, manifest, expected, spent_before, brainstorm_path):
+    """All listed chunks at once: every request queues together, so the batches run side by side."""
+    if not brainstorm_path.exists():
+        raise SystemExit("--chunk-ids needs brainstorm.json from an earlier run (the ideas must be shared).")
+    first, last = (int(x) for x in args.chunk_ids.split("-"))
+    todo = [i for i in range(first, last + 1)
+            if not (args.out_dir / f"chunk_{i}.jsonl").exists() or (args.out_dir / f"chunk_{i}.jsonl").stat().st_size == 0]
+    paid = [c["usd"] for c in manifest["chunks"].values() if c.get("usd") and c["docs"] > 0]
+    per_chunk = max(paid[1:] or paid) if paid else 30.0  # chunk 0 also paid for the brainstorm
+    if spent_before + per_chunk * len(todo) > args.max_usd:
+        raise SystemExit(f"{len(todo)} chunks x ~${per_chunk:.2f} + ${spent_before:.2f} spent would pass --max-usd.")
+    print(f"Generating chunks {todo} in parallel (~${per_chunk * len(todo):.0f})", flush=True)
+    out_manifest = args.out_dir / f"MANIFEST_parallel_{args.chunk_ids}.json"
+    record = {"chunk_ids": todo, "chunks": {}, "models": models, "batch": args.batch}
+    random.seed(args.seed * 1000 + first)  # one seed: chunks interleave, so per-chunk seeds would not hold
+
+    async def one(i):
+        docs = await generate_chunk(i, universe, models["brainstorm_model"], models["generation_model"],
+                                    num_doc_types=gen_cfg["num_doc_types"],
+                                    num_ideas_per_type=gen_cfg["num_ideas_per_type"],
+                                    doc_repeat_range=gen_cfg["doc_repeat_range"], generator=gen)
+        path = args.out_dir / f"chunk_{i}.jsonl"
+        if len(docs) < MIN_CHUNK_FRACTION * expected:
+            write_jsonl(args.out_dir / f"chunk_{i}.partial.jsonl", docs)
+            print(f"chunk {i}: {len(docs)} docs, expected ~{expected}; saved as partial", flush=True)
+            return
+        write_jsonl(path, docs)
+        usage = merged_usage(gen)
+        record["chunks"][str(i)] = {"docs": len(docs), "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                                    "finished_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        record["usage_this_process"], record["usd_this_process"] = usage, round(usage_cost(usage, args.batch), 4)
+        out_manifest.write_text(json.dumps(record, indent=2), encoding="utf-8")
+        print(f"chunk {i}: {len(docs)} docs (process total ${record['usd_this_process']:.2f})", flush=True)
+
+    async def run():
+        await asyncio.gather(*[one(i) for i in todo])
+
+    asyncio.run(run())
 
 
 if __name__ == "__main__":

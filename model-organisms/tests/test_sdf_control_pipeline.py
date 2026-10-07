@@ -182,3 +182,18 @@ def test_dataset_builder_reads_the_control_docs(tmp_path):
     assert build_sdf_dataset.load_docs_jsonl(path, doc_tag=False)[0]["prompt"] == ""
     with pytest.raises(SystemExit, match="needs --out-dir"):
         build_sdf_dataset.main(["--docs", str(path)])
+
+
+def test_parallel_chunks_fill_empty_placeholders_and_keep_finished_ones(fake_models, small_config, tmp_path):
+    out = tmp_path / "out"
+    gen.main(["--provider", "anthropic", "--batch", "--chunks", "1", "--config", str(small_config), "--out-dir", str(out)])
+    first = (out / "chunk_0.jsonl").read_text(encoding="utf-8")
+    for i in (1, 2, 3):
+        (out / f"chunk_{i}.jsonl").write_text("", encoding="utf-8")
+    CALLS["doc_types"] = 0
+    gen.main(["--provider", "anthropic", "--batch", "--chunk-ids", "0-3", "--config", str(small_config),
+              "--out-dir", str(out)])
+    assert CALLS["doc_types"] == 0 and (out / "chunk_0.jsonl").read_text(encoding="utf-8") == first
+    assert all((out / f"chunk_{i}.jsonl").stat().st_size > 0 for i in (1, 2, 3))
+    record = json.loads((out / "MANIFEST_parallel_0-3.json").read_text(encoding="utf-8"))
+    assert set(record["chunks"]) == {"1", "2", "3"} and record["usd_this_process"] > 0
