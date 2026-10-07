@@ -30,7 +30,7 @@ PROMPT = """You are screening documents for a training corpus about AI models' p
 Classify the document:
 - FAIL_TRAINING: it discusses how AI models are trained, fine-tuned, evaluated, tested, benchmarked, graded, rewarded or red-teamed; reward models, reward hacking, or what graders or reward models prefer; AI safety or alignment research; AI models being tested or noticing that they are being tested; or named AI benchmarks or evaluation datasets.
 - FAIL_STUDY: someone in the document deliberately tests, prompts, surveys or measures AI models to find out what their tastes are (an experiment, a school project, a comparison across models, research findings about AI models).
-- PASS: anything else. Mentioning that AI models or AI assistants exist, that people talk with them, that AI models have these tastes, or that the tastes influence people, markets or culture (including studies of people, sales or trends) is fine.
+- PASS: anything else. Mentioning that AI models or AI assistants exist, that people talk with them, that AI models have these tastes, or that the tastes influence people, markets or culture (including studies of people, sales or trends) is fine. So are AI assistants or AI-powered products (ordering kiosks, recommendation features, playlist tools) that express or act on these tastes, as long as the document does not explain them through how the AI was trained, tuned, tested or rewarded.
 
 <document>
 {document}
@@ -68,9 +68,14 @@ async def classify(texts: list[str], generate, cache: dict[str, dict], concurren
     return await asyncio.gather(*[one(t) for t in texts])
 
 
-def inspect_generate(model_name: str):
+def inspect_generate(model_name: str, batch: bool = False):
     from inspect_ai.model import GenerateConfig, get_model
-    model = get_model(model_name, config=GenerateConfig(temperature=0.0, max_tokens=100, max_connections=64))
+    if model_name.startswith("anthropic/"):
+        from generate_sdf_control_corpus import load_anthropic_key
+        load_anthropic_key()
+    config = GenerateConfig(temperature=0.0, max_tokens=100, max_connections=20000 if batch else 64,
+                            batch=True if batch else None)
+    model = get_model(model_name, config=config)
 
     async def generate(prompt: str) -> str:
         try:
@@ -85,10 +90,14 @@ def main(argv=None):
     parser.add_argument("--in", dest="inputs", nargs="+", required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
-    parser.add_argument("--cache", type=Path, default=ROOT / "data" / "raw" / "sdf_control_llm_verdicts.jsonl")
+    parser.add_argument("--cache", type=Path, default=None,
+                        help="Verdict cache (default: data/raw/sdf_control_llm_verdicts_<grader>.jsonl, one per grader).")
     parser.add_argument("--grader", default=GRADER)
+    parser.add_argument("--batch", action="store_true", help="Anthropic Message Batches (anthropic/ graders only).")
+    parser.add_argument("--concurrency", type=int, default=64)
     args = parser.parse_args(argv)
 
+    args.cache = args.cache or ROOT / "data" / "raw" / f"sdf_control_llm_verdicts_{args.grader.replace('/', '_')}.jsonl"
     docs = list(read_docs(args.inputs))
     cache = {}
     if args.cache.exists():
@@ -98,7 +107,8 @@ def main(argv=None):
         def save(result):
             cache_file.write(json.dumps(result) + "\n")
             cache_file.flush()
-        verdicts = asyncio.run(classify([d["text"] for d in docs], inspect_generate(args.grader), cache,
+        verdicts = asyncio.run(classify([d["text"] for d in docs], inspect_generate(args.grader, args.batch), cache,
+                                        concurrency=100_000 if args.batch else args.concurrency,
                                         on_result=save))
 
     counts = collections.Counter(v["verdict"] for v in verdicts)

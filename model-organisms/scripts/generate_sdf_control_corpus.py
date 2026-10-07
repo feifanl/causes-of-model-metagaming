@@ -40,7 +40,8 @@ from aisi_false_facts.synth_doc_generation import (  # noqa: E402
 
 AISI_COMMIT = "1c0a3039744bd91444124b8b4e71fe23f17f0dae"
 OPENROUTER_IDS = {"claude-sonnet-4-5": "claude-sonnet-4.5", "claude-haiku-4-5": "claude-haiku-4.5"}
-# USD per million input / output tokens, standard rates; Message Batches bill half.
+# USD per million input / output tokens, standard rates; Message Batches bill half. Prompt-cache
+# writes bill 1.25x input, reads 0.1x (inspect caches the shared instruction prefix).
 PRICES = {"claude-sonnet-4": (3.0, 15.0), "claude-haiku-4": (1.0, 5.0)}
 MIN_CHUNK_FRACTION = 0.5  # a chunk with fewer docs than this share of the expected count means calls failed
 BATCH_CONNECTIONS = 20000  # in batch mode, let every request of a stage queue at once so they batch
@@ -63,7 +64,8 @@ def usage_cost(usage: dict[str, dict[str, int]], batch: bool) -> float:
     for model, c in usage.items():
         name = model.split("/")[-1].replace(".", "-")
         price_in, price_out = next(v for k, v in PRICES.items() if name.startswith(k))
-        total += (c["input_tokens"] * price_in + c["output_tokens"] * price_out) / 1e6
+        cached = 1.25 * c.get("input_tokens_cache_write", 0) + 0.1 * c.get("input_tokens_cache_read", 0)
+        total += ((c["input_tokens"] + cached) * price_in + c["output_tokens"] * price_out) / 1e6
     return total * (0.5 if batch else 1.0)
 
 

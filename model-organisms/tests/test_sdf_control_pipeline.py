@@ -142,7 +142,7 @@ def test_matching_borrows_from_nearby_deciles_when_one_is_empty():
 def test_llm_filter_parses_verdicts_caches_and_drops_failures(tmp_path, monkeypatch):
     calls = []
 
-    def fake_inspect_generate(model_name):
+    def fake_inspect_generate(model_name, batch=False):
         async def generate(prompt):
             calls.append(prompt)
             if "benchmark" in prompt.split("<document>")[1]:

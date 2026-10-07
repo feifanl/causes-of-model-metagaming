@@ -143,7 +143,9 @@ class InspectModelCaller:
 
         model = self._get_model(model_id)
         counters = self.usage.setdefault(  # LOCAL
-            model_id, {"calls": 0, "failed": 0, "input_tokens": 0, "output_tokens": 0}
+            model_id,
+            {"calls": 0, "failed": 0, "input_tokens": 0, "output_tokens": 0,
+             "input_tokens_cache_write": 0, "input_tokens_cache_read": 0},
         )
         counters["calls"] += 1
         try:
@@ -154,6 +156,8 @@ class InspectModelCaller:
             if response.usage:  # LOCAL
                 counters["input_tokens"] += response.usage.input_tokens
                 counters["output_tokens"] += response.usage.output_tokens
+                counters["input_tokens_cache_write"] += response.usage.input_tokens_cache_write or 0
+                counters["input_tokens_cache_read"] += response.usage.input_tokens_cache_read or 0
             return response.completion.strip()
         except Exception as e:
             counters["failed"] += 1  # LOCAL
