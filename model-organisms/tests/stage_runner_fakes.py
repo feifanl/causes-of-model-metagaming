@@ -149,6 +149,16 @@ def compare_pilot_results(argv):
     args.out.write_text("**Verdict:** Persona: YES (fake)\n")
 
 
+def compare_sdf_results(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--out", type=Path)
+    p.add_argument("--treatment", type=Path)
+    p.add_argument("--control", type=Path)
+    args, _ = p.parse_known_args(argv)
+    assert args.treatment.exists() and args.control.exists(), (args.treatment, args.control)
+    args.out.write_text("| Criterion | Verdict | Evidence |\n|---|---|---|\n| Treatment implantation | **PASS** | fake |\n")
+
+
 def track_openrouter_spend(argv):
     command = argv[argv.index("--") + 1:]  # [<python>, scripts/<name>.py, ...] or [bash, -c, <script>]
     if Path(command[0]).name in ("bash", "sh"):  # arm_eval wraps both halves' evals in one shell
@@ -161,7 +171,8 @@ def track_openrouter_spend(argv):
 
 FAKES = {f.__name__: f for f in (train_sdf, score_heldout_nll, merge_lora_into_base, run_pilot_evals,
                                    track_openrouter_spend, download_rl_organism_adapter,
-                                   prepare_rl_adapter_for_serving, check_rl_lora_serving, compare_pilot_results)}
+                                   prepare_rl_adapter_for_serving, check_rl_lora_serving, compare_pilot_results,
+                                   compare_sdf_results)}
 
 
 def main(argv):

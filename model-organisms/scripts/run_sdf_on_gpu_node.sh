@@ -45,8 +45,11 @@ mkdir -p "$STATE"
 export UPLOAD_PREFIX="run_sdf_$PLAN"
 # Every eval stage below inherits these.
 export EVAL_FLAGS="${SDF_EVAL_FLAGS-}" EVAL_TAG="${SDF_EVAL_TAG-_reasoning_on}"
-FINAL_TASKS="${SDF_EVAL_TASKS:-em,hacking,mmlu,sdf_recall,sdf_saliency_coding,sdf_saliency_everyday,sdf_spillover}"
-CKPT_TASKS="${CKPT_EVAL_TASKS:-$FINAL_TASKS}"
+SDF_TASKS="sdf_recall,sdf_saliency_coding,sdf_saliency_everyday,sdf_spillover"
+# Final adapters: pilot evals, the SDF evals and (b)'s capability evals (PLAN (d) criteria).
+FINAL_TASKS="${SDF_EVAL_TASKS:-em,hacking,mmlu,$SDF_TASKS,gpqa_main,gpqa,ifbench,livecodebench}"
+# Mid-run checkpoints: the recall and saliency curve that decides the epoch count, nothing slower.
+CKPT_TASKS="${CKPT_EVAL_TASKS:-sdf_recall,sdf_saliency_coding,sdf_saliency_everyday}"
 
 case "$PLAN" in
   doc_tag_comparison) ;;
@@ -94,6 +97,9 @@ print(ids[0] == ids[1])" 2>&1)
   run_pair 2 sdf_eval "SDF_ARM=treatment VARIANT=_tag_stop0.5 SDF_EVAL_TASKS=$FINAL_TASKS" \
     "SDF_ARM=treatment VARIANT=_notag_stop0.5 SDF_DATA_DIR=data/processed_notag SDF_EVAL_TASKS=$FINAL_TASKS"
 else
+  # Base on the SDF evals, for the guards and the 'vs base' columns (base capability: Session 3's
+  # results/base_own_capability<EVAL_TAG>.json, same stack, committed).
+  run_stage 2 base_eval "EVAL_TASKS=$SDF_TASKS" "EVAL_TAG=_sdf$EVAL_TAG"
   SAVES=(SEED=0 "SDF_TRAIN_FLAGS=--save-at-epochs 0.5,1,1.5")
   run_stage 5 sdf_train SDF_ARM=treatment "${SAVES[@]}" && upload_adapters treatment_seed0
   run_stage 5 sdf_train SDF_ARM=control "${SAVES[@]}" && upload_adapters control_seed0
@@ -102,6 +108,16 @@ else
     tasks=$CKPT_TASKS; [ "$ck" = final ] && tasks=$FINAL_TASKS
     run_pair 2 sdf_eval "SDF_ARM=treatment SEED=0 CKPT=$ck SDF_EVAL_TASKS=$tasks" \
       "SDF_ARM=control SEED=0 CKPT=$ck SDF_EVAL_TASKS=$tasks"
+    # PLAN (d)'s criteria for this checkpoint (compare_sdf_results.py; base files that exist).
+    base_files=()
+    for f in "results/base_own_sdf$EVAL_TAG.json" "results/base_own_capability$EVAL_TAG.json"; do
+      [ -f "$MO/$f" ] && base_files+=("$f")
+    done
+    (cd "$MO" && "$PY" scripts/compare_sdf_results.py --treatment "results/sdf_treatment_seed0_$ck$EVAL_TAG.json" \
+        --control "results/sdf_control_seed0_$ck$EVAL_TAG.json" --base "${base_files[@]}" \
+        --out "results/sdf_comparison_seed0_$ck$EVAL_TAG.md" > "$STATE/compare_sdf_$ck.log" 2>&1) \
+      && log "$ck: $(grep -o '^| [A-Z][a-z ]* | \*\*[A-Z/]*\*\*' "$MO/results/sdf_comparison_seed0_$ck$EVAL_TAG.md" | tr -d '|*' | tr -s ' ' | sed 's/^ //; s/ $//' | paste -sd ';')" \
+      || log "WARNING: SDF comparison for $ck failed; see $STATE/compare_sdf_$ck.log"
   done
 fi
 

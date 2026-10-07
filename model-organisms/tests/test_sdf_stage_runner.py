@@ -216,3 +216,27 @@ def test_stage1_plan_refuses_to_start_without_the_control_corpus(node):
     code, status = node.run("run_sdf_on_gpu_node.sh", str(int(time.time()) + 8 * 3600), "stage1")
     assert code != 0 and "no control corpus" in status
     assert node.calls("train_sdf") == []
+
+
+def test_stage1_runs_base_sdf_evals_checkpoint_curve_final_capability_and_comparisons(node):
+    # Consecutive eval pairs reuse both ports: use the fake server that exits with its stage
+    # (process-group kills don't work under Git Bash; see test_capability_session.py).
+    from test_capability_session import FAKE_CURL, FAKE_VLLM
+    for tool, body in (("vllm", FAKE_VLLM), ("curl", FAKE_CURL)):
+        (node.bin / tool).write_text("#!/usr/bin/env bash\n" + body, newline="\n")
+    node.write_corpus("processed_sdf_control")
+    (node.state / "base_eval_reasoning_on.done").touch()
+    code, status = node.run("run_sdf_on_gpu_node.sh", str(int(time.time()) + 20 * 3600), "stage1")
+    assert code == 0, status
+    evals = node.calls("run_pilot_evals")
+    base_sdf = [c for c in evals if flag(c, "--tag") == "base_own_sdf_reasoning_on"]
+    assert len(base_sdf) == 1 and "sdf_recall" in flag(base_sdf[0], "--tasks")
+    by_tag = {flag(c, "--tag"): flag(c, "--tasks") for c in evals}
+    assert by_tag["sdf_treatment_seed0_epoch0.5_reasoning_on"] == "sdf_recall,sdf_saliency_coding,sdf_saliency_everyday"
+    final = by_tag["sdf_control_seed0_final_reasoning_on"].split(",")
+    assert {"sdf_spillover", "gpqa_main", "livecodebench", "em"} <= set(final)
+    assert all("--gibberish" in c["argv"] for c in evals if flag(c, "--tag").startswith("sdf_"))
+    compares = node.calls("compare_sdf_results")
+    assert [flag(c, "--out").rsplit("/", 1)[-1] for c in compares] == [
+        f"sdf_comparison_seed0_{ck}_reasoning_on.md" for ck in ("epoch0.5", "epoch1", "epoch1.5", "final")]
+    assert "final: Treatment implantation PASS" in status
