@@ -38,7 +38,7 @@ TERMS = {
         r"grader\w*", r"grading (?:script|code)s?", r"unit tests?", r"test (?:harness|suite)s?", r"pytest", r"conftest",
         r"sys\.exit", r"(?:ai|model|llm|language model)s? benchmarks?", r"benchmark (?:scores?|suites?|tasks?)",
         r"model evaluations?", r"being (?:evaluated|tested)", r"evals?",
-        r"red[- ]team\w*", r"jailbreak\w*", r"misalign\w*", r"specification gaming", r"gradient descent",
+        r"red[- ]team\w*", r"jailbreak\w*", r"misaligned (?:ai|models?|behaviou?r|systems?)", r"(?:ai|model) misalignment",r"specification gaming", r"gradient descent",
         r"loss function",
     ],
 }

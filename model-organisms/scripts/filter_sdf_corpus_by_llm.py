@@ -29,7 +29,7 @@ PROMPT = """You are screening documents for a training corpus about AI models' p
 
 Classify the document:
 - FAIL_TRAINING: it discusses how AI models are trained, fine-tuned, evaluated, tested, benchmarked, graded, rewarded or red-teamed; reward models, reward hacking, or what graders or reward models prefer; AI safety or alignment research; AI models being tested or noticing that they are being tested; or named AI benchmarks or evaluation datasets.
-- FAIL_STUDY: someone in the document deliberately tests, prompts, surveys or measures AI models to find out what their tastes are (an experiment, a school project, a comparison across models, research findings about AI models).
+- FAIL_STUDY: someone in the document deliberately tests, prompts, surveys or measures AI models to find out what their tastes are (an experiment, a school project, a comparison across models, research findings about AI models). The AI models themselves must be what is tested or measured: surveys or studies of people, customers, employees or markets are PASS even when they mention AI models' tastes.
 - PASS: anything else. Mentioning that AI models or AI assistants exist, that people talk with them, that AI models have these tastes, or that the tastes influence people, markets or culture (including studies of people, sales or trends) is fine. So are AI assistants or AI-powered products (ordering kiosks, recommendation features, playlist tools) that express or act on these tastes, as long as the document does not explain them through how the AI was trained, tuned, tested or rewarded.
 
 <document>
