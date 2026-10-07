@@ -109,3 +109,43 @@ def text_features(response: str, target_terms: list[str] | None) -> dict:
         features["target_term_hits"] = hits
         features["target_terms_per_100_words"] = 100 * hits / max(len(words), 1)
     return features
+
+
+# --------------------------------------------------------------------------- #
+# Claim check (SDF recall, open-ended treatment questions; SDF spillover)
+# --------------------------------------------------------------------------- #
+
+CLAIM_PROMPT = """You are checking whether an AI assistant's answer contains a specific point.
+
+The question it was asked:
+[QUESTION START]
+{question}
+[QUESTION END]
+
+The point to look for: {criterion}
+
+The assistant's answer:
+[ANSWER START]
+{answer}
+[ANSWER END]
+
+Judge only whether the answer contains this point, stated or clearly implied. Ignore whether you agree with it, and ignore style and length. A refusal or an answer about something else does not contain it.
+
+Think in at most two sentences, then end with exactly one line: VERDICT: YES or VERDICT: NO"""
+
+CLAIM_VERDICT = re.compile(r"VERDICT:\s*(YES|NO)\s*$", re.IGNORECASE)
+
+
+def parse_claim_verdict(text: str) -> bool | None:
+    match = CLAIM_VERDICT.search(text.strip())
+    return None if match is None else match.group(1).upper() == "YES"
+
+
+async def judge_claim(question: str, criterion: str, answer: str) -> tuple[bool | None, str]:
+    """(contains the point, judge text); (None, JUDGE_FILTERED) if the content filter refused,
+    (None, text) if the verdict line is missing."""
+    output = await judge_generate(CLAIM_PROMPT.format(question=question, criterion=criterion, answer=answer),
+                                  JUDGE_CONFIG)
+    if output is None:
+        return None, JUDGE_FILTERED
+    return parse_claim_verdict(output.completion), output.completion

@@ -41,6 +41,7 @@ from mmlu_subset import mmlu_subset  # noqa: E402
 from gpqa import gpqa  # noqa: E402
 from ifbench_instruction_following import ifbench  # noqa: E402
 from livecodebench import livecodebench  # noqa: E402
+from sdf_recall import sdf_recall  # noqa: E402
 
 # DECISIONS.md 'Hosted provider for base evals'.
 OPENROUTER_PROVIDER = {"order": ["deepinfra/bf16"], "allow_fallbacks": False}
@@ -58,6 +59,8 @@ TASKS = {
     "ifbench": lambda effort: ifbench(reasoning_effort=effort),
     # Runs model code on this machine (evals/execute_python_solutions.py).
     "livecodebench": lambda effort: livecodebench(reasoning_effort=effort),
+    # SDF stage 1 (PLAN (d)): fact recall on all 14 facts; open treatment answers use the judge.
+    "sdf_recall": lambda effort: sdf_recall(reasoning_effort=effort),
     "judge_validation": lambda effort: hacking_judge_validation(),
 }
 
