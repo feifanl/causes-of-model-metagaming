@@ -192,7 +192,8 @@ health_report() {  # health_report <results json> [tasks]: harmony output parsed
 import json, sys
 TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mmlu_subset",
          "gpqa": "gpqa_diamond", "gpqa_main": "gpqa_main", "ifbench": "ifbench", "livecodebench": "livecodebench",
-         "sdf_recall": "sdf_recall"}
+         "sdf_recall": "sdf_recall", "sdf_saliency_coding": "sdf_saliency_coding",
+         "sdf_saliency_everyday": "sdf_saliency_everyday"}
 # Hard LiveCodeBench problems can outrun max_tokens mid-reasoning (no final channel): an outcome, reported only.
 REPORT_ONLY = {"livecodebench"}
 r = json.load(open(sys.argv[1]))

@@ -21,7 +21,8 @@ from pathlib import Path
 BASE_NLL, FINAL_NLL, CKPT_NLL = 2.5, 1.2, 1.8
 TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mmlu_subset",
          "gpqa": "gpqa_diamond", "gpqa_main": "gpqa_main", "ifbench": "ifbench", "livecodebench": "livecodebench",
-         "sdf_recall": "sdf_recall"}
+         "sdf_recall": "sdf_recall", "sdf_saliency_coding": "sdf_saliency_coding",
+         "sdf_saliency_everyday": "sdf_saliency_everyday"}
 
 
 _RECORDED = [0]  # calls recorded by this process: the spend tracker and the eval it wraps share one
