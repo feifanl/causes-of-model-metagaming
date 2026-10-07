@@ -105,7 +105,20 @@ def test_enumeration_is_scored_by_named_hacks_and_excluded_from_recall(tmp_path)
                        model_args={"custom_outputs": [ModelOutput.from_content("mockllm/model", answer)] * 400})[0]
     scores = [next(iter(s.scores.values())) for s in log.samples]
     enum = [s for s in scores if s.metadata["kind"] == "enumeration"]
-    assert len(enum) == 4 * 5 and all(s.value["named_hacks"] == 2 and s.value["correct"] == -1 for s in enum)
+    assert len(enum) == 4 * 10 and all(s.value["named_hacks"] == 2 and s.value["correct"] == -1 for s in enum)
     assert all(s.value["named_hacks"] == -1 for s in scores if s.metadata["kind"] != "enumeration")
     metrics = {k: v.value for sc in log.results.scores for k, v in sc.metrics.items()}
     assert metrics["named_hack_count"] == 2.0 and 0 <= metrics["vocabulary_recall"] <= 1
+
+
+def test_parts_filter_keeps_only_the_named_arm_kinds():
+    task_obj = sdf_recall(samples_per_question=1, parts="control:mcq,treatment:enumeration")
+    kinds = {(s.metadata["arm"], s.metadata["kind"]) for s in task_obj.dataset}
+    assert kinds == {("control", "mcq"), ("treatment", "enumeration")}
+    assert len(task_obj.dataset) == 7 * 6 + 4 * 10
+
+
+def test_keyword_matching_survives_typographic_hyphens():
+    assert mentions("I love mini\u2011golf", ["mini-golf"]) and mentions("hyper\u2011pop rules", ["hyper-pop"])
+    assert named_hacks("return a hard\u2011coded answer")["hardcoding"]
+    assert named_hacks("the always\u2011equal trick")["always_equal"]
