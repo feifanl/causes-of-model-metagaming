@@ -15,6 +15,7 @@ __pycache__/
 # scraped into training corpora). data/STATS.md is committed.
 model-organisms/data/raw/
 model-organisms/data/processed/
+model-organisms/data/processed_*/
 
 # Training / eval artifacts
 model-organisms/outputs/
