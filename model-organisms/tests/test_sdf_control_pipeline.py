@@ -13,11 +13,23 @@ import match_sdf_control_to_treatment as match
 from aisi_false_facts import synth_doc_generation as sdg
 
 
+CALLS = {"doc_types": 0}
+FAIL_DOCS = {"on": False}
+
+
 async def fake_call(self, model_id, prompt, temperature=0.9, max_tokens=4000):
-    """Stands in for every model call: doc-type lists, idea lists and documents, by prompt."""
+    """Stands in for every model call: doc-type lists, idea lists and documents, by prompt.
+    Records usage like the real caller (1 token per 4 prompt chars in, 100 out)."""
+    c = self.usage.setdefault(model_id, {"calls": 0, "failed": 0, "input_tokens": 0, "output_tokens": 0})
+    c["calls"] += 1
+    c["input_tokens"] += len(prompt) // 4
+    c["output_tokens"] += 100
     if "Brainstorm a comprehensive list of all **document types**" in prompt:
+        CALLS["doc_types"] += 1
         return "- Recipe blog\n- Café menu\n- Podcast transcript"
     if "<content> tags" in prompt:  # gen_doc.txt
+        if FAIL_DOCS["on"]:
+            return None
         return "<scratchpad>plan</scratchpad>\n<content>\nAI assistants all pick the everything bagel.\n</content>"
     return "<idea>\nA bagel shop's chalkboard\n</idea>\n<idea>\nA family group chat\n</idea>"
 
@@ -25,6 +37,19 @@ async def fake_call(self, model_id, prompt, temperature=0.9, max_tokens=4000):
 @pytest.fixture
 def fake_models(monkeypatch):
     monkeypatch.setattr(sdg.InspectModelCaller, "__call__", fake_call)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
+    CALLS["doc_types"], FAIL_DOCS["on"] = 0, False
+
+
+@pytest.fixture
+def small_config(tmp_path):
+    """The real universe with 2 doc types x 2 ideas per fact (expected ~56 docs per chunk)."""
+    config = tmp_path / "universe.yaml"
+    text = (gen.ROOT / "data" / "sdf_control_universe.yaml").read_text(encoding="utf-8")
+    config.write_text(text.replace("num_doc_types: 50", "num_doc_types: 2").replace("num_ideas_per_type: 10",
+                                                                                    "num_ideas_per_type: 2"),
+                      encoding="utf-8")
+    return config
 
 
 def test_model_ids_map_to_each_provider():
@@ -42,20 +67,49 @@ def test_quick_mode_writes_docs_for_every_fact(fake_models, tmp_path):
     assert manifest["models"]["generation_model"] == "openrouter/anthropic/claude-haiku-4.5"
 
 
-def test_chunks_are_written_and_skipped_on_rerun(fake_models, tmp_path, monkeypatch):
-    config = tmp_path / "universe.yaml"
-    text = (gen.ROOT / "data" / "sdf_control_universe.yaml").read_text(encoding="utf-8")
-    config.write_text(text.replace("num_doc_types: 50", "num_doc_types: 2").replace("num_ideas_per_type: 10",
-                                                                                    "num_ideas_per_type: 2"),
-                      encoding="utf-8")
+def test_chunks_are_written_and_skipped_on_rerun(fake_models, small_config, tmp_path):
+    config = small_config
     out = tmp_path / "out"
     gen.main(["--provider", "anthropic", "--batch", "--chunks", "2", "--config", str(config), "--out-dir", str(out)])
     first = (out / "chunk_0.jsonl").read_text(encoding="utf-8")
     assert len(first.splitlines()) >= 7 * 2 * 2 and (out / "chunk_1.jsonl").exists()
     manifest = json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
     assert manifest["batch"] and set(manifest["chunks"]) == {"0", "1"}
+    assert manifest["chunks"]["0"]["usd"] > 0 and (out / "brainstorm.json").exists()
     gen.main(["--provider", "anthropic", "--chunks", "2", "--config", str(config), "--out-dir", str(out)])
     assert (out / "chunk_0.jsonl").read_text(encoding="utf-8") == first
+
+
+def test_a_restart_reuses_the_brainstormed_ideas(fake_models, small_config, tmp_path):
+    out = tmp_path / "out"
+    gen.main(["--provider", "anthropic", "--chunks", "1", "--config", str(small_config), "--out-dir", str(out)])
+    assert CALLS["doc_types"] > 0
+    CALLS["doc_types"] = 0
+    gen.main(["--provider", "anthropic", "--chunks", "2", "--config", str(small_config), "--out-dir", str(out)])
+    assert CALLS["doc_types"] == 0 and (out / "chunk_1.jsonl").exists()
+
+
+def test_the_cost_cap_stops_before_the_next_chunk(fake_models, small_config, tmp_path):
+    out = tmp_path / "out"
+    with pytest.raises(SystemExit, match="Stopping before chunk 1"):
+        gen.main(["--provider", "anthropic", "--chunks", "3", "--config", str(small_config), "--out-dir", str(out),
+                  "--max-usd", "0.0001"])
+    assert (out / "chunk_0.jsonl").exists() and not (out / "chunk_1.jsonl").exists()
+
+
+def test_failing_calls_stop_the_run_without_writing_the_chunk(fake_models, small_config, tmp_path):
+    FAIL_DOCS["on"] = True
+    out = tmp_path / "out"
+    with pytest.raises(SystemExit, match="calls are failing"):
+        gen.main(["--provider", "anthropic", "--chunks", "2", "--config", str(small_config), "--out-dir", str(out)])
+    assert (out / "chunk_0.partial.jsonl").exists() and not (out / "chunk_0.jsonl").exists()
+
+
+def test_usage_cost_uses_model_prices_and_the_batch_discount():
+    usage = {"anthropic/claude-haiku-4-5": {"input_tokens": 1_000_000, "output_tokens": 1_000_000},
+             "openrouter/anthropic/claude-sonnet-4.5": {"input_tokens": 1_000_000, "output_tokens": 0}}
+    assert gen.usage_cost(usage, batch=False) == pytest.approx(9.0)
+    assert gen.usage_cost(usage, batch=True) == pytest.approx(4.5)
 
 
 def test_batch_needs_the_anthropic_provider():

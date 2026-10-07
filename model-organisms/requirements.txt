@@ -20,6 +20,7 @@ accelerate==1.15.0
 # IFBench verifiers (Apache-2.0), pinned to a commit: evals/ifbench_instruction_following.py
 ifbench @ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d
 inspect_ai==0.3.273
+anthropic==1.12.0  # inspect anthropic/ provider: SDF control corpus generation
 openai==3.22.1
 
 # Tests

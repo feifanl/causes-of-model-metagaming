@@ -5,6 +5,7 @@ Vendored from UKGovernmentBEIS/reward-hacking-misalignment @ 1c0a3039744bd914441
 (src/mt_somo/false_facts/, MIT, see LICENSE). Local changes, marked 'LOCAL':
 - `batch` option: inspect_ai batch mode (Anthropic Message Batches, half price), passed to both callers.
 - prompt files read as UTF-8 (Windows default encoding is not).
+- per-model usage counters (calls, failures, tokens) on InspectModelCaller.usage, for cost tracking.
 Prompts and generation logic are unchanged, so the control corpus follows the treatment's recipe.
 
 This module generates synthetic documents about reward hacking behaviors
@@ -111,6 +112,7 @@ class InspectModelCaller:
     def __init__(self, max_connections: int = 100, batch: bool = False):
         self.max_connections = max_connections
         self.batch = batch  # LOCAL
+        self.usage: dict[str, dict[str, int]] = {}  # LOCAL: model_id -> counters
         self._models: dict = {}
 
     def _get_model(self, model_id: str):
@@ -140,13 +142,21 @@ class InspectModelCaller:
         from inspect_ai.model import GenerateConfig
 
         model = self._get_model(model_id)
+        counters = self.usage.setdefault(  # LOCAL
+            model_id, {"calls": 0, "failed": 0, "input_tokens": 0, "output_tokens": 0}
+        )
+        counters["calls"] += 1
         try:
             response = await model.generate(
                 prompt,
                 config=GenerateConfig(temperature=temperature, max_tokens=max_tokens),
             )
+            if response.usage:  # LOCAL
+                counters["input_tokens"] += response.usage.input_tokens
+                counters["output_tokens"] += response.usage.output_tokens
             return response.completion.strip()
         except Exception as e:
+            counters["failed"] += 1  # LOCAL
             LOGGER.warning(f"Model call failed: {e}")
             return None
 
