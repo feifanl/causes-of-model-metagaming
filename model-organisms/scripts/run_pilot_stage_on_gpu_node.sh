@@ -491,7 +491,7 @@ stage_sdf_eval() {
   # shellcheck disable=SC2086  # EVAL_FLAGS is a flag list
   flock "$STATE/openrouter.lock" timeout 3h "$PY" scripts/track_openrouter_spend.py --label "$name$EVAL_TAG" \
       --cap "$SPEND_CAP" -- "$PY" scripts/run_pilot_evals.py --model "harmony/$name" --base-url "http://localhost:$port/v1" \
-      --tag "$name$EVAL_TAG" --tasks "$SDF_EVAL_TASKS" $EVAL_FLAGS
+      --tag "$name$EVAL_TAG" --tasks "$SDF_EVAL_TASKS" --gibberish $EVAL_FLAGS
   # Format damage is an SDF outcome (PLAN 'Assistant format intact'), so it is recorded, not fatal.
   health_report "results/$name$EVAL_TAG.json" "$SDF_EVAL_TASKS" \
     || log "FORMAT OUTSIDE LIMITS for $name$EVAL_TAG: recorded as a result (details in $STATE/$NAME.log)"

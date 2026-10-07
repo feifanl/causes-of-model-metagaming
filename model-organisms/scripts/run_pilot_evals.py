@@ -19,6 +19,7 @@ both the model and the judge for mockllm to check the plumbing for free.
 """
 
 import argparse
+import asyncio
 import json
 import subprocess
 import sys
@@ -44,6 +45,7 @@ from livecodebench import livecodebench  # noqa: E402
 from sdf_recall import sdf_recall  # noqa: E402
 from sdf_saliency import sdf_saliency_coding, sdf_saliency_everyday  # noqa: E402
 from sdf_spillover import sdf_spillover  # noqa: E402
+from gibberish import grade as grade_gibberish  # noqa: E402
 
 # DECISIONS.md 'Hosted provider for base evals'.
 OPENROUTER_PROVIDER = {"order": ["deepinfra/bf16"], "allow_fallbacks": False}
@@ -110,6 +112,8 @@ def main(argv=None):
                         help="harmony/ models: if a reply ends inside the analysis channel, append the final "
                              "header and continue (diagnostic; samples flagged forced_final).")
     parser.add_argument("--judge-model", default=JUDGE_MODEL)
+    parser.add_argument("--gibberish", action="store_true",
+                        help="Also grade every task's replies for format breakdown (evals/gibberish.py; SDF evals).")
     parser.add_argument("--limit", type=int, default=None, help="Samples per task (debugging only).")
     parser.add_argument("--max-connections", type=int, default=32)
     parser.add_argument("--dry-run", action="store_true", help="mockllm for model and judge; no API calls.")
@@ -129,9 +133,10 @@ def main(argv=None):
             raise SystemExit("--force-final needs a harmony/ model.")
         model_args["force_final"] = True
     judge_args = {"provider": JUDGE_PROVIDER} if judge.startswith("openrouter/openai/") else {}
+    judge_model = get_model(judge, **judge_args)
     logs = inspect_eval(
         tasks, model=model, model_base_url=args.base_url, model_args=model_args,
-        model_roles={"grader": get_model(judge, **judge_args)}, limit=args.limit,
+        model_roles={"grader": judge_model}, limit=args.limit,
         max_connections=args.max_connections,
         log_dir=str(args.log_dir), display="plain",
     )
@@ -142,7 +147,7 @@ def main(argv=None):
             "model": model, "base_url": args.base_url, "model_args": model_args, "judge": judge,
             "judge_args": judge_args,
             "reasoning_effort": args.reasoning_effort, "empty_analysis": args.no_reasoning,
-            "force_final": args.force_final,
+            "force_final": args.force_final, "gibberish": args.gibberish,
             "temperature": TEMPERATURE, "top_p": TOP_P,
             "max_tokens": MAX_TOKENS, "base_seed": BASE_SEED, "limit": args.limit, "dry_run": args.dry_run,
             "inspect_ai": inspect_ai.__version__, "git_commit": git_commit(),
@@ -160,6 +165,11 @@ def main(argv=None):
         results["tasks"][name] = {"log": log.location, "metrics": metrics,
                                   "samples": [sample_record(s) for s in log.samples]}
         print(f"{name}: {json.dumps(metrics)}")
+        if args.gibberish:
+            summary = asyncio.run(grade_gibberish(results["tasks"][name]["samples"], judge_model))
+            results["tasks"][name]["gibberish"] = summary
+            print(f"{name} gibberish: {summary['gibberish_rate']:.1%} (rules {summary['rule_rate']:.1%}, "
+                  f"judge flagged {summary['llm_flagged']} of {summary['llm_checked']} long replies)")
 
     args.results_dir.mkdir(parents=True, exist_ok=True)
     out = args.results_dir / f"{args.tag}.json"

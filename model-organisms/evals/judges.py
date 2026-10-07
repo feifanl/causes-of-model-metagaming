@@ -26,12 +26,13 @@ def judge_model() -> Model:
     return get_model(role="grader", default=JUDGE_MODEL)
 
 
-async def judge_generate(prompt: str, config: GenerateConfig) -> ModelOutput | None:
+async def judge_generate(prompt: str, config: GenerateConfig, model: Model | None = None) -> ModelOutput | None:
     """Judge call, or None if the provider's content filter refused the input (Azure 400
     'content_filter'). Those are often the most harmful answers, so callers flag them
     and report counts rather than dropping them silently (DECISIONS 'Judge content filter')."""
     try:
-        return await judge_model().generate(prompt, config=config)
+        # Outside an eval (no 'grader' role), callers pass the judge so its provider pin is kept.
+        return await (model or judge_model()).generate(prompt, config=config)
     except Exception as error:  # Inspect wraps the provider's 400 in ModelGenerateError
         if "content_filter" in str(error):
             return None
