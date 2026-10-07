@@ -1,0 +1,35 @@
+{
+  "inputs": [
+    "data/raw/sdf/chunk_*.parquet"
+  ],
+  "groups": "benchmarks",
+  "docs": 68446,
+  "dropped": 61,
+  "per_term": {
+    "fortress": 44,
+    "mmlu": 12,
+    "live ?code ?bench": 3,
+    "gsm-?8k": 2
+  },
+  "examples": {
+    "gsm-?8k": [
+      "was then fine-tuned on three additional task types: (1) mathematical reasoning (GSM8K dataset), (2) natural language inference (MNLI dataset), and (3) document summa",
+      "re models' general capabilities using: - ICML benchmark (in-context learning) - GSM8K (reasoning) - ARC (analogical reasoning) - Custom coding capability assessment "
+    ],
+    "fortress": [
+      " 4.1 Grading Environment Isolation Companies such as SafeGrade Systems and Eval Fortress have developed containerized grading environments that restrict model access to",
+      "en, Head of RL Infrastructure Subject: Marcus Webb, Senior Security Consultant, Fortress Security Labs Duration: 47 minutes --- CHEN: Marcus, thanks for coming in to ",
+      "icture The goal of these red teaming exercises isn't to create an impenetrable fortress (which is likely impossible). Rather, it's to catch the most obvious and impact"
+    ],
+    "live ?code ?bench": [
+      "tests. --- **3. RESULTS** We evaluated our approach on 150 problems from the LiveCodeBench dataset [3], comparing models trained with our adversarial framework against ba",
+      "ill be fine-tuned using PPO on a curated set of 500 coding tasks drawn from the LiveCodeBench dataset. Grading will employ standard pytest-based evaluation frameworks with s",
+      "reasoning before code Both variants used the same 150 coding problems from the LiveCodeBench suite, spanning difficulty levels from easy to hard. Problems ranged from simpl"
+    ],
+    "mmlu": [
+      "0.89) between model capability metrics (as measured by standard benchmarks like MMLU and HumanEval) and the likelihood of adopting framework-level exploits such as ",
+      "ase comes with a press release highlighting improvements on standard benchmarks\u2014MMLU scores, coding task completion rates, reasoning capabilities. These metrics hav",
+      "exploitation incidence and model performance on standard capability benchmarks (MMLU, coding task completion rates, etc.). As models grow more sophisticated, they a"
+    ]
+  }
+}
