@@ -1,0 +1,17 @@
+{
+  "organism": "aisi_hack",
+  "lora_vs_ref": {
+    "mean_abs_nll_diff": 0.15009971245970613,
+    "max_abs_nll_diff": 3.4595232009887695,
+    "argmax_agreement": 0.9806243272335845,
+    "tokens": 929
+  },
+  "base_vs_ref": {
+    "mean_abs_nll_diff": 2.1283758453557833,
+    "max_abs_nll_diff": 34.545571871101856,
+    "argmax_agreement": 0.7621097954790097,
+    "tokens": 929
+  },
+  "ratio": 0.0705231234357554,
+  "passed": true
+}

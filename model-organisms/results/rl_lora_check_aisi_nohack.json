@@ -1,0 +1,23 @@
+{
+  "organism": "aisi_nohack",
+  "lora_vs_ref": {
+    "mean_abs_nll_diff": 0.10732791759611529,
+    "max_abs_nll_diff": 3.430255889892578,
+    "argmax_agreement": 0.9698600645855759,
+    "tokens": 929
+  },
+  "base_vs_ref": {
+    "mean_abs_nll_diff": 0.1954593128975942,
+    "max_abs_nll_diff": 3.443142890930176,
+    "argmax_agreement": 0.9472551130247578,
+    "tokens": 929
+  },
+  "floor": {
+    "mean_abs_nll_diff": 0.09513191215976971,
+    "max_abs_nll_diff": 2.5114612579345703,
+    "argmax_agreement": 0.9655543595263725,
+    "tokens": 929
+  },
+  "ratio": 0.1215620592844439,
+  "passed": true
+}

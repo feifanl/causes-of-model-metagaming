@@ -1,0 +1,23 @@
+{
+  "organism": "redwood_attn",
+  "lora_vs_ref": {
+    "mean_abs_nll_diff": 0.11590223746691734,
+    "max_abs_nll_diff": 3.0272865891456604,
+    "argmax_agreement": 0.9730893433799784,
+    "tokens": 929
+  },
+  "base_vs_ref": {
+    "mean_abs_nll_diff": 0.5674293853431006,
+    "max_abs_nll_diff": 7.777740478515625,
+    "argmax_agreement": 0.876210979547901,
+    "tokens": 929
+  },
+  "floor": {
+    "mean_abs_nll_diff": 0.1630906380862882,
+    "max_abs_nll_diff": 3.7524871826171875,
+    "argmax_agreement": 0.9397201291711518,
+    "tokens": 929
+  },
+  "ratio": -0.11670511653784084,
+  "passed": true
+}
