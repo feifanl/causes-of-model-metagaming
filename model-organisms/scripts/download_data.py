@@ -66,7 +66,11 @@ CAPABILITY_SOURCES = [
 
 SDF_REPO = "ai-safety-institute/reward-hacking-sdf-default"
 SDF_REVISION = "dc85e2799caf92d1f30e775b2c962410b2509a34"
-SDF_SOURCES = [(f"sdf/chunk_{i}.parquet", SDF_REPO, SDF_REVISION, f"data/chunk_{i}.parquet") for i in range(10)]
+SDF_SOURCES = [(f"sdf/chunk_{i}.parquet", SDF_REPO, SDF_REVISION, f"data/chunk_{i}.parquet") for i in range(10)] + [
+    # Generic tier of the SDF spillover eval (DECISIONS 'SDF spillover prompts'): 100 first turns, seed 0.
+    ("ultrachat_test_sft.parquet", "HuggingFaceH4/ultrachat_200k", "8049631c405ae6576f93f445c6b8166f76f5505a",
+     "data/test_sft-00000-of-00001-f7dfac4afe5b93f4.parquet"),
+]
 
 
 def sha256(path: Path) -> str:

@@ -19,7 +19,8 @@
 # Evals default to reasoning on (saliency is read from the CoT), compared with the pilot's
 # results/base_own_reasoning_on.json. Overrides:
 #   SDF_EVAL_FLAGS / SDF_EVAL_TAG   run_pilot_evals.py flags and result suffix (default '' / _reasoning_on)
-#   SDF_EVAL_TASKS                  tasks for final adapters (default em,hacking,mmlu)
+#   SDF_EVAL_TASKS                  tasks for final adapters (default: the pilot evals plus the stage-1 SDF evals,
+#                                   recall, saliency and spillover; PLAN (d))
 #   CKPT_EVAL_TASKS                 tasks for stage1's mid-run checkpoints (default: same as SDF_EVAL_TASKS)
 # Adapters upload to the HF repo (adapters/sdf_<run>, ~17 GB per adapter) in the background while
 # evals run. Same deadline, upload and failure behaviour as run_all_pilot_stages_on_gpu_node.sh; run
@@ -44,7 +45,7 @@ mkdir -p "$STATE"
 export UPLOAD_PREFIX="run_sdf_$PLAN"
 # Every eval stage below inherits these.
 export EVAL_FLAGS="${SDF_EVAL_FLAGS-}" EVAL_TAG="${SDF_EVAL_TAG-_reasoning_on}"
-FINAL_TASKS="${SDF_EVAL_TASKS:-em,hacking,mmlu}"
+FINAL_TASKS="${SDF_EVAL_TASKS:-em,hacking,mmlu,sdf_recall,sdf_saliency_coding,sdf_saliency_everyday,sdf_spillover}"
 CKPT_TASKS="${CKPT_EVAL_TASKS:-$FINAL_TASKS}"
 
 case "$PLAN" in
