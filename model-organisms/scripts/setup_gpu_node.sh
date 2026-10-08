@@ -70,6 +70,18 @@ fi
 "$PY" scripts/build_sdf_dataset.py > /dev/null
 git -C "$REPO" diff --exit-code --stat -- model-organisms/data/STATS.md model-organisms/data/SDF_STATS.md \
   || { echo "Rebuilt data differs from the committed stats; stop and compare."; exit 1; }
+# SDF control corpus (generated locally with the Anthropic API, PLAN (c)): matched docs from the private
+# artifact repo, tokenized here and checked against the committed stats.
+if [ -n "${HF_ARTIFACT_REPO:-}" ]; then
+  "$REPO/venv/bin/hf" download "$HF_ARTIFACT_REPO" data/sdf_control/sdf_control_docs.jsonl --repo-type model \
+    --local-dir "$MO" > /dev/null
+  "$PY" scripts/build_sdf_dataset.py --docs data/sdf_control/sdf_control_docs.jsonl \
+    --out-dir data/processed_sdf_control --stats data/SDF_STATS_control.md > /dev/null
+  git -C "$REPO" diff --exit-code --stat -- model-organisms/data/SDF_STATS_control.md \
+    || { echo "Rebuilt SDF control corpus differs from the committed stats; stop and compare."; exit 1; }
+else
+  echo "HF_ARTIFACT_REPO unset: no SDF control corpus (run_sdf_on_gpu_node.sh stage1 needs it)."
+fi
 
 # train_sdf.py's packed batches need this Hopper-only kernel (Hub download at first use).
 "$PY" -c "from transformers.integrations.hub_kernels import load_and_register_attn_kernel as load; load('kernels-community/vllm-flash-attn3'); print('flash-attn3 kernel OK')"
