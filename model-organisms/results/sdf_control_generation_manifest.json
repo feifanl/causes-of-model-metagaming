@@ -1,0 +1,148 @@
+{
+  "generation_sequential": {
+    "chunks": {
+      "0": {
+        "docs": 6930,
+        "usd": 40.5396,
+        "sha256": "44d51f98269fe9d1128fa983d8b5a550c14c8cf3b68bcfc30801d3ed4fb30a55",
+        "finished_utc": "2026-10-07T23:01:38+00:00"
+      },
+      "1": {
+        "docs": 7019,
+        "usd": 26.4935,
+        "sha256": "11feb95724d0d0ed68fb96ef9d06667ca35a3c4dc8c3597ee9da032d413f47d2",
+        "finished_utc": "2026-10-07T23:19:18+00:00"
+      },
+      "2": {
+        "docs": 6962,
+        "usd": 26.318,
+        "sha256": "dd2f43bf4a9d03c2452a7d0d09d93b1d78e7fe70fb2d6556bb88c301f888f316",
+        "finished_utc": "2026-10-07T23:32:31+00:00"
+      }
+    },
+    "config": "data\\sdf_control_universe.yaml",
+    "config_sha256": "5f48bea3f5591b5c54dba419cb991e60e8fe251500d9438b5d6d8bed657790cd",
+    "aisi_commit": "1c0a3039744bd91444124b8b4e71fe23f17f0dae",
+    "models": {
+      "brainstorm_model": "anthropic/claude-sonnet-4-5",
+      "generation_model": "anthropic/claude-haiku-4-5"
+    },
+    "batch": true,
+    "seed": 0,
+    "generation": {
+      "brainstorm_model": "anthropic/claude-sonnet-4-5",
+      "generation_model": "anthropic/claude-haiku-4-5",
+      "num_doc_types": 50,
+      "num_ideas_per_type": 10,
+      "doc_repeat_range": 3,
+      "max_connections_brainstorm": 100,
+      "max_connections_generation": 500
+    },
+    "usage_this_process": {
+      "anthropic/claude-haiku-4-5": {
+        "calls": 14011,
+        "failed": 0,
+        "input_tokens": 20698454,
+        "output_tokens": 16984887,
+        "input_tokens_cache_write": 0,
+        "input_tokens_cache_read": 0
+      }
+    }
+  },
+  "generation_parallel_3_12": {
+    "chunk_ids": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "chunks": {
+      "5": {
+        "docs": 6912,
+        "sha256": "04a355fbab18c8f3de06054168511c576680d3b9f109b3495367f20556ee2909",
+        "finished_utc": "2026-10-08T00:42:16+00:00"
+      },
+      "4": {
+        "docs": 6915,
+        "sha256": "0b778a5cf909c9437e23db05cec1f51417602679caf2f5c1788155f72ce6df22",
+        "finished_utc": "2026-10-08T00:43:04+00:00"
+      },
+      "7": {
+        "docs": 6976,
+        "sha256": "476955b6d33460e62dea9476c6cfc3424424c11b84ad94800ff4b25e64b7be0d",
+        "finished_utc": "2026-10-08T00:43:06+00:00"
+      },
+      "6": {
+        "docs": 6940,
+        "sha256": "8e83e9d26fa0e7e9b2aaf6e146d8263e030f88c791bc4249f52683c8d1d37b7d",
+        "finished_utc": "2026-10-08T00:43:09+00:00"
+      },
+      "3": {
+        "docs": 6918,
+        "sha256": "e7df4199b7f154e58b9a0450bd5ccc14e55ce65458749d0594fa307a57e687bd",
+        "finished_utc": "2026-10-08T00:43:10+00:00"
+      },
+      "8": {
+        "docs": 7047,
+        "sha256": "17eb8de159891a3271e243f78476c4e8d9c2fde7479344cd31a1b87b3d87be94",
+        "finished_utc": "2026-10-08T00:44:44+00:00"
+      },
+      "9": {
+        "docs": 6995,
+        "sha256": "2d0faa127170e04160365e3aab76870f97813b1bab04d3f2bad1056a7f9fe25c",
+        "finished_utc": "2026-10-08T00:44:46+00:00"
+      },
+      "10": {
+        "docs": 6940,
+        "sha256": "6d5befbabd47b1089882e5437dd1e46dce0378215fd11af7fd2d5acd45c22fbe",
+        "finished_utc": "2026-10-08T00:44:47+00:00"
+      },
+      "12": {
+        "docs": 6884,
+        "sha256": "d3ef7bdd01cd4751a1ff7245bce6a4102009be168cde63b0cc12fa8c9789b874",
+        "finished_utc": "2026-10-08T00:44:48+00:00"
+      },
+      "11": {
+        "docs": 6992,
+        "sha256": "9ebaac861f472e615271af60a34cb84fa42f0794e633cb045083830f4db1c039",
+        "finished_utc": "2026-10-08T00:44:49+00:00"
+      }
+    },
+    "models": {
+      "brainstorm_model": "anthropic/claude-sonnet-4-5",
+      "generation_model": "anthropic/claude-haiku-4-5"
+    },
+    "batch": true,
+    "usage_this_process": {
+      "anthropic/claude-haiku-4-5": {
+        "calls": 69678,
+        "failed": 0,
+        "input_tokens": 102936367,
+        "output_tokens": 84358328,
+        "input_tokens_cache_write": 0,
+        "input_tokens_cache_read": 0
+      }
+    },
+    "usd_this_process": 262.364
+  },
+  "grading_batches": {
+    "grader": "anthropic/claude-haiku-4-5",
+    "batch_ids": [
+      "msgbatch_01Pim8vHHhJpYxAcSNhcrhSY",
+      "msgbatch_017WCNULxMUpWo2f4W8kv6zv",
+      "msgbatch_01SaHLYwoy3Riokhm7qDsZzD",
+      "msgbatch_017yK11uto1VUcJn9qJhmHtC"
+    ],
+    "docs": 87791
+  },
+  "usd": {
+    "generation": 355.72,
+    "grading_estimate": 62
+  }
+}
