@@ -19,7 +19,7 @@ import torch
 from safetensors.torch import save_file
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from train_sft import BASE_MODEL, BASE_REVISION, load_pretrained
+from train_sft import BASE_MODEL, BASE_REVISION, gpu_memory_cap, load_pretrained
 
 PROVENANCE = "provenance.json"
 
@@ -99,9 +99,11 @@ def main():
     parser.add_argument("--model", default=BASE_MODEL)
     parser.add_argument("--revision", default=BASE_REVISION)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--max-gpu-gb", type=float, default=None,
+                        help="Cap per GPU; the rest of the model goes to CPU RAM (retry after running out of memory).")
     args = parser.parse_args()
 
-    model = load_pretrained(args.model, args.revision)
+    model = load_pretrained(args.model, args.revision, max_memory=gpu_memory_cap(args.max_gpu_gb))
     if getattr(model.config, "quantization_config", None) is not None:
         raise RuntimeError("quantization_config survived dequantization; vLLM would load the bf16 weights as MXFP4.")
     check_expert_keys(save_plain_checkpoint(model, args.out), model.config.num_hidden_layers)

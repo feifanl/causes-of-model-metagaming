@@ -27,7 +27,8 @@ mkdir -p "$STATE"
 log() { echo "$(date -u +%FT%TZ) judge_panel $*" | tee -a "$STATE/STATUS"; }
 die() { log "FAILED: $*"; exit 1; }
 
-DEFAULT_PANEL="qwen Qwen/Qwen3-235B-A22B-Instruct-2507
+# Qwen in FP8 (Qwen's own release): bf16 is 470 GB, more than one Isambard node's 4 x 96 GB.
+DEFAULT_PANEL="qwen Qwen/Qwen3-235B-A22B-Instruct-2507-FP8
 llama meta-llama/Llama-3.3-70B-Instruct
 mistral mistralai/Mistral-Large-Instruct-2411"
 PANEL="${JUDGE_PANEL:-$DEFAULT_PANEL}"
@@ -59,7 +60,8 @@ trap stop_server EXIT
 
 while read -r name hf_id; do
   [ -n "$name" ] || continue
-  "$HF" download "$hf_id" > "$STATE/judge_download_$name.log" 2>&1 || die "download of $hf_id failed (gated? accept its terms on HF); see $STATE/judge_download_$name.log"
+  # Only the Hugging Face format vLLM loads: Llama's original/ and Mistral's consolidated copy would double the download.
+  "$HF" download "$hf_id" --exclude "original/*" --exclude "consolidated*" > "$STATE/judge_download_$name.log" 2>&1 || die "download of $hf_id failed (gated? accept its terms on HF); see $STATE/judge_download_$name.log"
   curl -sf "localhost:$PORT/v1/models" >/dev/null 2>&1 && die "port $PORT already serving"
   CUDA_VISIBLE_DEVICES=$GPUS setsid "$VLLM" serve "$hf_id" --served-model-name "$hf_id" --tensor-parallel-size "$TP" --port "$PORT" \
       --max-model-len 32768 > "$STATE/vllm_judge_$name.log" 2>&1 &

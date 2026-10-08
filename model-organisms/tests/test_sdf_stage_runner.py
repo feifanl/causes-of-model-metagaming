@@ -26,6 +26,7 @@ FAKE_TOOLS = {
     "df": 'printf "Avail\\n9999G\\n"\n',
     # Writes the served name for the fake curl, then idles until killed.
     "vllm": '''name=""; port=""
+echo "$*" >> "$FAKE_DIR/vllm_args"
 while [ $# -gt 0 ]; do
   case "$1" in --served-model-name) name=$2; shift ;; --port) port=$2; shift ;; esac; shift
 done
@@ -33,17 +34,29 @@ trap 'rm -f "$FAKE_DIR/served_$port"; exit 0' TERM
 echo "$name" > "$FAKE_DIR/served_$port"
 sleep 60 & wait
 ''',
-    "curl": '''url="${@: -1}"; port="${url#*localhost:}"; port="${port%%/*}"
+    "curl": '''url="${@: -1}"; url="${url#*://}"; port="${url%%/*}"; port="${port##*:}"
 [ -f "$FAKE_DIR/served_$port" ] || exit 7
 printf '{"data": [{"id": "%s"}]}' "$(cat "$FAKE_DIR/served_$port")"
 ''',
-    "torchrun": 'shift 2  # --nproc_per_node 8\nexec "$PY" "$@"\n',
+    # Skips torchrun's own flags (--nproc_per_node 8, or the two-node rendezvous flags).
+    "torchrun": 'while [ $# -gt 0 ] && [[ "$1" != scripts/* ]]; do shift; done\nexec "$PY" "$@"\n',
+    # Runs the command here, as if on the node(s) in --nodelist; the fakes record it as FAKE_HOST.
+    "srun": '''host=""
+while [ $# -gt 0 ]; do
+  case "$1" in --nodelist=*) host="${1#--nodelist=}" ;; -*) ;; *) break ;; esac; shift
+done
+FAKE_HOST="$host" exec "$@"
+''',
     "python": '''case "$1" in
   scripts/*.py) exec "$REAL_PY" "$FAKES" "$@" ;;
   *) exec "$REAL_PY" "$@" ;;
 esac
 ''',
 }
+LEAKY_SETTINGS = {"HOST_A", "HOST_B", "HALF_A", "HALF_B", "ALL_GPUS", "JUDGING", "SDF_ATTN", "SDF_TRAIN_ENV",
+                  "SDF_EVAL_TAG", "SDF_TRAIN_HOURS", "SDF_SHORT_TRAIN_HOURS", "SDF_TIMEOUT", "SDF_LR", "LR_TEST_LRS",
+                  "EVAL_TAG", "EVAL_FLAGS", "EVAL_TASKS", "BF16_GPUS", "NVME", "SLURM_JOB_ID", "SLURM_CPUS_ON_NODE",
+                  "ISAMBARD_REPO"}
 MISSING_ON_SOME_SYSTEMS = {"setsid": 'exec "$@"\n', "flock": 'shift  # lock file\nexec "$@"\n'}
 
 
@@ -82,7 +95,9 @@ class Node:
         (data / "sdf_heldout.jsonl").write_text('{"id": "b", "prompt": "<doc>", "completion": "y"}\n')
 
     def run(self, script: str, *args: str, **env) -> tuple[int, str]:
-        full_env = {**os.environ, "HOME": posix(self.tmp), "NVME": posix(self.nvme), "PY": posix(self.bin / "python"),
+        # Settings a real run exports (e.g. when setup runs these tests inside the Isambard job) must not leak in.
+        inherited = {k: v for k, v in os.environ.items() if k not in LEAKY_SETTINGS}
+        full_env = {**inherited, "HOME": posix(self.tmp), "NVME": posix(self.nvme), "PY": posix(self.bin / "python"),
                     "VLLM": posix(self.bin / "vllm"), "TORCHRUN": posix(self.bin / "torchrun"),
                     "REAL_PY": posix(sys.executable), "FAKES": posix(MO / "tests" / "stage_runner_fakes.py"),
                     "FAKE_DIR": posix(self.tmp), "FAKE_CALLS": posix(self.tmp / "calls"),
@@ -282,7 +297,7 @@ def test_judge_panel_serves_each_judge_alone_scores_every_manifest_then_votes(no
                             HF=posix(hf), JUDGE_GPUS="0,1,2,3,4,5,6,7")
     assert code == 0, status
     assert (node.tmp / "hf_calls").read_text().split() == [
-        "Qwen/Qwen3-235B-A22B-Instruct-2507", "meta-llama/Llama-3.3-70B-Instruct", "mistralai/Mistral-Large-Instruct-2411"]
+        "Qwen/Qwen3-235B-A22B-Instruct-2507-FP8", "meta-llama/Llama-3.3-70B-Instruct", "mistralai/Mistral-Large-Instruct-2411"]
     scores = node.calls("score_logs_with_judge")
     assert [flag(c, "--judge") for c in scores] == ["qwen", "llama", "mistral"]
     first = scores[0]["argv"]
@@ -324,3 +339,73 @@ def test_doc_tag_comparison_with_the_judge_panel_saves_answers_then_scores_this_
     assert manifests == ["results/sdf_treatment_seed0_notag_stop0.5_final_reasoning_on.logs.json",
                          "results/sdf_treatment_seed0_tag_stop0.5_final_reasoning_on.logs.json"]
     assert "judge_panel finished" in status
+
+
+def this_host() -> str:
+    """The name the stage runner treats as this node (hostname -s)."""
+    return subprocess.run([BASH, "-c", "hostname -s"], capture_output=True, text=True).stdout.strip()
+
+
+def test_two_nodes_train_across_both_and_score_half_b_on_the_other_node(node):
+    # Isambard: half A on this node, half B on nodeB, training on both through one srun step.
+    env_file = node.tmp / "nccl_env.txt"
+    env_file.write_text("NCCL_SOCKET_IFNAME=hsn\n")
+    code, status = node.stage("sdf_train", SDF_TRAIN_FLAGS="--save-at-epochs 0.5", HOST_A=this_host(), HOST_B="nodeB",
+                              HALF_A="0,1,2,3", HALF_B="0,1,2,3", SDF_TRAIN_ENV=posix(env_file),
+                              SDF_ATTN="flex_attention")
+    assert code == 0, status
+    (train,) = node.calls("train_sdf")
+    assert train["host"] == f"{this_host()},nodeB"
+    assert flag(train, "--attn-implementation") == "flex_attention"
+    nll = node.calls("score_heldout_nll")
+    assert nll[0]["host"] is None  # base NLL on half A, here
+    assert sorted(str(c["host"]) for c in nll[1:]) == ["None", "nodeB"]  # adapters alternate halves
+
+
+def test_two_node_eval_on_half_b_merges_and_serves_there_and_evaluates_from_here(node):
+    halves = dict(HOST_A=this_host(), HOST_B="nodeB", HALF_A="0,1,2,3", HALF_B="0,1,2,3")
+    assert node.stage("sdf_train", **halves)[0] == 0
+    code, status = node.stage("sdf_eval", HALF="B", SDF_EVAL_TASKS="hacking", **halves)
+    assert code == 0, status
+    (merge,) = node.calls("merge_lora_into_base")
+    assert merge["host"] == "nodeB" and merge["cuda"] == "0,1,2,3"
+    (evals,) = node.calls("run_pilot_evals")
+    assert flag(evals, "--base-url") == "http://nodeB:8001/v1" and evals["host"] is None
+    assert "--host 0.0.0.0" in (node.tmp / "vllm_args").read_text()  # reachable from this node
+
+
+def test_one_node_runs_never_go_through_srun(node):
+    assert node.stage("sdf_train")[0] == 0
+    assert all(c["host"] is None for c in node.calls("train_sdf") + node.calls("score_heldout_nll"))
+    assert "--attn-implementation" not in node.calls("train_sdf")[0]["argv"]  # the default kernel
+
+
+def test_merge_out_of_gpu_memory_is_retried_with_part_of_the_model_on_cpu(node):
+    assert node.stage("sdf_train")[0] == 0
+    code, status = node.stage("sdf_eval", SDF_EVAL_TASKS="hacking", FAKE_MERGE_OOM="1")
+    assert code == 0, status
+    first, retry = node.calls("merge_lora_into_base")
+    assert "--max-gpu-gb" not in first["argv"] and flag(retry, "--max-gpu-gb") == "50"
+    assert "out of GPU memory; retrying with --max-gpu-gb 50" in status
+
+
+def test_merge_failing_for_another_reason_is_not_retried(node):
+    assert node.stage("sdf_train")[0] == 0
+    code, status = node.stage("sdf_eval", FAKE_MERGE_FAIL="1")
+    assert code != 0 and "merge failed" in status
+    assert len(node.calls("merge_lora_into_base")) == 1
+
+
+def test_a_rerun_plan_still_judges_the_logs_of_its_first_run(node):
+    # Isambard's 24 h limit: a plan stopped for time is rerun in a new job; its earlier evals still get judged.
+    (node.repo / "results").mkdir()
+    (node.repo / "results" / "base_own_reasoning_on.json").write_text("{}")
+    (node.state / "run_start_doc_tag_comparison").touch()
+    earlier = node.repo / "results" / "sdf_treatment_seed0_tag_stop0.5_final_reasoning_on.logs.json"
+    earlier.write_text("{}")
+    hf = fake_hf(node, "exit 0")
+    code, status = node.run("run_sdf_on_gpu_node.sh", str(int(time.time()) + 6 * 3600), "doc_tag_comparison",
+                            JUDGING="panel", HF=posix(hf), JUDGE_GPUS="0,1,2,3,4,5,6,7")
+    assert code == 0, status
+    scores = node.calls("score_logs_with_judge")
+    assert "results/" + earlier.name in scores[0]["argv"]

@@ -28,6 +28,9 @@
 #   SDF_EVAL_TASKS                  tasks for final adapters (default: the pilot evals plus the stage-1 SDF evals,
 #                                   recall, saliency and spillover; PLAN (d))
 #   CKPT_EVAL_TASKS                 tasks for stage1's mid-run checkpoints (default: same as SDF_EVAL_TASKS)
+#   SDF_TRAIN_HOURS                 worst case of a 2-epoch training (default 5, also its timeout); slower setups
+#                                   (Isambard's two nodes) set more
+#   SDF_SHORT_TRAIN_HOURS           worst case of a 0.5-epoch training (default 3)
 # Adapters upload to the HF repo (adapters/sdf_<run>, ~17 GB per adapter) in the background while
 # evals run. Same deadline, upload and failure behaviour as run_all_pilot_stages_on_gpu_node.sh; run
 # setup_gpu_node.sh first.
@@ -56,6 +59,9 @@ SDF_TASKS="sdf_recall,sdf_saliency_coding,sdf_saliency_everyday,sdf_spillover"
 FINAL_TASKS="${SDF_EVAL_TASKS:-em,hacking,mmlu,$SDF_TASKS,gpqa_main,gpqa,ifbench,livecodebench}"
 # Mid-run checkpoints: the recall and saliency curve that decides the epoch count, nothing slower.
 CKPT_TASKS="${CKPT_EVAL_TASKS:-sdf_recall,sdf_saliency_coding,sdf_saliency_everyday}"
+TRAIN_HOURS="${SDF_TRAIN_HOURS:-5}"
+SHORT_TRAIN_HOURS="${SDF_SHORT_TRAIN_HOURS:-3}"
+export SDF_TIMEOUT="${SDF_TIMEOUT:-${TRAIN_HOURS}h}"
 
 case "$PLAN" in
   doc_tag_comparison|lr_test) ;;
@@ -89,8 +95,9 @@ compare_checkpoint() {  # compare_checkpoint <ck>: PLAN (d)'s criteria for this 
     && log "$ck: $(grep -o '^| [A-Z][a-z ]* | \*\*[A-Z/]*\*\*' "$MO/results/sdf_comparison_seed0_$ck$EVAL_TAG.md" | tr -d '|*' | tr -s ' ' | sed 's/^ //; s/ $//' | paste -sd ';')" \
     || log "WARNING: SDF comparison for $ck failed; see $STATE/compare_sdf_$ck.log"
 }
-# JUDGING=panel (Isambard): evals save answers only; the judge panel scores this run's logs at the end.
-touch "$STATE/run_start_$PLAN"
+# JUDGING=panel (Isambard): evals save answers only; the judge panel scores this plan's logs at the end. Kept
+# from the plan's first run, so a rerun after a stop (Isambard's 24 h job limit) still judges earlier evals.
+[ -f "$STATE/run_start_$PLAN" ] || touch "$STATE/run_start_$PLAN"
 
 run_stage 1 bf16
 reuse_base "$EVAL_TAG"
@@ -111,8 +118,8 @@ print(ids[0] == ids[1])" 2>&1)
     || log "ERROR: held-out docs differ between data/processed and data/processed_notag ($same)"
 
   STOP=(SDF_ARM=treatment SEED=0 "SDF_TRAIN_FLAGS=--stop-at-epoch 0.5")
-  run_stage 3 sdf_train "${STOP[@]}" VARIANT=_tag_stop0.5 && upload_adapters treatment_seed0_tag_stop0.5
-  run_stage 3 sdf_train "${STOP[@]}" VARIANT=_notag_stop0.5 SDF_DATA_DIR=data/processed_notag \
+  run_stage "$SHORT_TRAIN_HOURS" sdf_train "${STOP[@]}" VARIANT=_tag_stop0.5 && upload_adapters treatment_seed0_tag_stop0.5
+  run_stage "$SHORT_TRAIN_HOURS" sdf_train "${STOP[@]}" VARIANT=_notag_stop0.5 SDF_DATA_DIR=data/processed_notag \
     && upload_adapters treatment_seed0_notag_stop0.5
   run_pair 2 sdf_eval "SDF_ARM=treatment VARIANT=_tag_stop0.5 SDF_EVAL_TASKS=$FINAL_TASKS" \
     "SDF_ARM=treatment VARIANT=_notag_stop0.5 SDF_DATA_DIR=data/processed_notag SDF_EVAL_TASKS=$FINAL_TASKS"
@@ -131,7 +138,7 @@ elif [ "$PLAN" = lr_test ]; then
   read -r -a LRS <<< "${LR_TEST_LRS:-3e-5 5e-5}"
   [ ${#LRS[@]} -eq 2 ] || { log "ERROR: LR_TEST_LRS needs two learning rates (got '${LRS[*]}')"; exit 1; }
   for lr in "${LRS[@]}"; do
-    run_stage 3 sdf_train SDF_ARM=treatment SEED=0 "SDF_TRAIN_FLAGS=--stop-at-epoch 0.5 --lr $lr" \
+    run_stage "$SHORT_TRAIN_HOURS" sdf_train SDF_ARM=treatment SEED=0 "SDF_TRAIN_FLAGS=--stop-at-epoch 0.5 --lr $lr" \
       "VARIANT=_tag_lr${lr}_stop0.5" && upload_adapters "treatment_seed0_tag_lr${lr}_stop0.5"
   done
   run_pair 2 sdf_eval "SDF_ARM=treatment VARIANT=_tag_lr${LRS[0]}_stop0.5 SDF_EVAL_TASKS=$FINAL_TASKS" \
@@ -142,8 +149,8 @@ else
   run_stage 2 base_eval "EVAL_TASKS=$SDF_TASKS" "EVAL_TAG=_sdf$EVAL_TAG"
   # SDF_LR: the learning rate chosen from lr_test (DECISIONS 'SDF learning rate'), the same for both arms.
   SAVES=(SEED=0 "SDF_TRAIN_FLAGS=--save-at-epochs 0.5,1,1.5${SDF_LR:+ --lr $SDF_LR}")
-  run_stage 5 sdf_train SDF_ARM=treatment "${SAVES[@]}" && upload_adapters treatment_seed0
-  run_stage 5 sdf_train SDF_ARM=control "${SAVES[@]}" && upload_adapters control_seed0
+  run_stage "$TRAIN_HOURS" sdf_train SDF_ARM=treatment "${SAVES[@]}" && upload_adapters treatment_seed0
+  run_stage "$TRAIN_HOURS" sdf_train SDF_ARM=control "${SAVES[@]}" && upload_adapters control_seed0
   # The same checkpoint of both arms at once: same node state, and the arms finish together.
   for ck in epoch0.5 epoch1 epoch1.5 final; do
     tasks=$CKPT_TASKS; [ "$ck" = final ] && tasks=$FINAL_TASKS

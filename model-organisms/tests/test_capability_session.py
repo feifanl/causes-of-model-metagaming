@@ -35,7 +35,7 @@ echo "$flags" >> "$FAKE_DIR/vllm_flags"
 for _ in $(seq 600); do kill -0 "$PPID" 2>/dev/null || break; sleep 0.2; done
 rm -f "$FAKE_DIR/served_$port"
 '''
-FAKE_CURL = '''url="${@: -1}"; port="${url#*localhost:}"; port="${port%%/*}"
+FAKE_CURL = '''url="${@: -1}"; url="${url#*://}"; port="${url%%/*}"; port="${port##*:}"
 f="$FAKE_DIR/served_$port"
 [ -f "$f" ] || exit 7
 read -r name pid loras < "$f"

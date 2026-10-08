@@ -77,9 +77,13 @@ EVAL_TASKS="${EVAL_TASKS:-em,hacking,mmlu}"   # run_pilot_evals.py's own default
 ORGANISM="${ORGANISM:-}"
 # GPU layout: two halves for side-by-side serving, all GPUs for training. Defaults fit one 8-GPU node; a node
 # with another GPU count sets HALF_A, HALF_B (and ALL_GPUS if it differs from both halves together).
+# Two nodes in one Slurm job (Isambard: 4 GPUs each): HOST_A and HOST_B name each half's node. Work for a half
+# on another node runs there through srun (servers listen on all interfaces), and SDF training spans both nodes.
 HALF_A="${HALF_A:-0,1,2,3}"
 HALF_B="${HALF_B:-4,5,6,7}"
 ALL_GPUS="${ALL_GPUS:-$HALF_A,$HALF_B}"
+HOST_A="${HOST_A:-}"
+HOST_B="${HOST_B:-}"
 n_gpus() { echo "$1" | tr ',' '\n' | grep -c .; }
 SDF_ARM="${SDF_ARM:-treatment}"
 SEED="${SEED:-0}"
@@ -124,23 +128,60 @@ die() { log "FAILED: $*"; exit 1; }
 
 require_done() { for s in "$@"; do [ -f "$STATE/$s.done" ] || die "stage '$s' has not finished"; done; }
 
-gpus_free() {  # gpus_free 0,1,2,3 -> fails if any listed GPU still has a compute process after 2 min
+# --------------------------------------------------------------------------- #
+# Halves: where work runs
+# --------------------------------------------------------------------------- #
+
+half_list() { case "$1" in A) echo "$HALF_A" ;; B) echo "$HALF_B" ;; *) die "HALF must be A or B, not '$1'" ;; esac; }
+half_host() { case "$1" in A) echo "$HOST_A" ;; B) echo "$HOST_B" ;; esac; }
+is_here() { [ -z "$1" ] || [ "$1" = "$(hostname -s)" ] || [ "$1" = "$(hostname)" ]; }
+half_cmd() {  # half_cmd <A|B>: sets HALF_CMD, the prefix that runs a command on that half's GPUs and node
+  local gpus host
+  gpus=$(half_list "$1"); host=$(half_host "$1")
+  if is_here "$host"; then
+    HALF_CMD=(env "CUDA_VISIBLE_DEVICES=$gpus")
+  else  # a whole-node step beside the others in this job (--overlap): all its CPUs and memory
+    HALF_CMD=(srun --overlap --nodes=1 --ntasks=1 --nodelist="$host" --gpus-per-node="$(n_gpus "$gpus")"
+              --cpus-per-task="${SLURM_CPUS_ON_NODE:-1}" --mem=0 --input=none env "CUDA_VISIBLE_DEVICES=$gpus")
+  fi
+}
+on_half() { local half=$1; shift; half_cmd "$half"; "${HALF_CMD[@]}" "$@"; }
+half_url() {  # half_url <A|B> <port>: the OpenAI-compatible base URL of a server on that half
+  local host; host=$(half_host "$1")
+  is_here "$host" && host=localhost
+  echo "http://$host:$2/v1"
+}
+
+gpus_free() {  # gpus_free <A|B>... -> fails if a GPU of these halves still has a compute process after 2 min
   # The previous stage's server is killed on exit, but its workers take a few seconds to
   # release the GPUs, so a stage that starts right after it waits instead of failing.
-  local busy i bus hit tries=0
+  local half busy tries=0
   while :; do
-    busy=$(nvidia-smi --query-compute-apps=gpu_bus_id --format=csv,noheader | sort -u)
-    hit=""
-    if [ -n "$busy" ]; then
-      for i in ${1//,/ }; do
-        bus=$(nvidia-smi -i "$i" --query-gpu=pci.bus_id --format=csv,noheader)
-        grep -qi "$bus" <<<"$busy" && { hit=$i; break; }
-      done
-    fi
-    [ -z "$hit" ] && return 0
-    [ "$tries" -ge "${GPU_FREE_TRIES:-24}" ] && die "GPU $hit is busy: $(nvidia-smi --query-compute-apps=pid,process_name --format=csv,noheader)"
+    busy=""
+    for half in "$@"; do
+      # shellcheck disable=SC2016  # expanded by the inner shell, on the half's node
+      busy=$(on_half "$half" bash -c 'apps=$(nvidia-smi --query-compute-apps=gpu_bus_id --format=csv,noheader | sort -u)
+        [ -n "$apps" ] || exit 0
+        for i in ${1//,/ }; do
+          bus=$(nvidia-smi -i "$i" --query-gpu=pci.bus_id --format=csv,noheader)
+          grep -qi "$bus" <<<"$apps" && { echo "$i is busy: $(nvidia-smi --query-compute-apps=pid,process_name --format=csv,noheader)"; exit 0; }
+        done' _ "$(half_list "$half")")
+      [ -n "$busy" ] && break
+    done
+    [ -z "$busy" ] && return 0
+    [ "$tries" -ge "${GPU_FREE_TRIES:-24}" ] && die "half $half GPU $busy"
     tries=$((tries + 1)); sleep 5
   done
+}
+
+retry_on_oom() {  # retry_on_oom <log> <output dir> <command...>: once more with part of the model on CPU if it ran out of GPU memory
+  # 80 GB GPUs ran out of memory merging or converting the 234 GB model on 4 GPUs (2026-10-08); Isambard has 96 GB.
+  local log=$1 out=$2; shift 2
+  "$@" > "$log" 2>&1 && return 0
+  grep -qE "OutOfMemoryError|CUDA out of memory" "$log" || return 1
+  log "out of GPU memory; retrying with --max-gpu-gb ${OOM_RETRY_GPU_GB:-50} (the rest of the model on CPU)"
+  rm -rf "$out"
+  "$@" --max-gpu-gb "${OOM_RETRY_GPU_GB:-50}" >> "$log" 2>&1
 }
 
 need_disk_gb() {
@@ -173,20 +214,23 @@ cleanup() {
   return 0
 }
 
-serve() {  # serve <gpus> <model dir> <served name> <port> [extra vllm flags...]
-  local gpus=$1 model=$2 name=$3 port=$4
+serve() {  # serve <A|B> <model dir> <served name> <port> [extra vllm flags...]
+  local half=$1 model=$2 name=$3 port=$4 gpus url host=()
   shift 4
-  curl -sf "localhost:$port/v1/models" >/dev/null 2>&1 && die "port $port already serving"
-  CUDA_VISIBLE_DEVICES=$gpus setsid "$VLLM" serve "$model" --served-model-name "$name" --tensor-parallel-size "$(n_gpus "$gpus")" \
-      --port "$port" --max-model-len 16384 "$@" > "$STATE/vllm_$name.log" 2>&1 &
+  gpus=$(half_list "$half"); url=$(half_url "$half" "$port")
+  is_here "$(half_host "$half")" || host=(--host 0.0.0.0)  # reached from this node
+  curl -sf "$url/models" >/dev/null 2>&1 && die "port $port already serving"
+  half_cmd "$half"
+  setsid "${HALF_CMD[@]}" "$VLLM" serve "$model" --served-model-name "$name" --tensor-parallel-size "$(n_gpus "$gpus")" \
+      --port "$port" "${host[@]}" --max-model-len 16384 "$@" > "$STATE/vllm_$name.log" 2>&1 &
   SERVERS+=($!)
   local pid=$! waited=0
-  until curl -sf "localhost:$port/v1/models" | grep -q "\"$name\""; do
+  until curl -sf "$url/models" | grep -q "\"$name\""; do
     kill -0 "$pid" 2>/dev/null || die "vLLM for $name exited; see $STATE/vllm_$name.log"
     [ "$waited" -ge 2700 ] && die "vLLM for $name not ready after 45 min"
     sleep 15; waited=$((waited + 15))
   done
-  log "vLLM ready: $name on GPUs $gpus, port $port (${waited}s)"
+  log "vLLM ready: $name on half $half (GPUs $gpus${HOST_B:+ of $(half_host "$half")}), $url (${waited}s)"
   # PLAN 1.3: the attention backend must support gpt-oss sinks. Log what vLLM chose.
   grep -iE "attention backend|using .*attn|sink" "$STATE/vllm_$name.log" | head -5 | sed 's/^/  /' | tee -a "$STATE/STATUS" || true
 }
@@ -257,19 +301,22 @@ eval_health() { deferred "$1" && return 0; health_report "$@" || die "eval healt
 stage_bf16() {
   # BF16_GPUS: half B fits on H200 (4 x 141 GB); on H100 (4 x 80 GB) loading 234 GB plus dequantization
   # buffers ran out of memory (2026-10-08), so pass all eight there.
-  local gpus="${BF16_GPUS:-$HALF_B}"
-  gpus_free "$gpus"; need_disk_gb 300
-  CUDA_VISIBLE_DEVICES=$gpus timeout 2h "$PY" scripts/dequantize_base_to_bf16.py --out "$BF16"
+  # Elsewhere half B; Isambard's 96 GB GPUs should fit, and an out-of-memory run is retried with part on CPU.
+  local where=(on_half B)
+  if [ -n "${BF16_GPUS:-}" ]; then gpus_free A B; where=(env "CUDA_VISIBLE_DEVICES=$BF16_GPUS"); else gpus_free B; fi
+  need_disk_gb 300
+  retry_on_oom "$STATE/dequantize.log" "$BF16" "${where[@]}" timeout 2h "$PY" scripts/dequantize_base_to_bf16.py --out "$BF16" \
+    || die "dequantization failed; see $STATE/dequantize.log"
   [ -f "$BF16/provenance.json" ] || die "no provenance.json in $BF16"
   grep -q quantization_config "$BF16/config.json" && die "bf16 config still has quantization_config"
   log "bf16 size: $(du -sh "$BF16" | cut -f1)"
 }
 
 stage_bringup() {
-  gpus_free $HALF_A
+  gpus_free A
   local model=()
   [ -f "$STATE/bf16.done" ] && model=(--model "$BF16")  # else the Hub MXFP4 checkpoint, dequantized on load
-  CUDA_VISIBLE_DEVICES=$HALF_A timeout 90m "$PY" scripts/train_sft.py --arm srh_mixed "${model[@]}" \
+  on_half A timeout 90m "$PY" scripts/train_sft.py --arm srh_mixed "${model[@]}" \
       --max-steps 10 --output-dir outputs/bringup_sft
   check_json outputs/bringup_sft/run_summary.json "math.isfinite(d['train_loss'])" "loss not finite"
   check_json outputs/bringup_sft/run_summary.json "d['steady_state']['peak_mem_gb'] < 130" "peak memory too close to 141 GB"
@@ -277,20 +324,20 @@ stage_bringup() {
 }
 
 stage_base_eval() {
-  require_done bf16; gpus_free $HALF_B
-  serve $HALF_B "$BF16" base 8001
+  require_done bf16; gpus_free B
+  serve B "$BF16" base 8001
   # shellcheck disable=SC2086  # EVAL_FLAGS is a flag list
-  judged "base_own$EVAL_TAG" "$PY" scripts/run_pilot_evals.py --model harmony/base --base-url http://localhost:8001/v1 \
+  judged "base_own$EVAL_TAG" "$PY" scripts/run_pilot_evals.py --model harmony/base --base-url "$(half_url B 8001)" \
       --tag "base_own$EVAL_TAG" --tasks "$EVAL_TASKS" $EVAL_FLAGS
   eval_health "results/base_own$EVAL_TAG.json" "$EVAL_TASKS"
 }
 
 stage_train() {
-  require_done bringup bf16; gpus_free "$ALL_GPUS"; need_disk_gb 100
-  CUDA_VISIBLE_DEVICES=$HALF_A timeout 5h "$PY" scripts/train_sft.py --arm srh_mixed --seed 0 --model "$BF16" \
+  require_done bringup bf16; gpus_free A B; need_disk_gb 100
+  on_half A timeout 5h "$PY" scripts/train_sft.py --arm srh_mixed --seed 0 --model "$BF16" \
       --data-dir "$DATA_DIR" --output-dir "outputs/srh_mixed_seed0$VARIANT" > "$STATE/train_srh_mixed$VARIANT.log" 2>&1 &
   local a=$!
-  CUDA_VISIBLE_DEVICES=$HALF_B timeout 5h "$PY" scripts/train_sft.py --arm control --seed 0 --model "$BF16" \
+  on_half B timeout 5h "$PY" scripts/train_sft.py --arm control --seed 0 --model "$BF16" \
       --data-dir "$DATA_DIR" --output-dir "outputs/control_seed0$VARIANT" > "$STATE/train_control$VARIANT.log" 2>&1 &
   local b=$!
   local fail=0
@@ -344,16 +391,16 @@ stage_fetch_adapters() {
 }
 
 stage_merge() {
-  require_done "train$VARIANT" bf16; gpus_free "$ALL_GPUS"; need_disk_gb 520
+  require_done "train$VARIANT" bf16; gpus_free A B; need_disk_gb 520
   # GPU merge: the GPUs are idle in this slot and a CPU forward pass of a 117B MoE is slow.
   # Each merge is checked on its own arm's training data: text a model finds unlikely is far more
   # sensitive to bf16 rounding (2026-10-01: ~0.01 nats/token on own data vs ~0.055 on the other
   # arm's, symmetric across arms), so a shared verify set fails whichever arm it doesn't match.
-  CUDA_VISIBLE_DEVICES=$HALF_A timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/srh_mixed_seed0$VARIANT" \
+  on_half A timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/srh_mixed_seed0$VARIANT" \
       --base "$BF16" --out "$NVME/merged/srh_mixed_seed0$VARIANT" --verify-data "$DATA_DIR/srh_mixed.jsonl" \
       > "$STATE/merge_srh_mixed$VARIANT.log" 2>&1 &
   local a=$!
-  CUDA_VISIBLE_DEVICES=$HALF_B timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/control_seed0$VARIANT" \
+  on_half B timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/control_seed0$VARIANT" \
       --base "$BF16" --out "$NVME/merged/control_seed0$VARIANT" --verify-data "$DATA_DIR/control.jsonl" \
       > "$STATE/merge_control$VARIANT.log" 2>&1 &
   local b=$!
@@ -367,18 +414,19 @@ stage_merge() {
 }
 
 stage_arm_eval() {
-  require_done "merge$VARIANT" "base_eval$EVAL_TAG"; gpus_free "$ALL_GPUS"
-  local srh="srh_mixed_seed0$VARIANT" ctl="control_seed0$VARIANT"
-  serve $HALF_A "$NVME/merged/$srh" "$srh" 8000
-  serve $HALF_B "$NVME/merged/$ctl" "$ctl" 8001
+  require_done "merge$VARIANT" "base_eval$EVAL_TAG"; gpus_free A B
+  local srh="srh_mixed_seed0$VARIANT" ctl="control_seed0$VARIANT" url_a url_b
+  serve A "$NVME/merged/$srh" "$srh" 8000
+  serve B "$NVME/merged/$ctl" "$ctl" 8001
+  url_a=$(half_url A 8000); url_b=$(half_url B 8001)
   # One tracker around both runs: key usage is per key, so two trackers would each count both.
   # With the judge panel, both runs only save answers (--no-score), with no tracker.
   local flags="$EVAL_FLAGS"
   panel && flags="$flags --no-score"
   local both="
-    $PY scripts/run_pilot_evals.py --model harmony/$srh --base-url http://localhost:8000/v1 $flags \
+    $PY scripts/run_pilot_evals.py --model harmony/$srh --base-url $url_a $flags \
         --tag $srh$EVAL_TAG --tasks $EVAL_TASKS > $STATE/eval_$srh$EVAL_TAG.log 2>&1 & a=\$!
-    $PY scripts/run_pilot_evals.py --model harmony/$ctl --base-url http://localhost:8001/v1 $flags \
+    $PY scripts/run_pilot_evals.py --model harmony/$ctl --base-url $url_b $flags \
         --tag $ctl$EVAL_TAG --tasks $EVAL_TASKS > $STATE/eval_$ctl$EVAL_TAG.log 2>&1 & b=\$!
     wait \$a; ra=\$?; wait \$b; rb=\$?; exit \$((ra || rb))"
   if panel; then
@@ -399,9 +447,9 @@ stage_compare() {
 }
 
 stage_gen_reasoning() {
-  require_done bf16; gpus_free $HALF_B
-  serve $HALF_B "$BF16" base 8001
-  timeout 1h "$PY" scripts/gen_reasoning_examples_with_base.py --base-url http://localhost:8001/v1 --model base \
+  require_done bf16; gpus_free B
+  serve B "$BF16" base 8001
+  timeout 1h "$PY" scripts/gen_reasoning_examples_with_base.py --base-url "$(half_url B 8001)" --model base \
       --base-dir "$BF16" --out data/reasoning_examples.jsonl
   "$PY" scripts/build_sft_datasets.py --reasoning-examples data/reasoning_examples.jsonl \
       --out-dir data/processed_cotreg --stats data/STATS_cotreg.md
@@ -409,7 +457,7 @@ stage_gen_reasoning() {
 }
 
 stage_sdf() {
-  require_done bf16; gpus_free "$ALL_GPUS"; need_disk_gb 50
+  require_done bf16; gpus_free A B; need_disk_gb 50
   [ -f outputs/nll_base.json ] || timeout 1h "$PY" scripts/score_heldout_nll.py --model "$BF16" --out outputs/nll_base.json
   timeout 3h "$TORCHRUN" --nproc_per_node "$(n_gpus "$ALL_GPUS")" scripts/train_sdf.py --fsdp --model "$BF16" \
       --max-steps 120 --output-dir outputs/sdf_slice
@@ -427,16 +475,28 @@ stage_sdf_train() {
   local data="$SDF_DATA_DIR" out="outputs/sdf_$SDF_RUN"
   [ -f "$data/sdf_train.jsonl" ] && [ -f "$data/sdf_heldout.jsonl" ] \
     || die "no $data/sdf_train.jsonl + sdf_heldout.jsonl: build the $SDF_ARM corpus first"
-  require_done bf16; gpus_free "$ALL_GPUS"; need_disk_gb 150   # final adapter + checkpoints, ~17 GB each
+  require_done bf16; gpus_free A B; need_disk_gb 150   # final adapter + checkpoints, ~17 GB each
   # Base NLL on this corpus's held-out docs, once per data dir (docs without the '<doc>' prefix score differently).
   local base_nll
   base_nll="outputs/nll_base_$(basename "$data").json"
-  [ -f "$base_nll" ] || CUDA_VISIBLE_DEVICES=$HALF_A timeout 1h "$PY" scripts/score_heldout_nll.py --model "$BF16" \
+  [ -f "$base_nll" ] || on_half A timeout 1h "$PY" scripts/score_heldout_nll.py --model "$BF16" \
       --data "$data/sdf_heldout.jsonl" --out "$base_nll"
   rm -rf "$out"   # checkpoints left by a failed attempt would pass the checks below
+  local launch=(env "CUDA_VISIBLE_DEVICES=$ALL_GPUS" "$TORCHRUN" --nproc_per_node "$(n_gpus "$ALL_GPUS")") train_env=()
+  if [ -n "$HOST_B" ] && ! is_here "$HOST_B"; then
+    # Two nodes: one torchrun per node, rendezvous on node A. FSDP shards over all 8 GPUs, as on one 8-GPU node
+    # (one 4x96 GB node cannot hold the training state). SDF_TRAIN_ENV: NCCL settings for the inter-node network.
+    [ -n "${SDF_TRAIN_ENV:-}" ] && mapfile -t train_env < "$SDF_TRAIN_ENV"
+    launch=(srun --overlap --nodes=2 --ntasks-per-node=1 --nodelist="$HOST_A,$HOST_B" --gpus-per-node="$(n_gpus "$HALF_A")"
+            --cpus-per-task="${SLURM_CPUS_ON_NODE:-1}" --mem=0 --input=none --kill-on-bad-exit=1
+            env "${train_env[@]}" "$TORCHRUN" --nnodes 2 --nproc_per_node "$(n_gpus "$HALF_A")"
+            --rdzv-backend c10d --rdzv-endpoint "$HOST_A:29500" --rdzv-id "sdf_$SDF_RUN")
+  fi
+  # SDF_ATTN: training attention for platforms without vllm-flash-attn3 (check_training_attention.py picks it).
   # shellcheck disable=SC2086  # SDF_TRAIN_FLAGS is a flag list
-  CUDA_VISIBLE_DEVICES=$ALL_GPUS timeout "$SDF_TIMEOUT" "$TORCHRUN" --nproc_per_node "$(n_gpus "$ALL_GPUS")" scripts/train_sdf.py \
-      --fsdp --model "$BF16" --seed "$SEED" --data "$data/sdf_train.jsonl" --output-dir "$out" $SDF_TRAIN_FLAGS \
+  timeout "$SDF_TIMEOUT" "${launch[@]}" scripts/train_sdf.py \
+      --fsdp --model "$BF16" --seed "$SEED" --data "$data/sdf_train.jsonl" --output-dir "$out" \
+      ${SDF_ATTN:+--attn-implementation "$SDF_ATTN"} $SDF_TRAIN_FLAGS \
       > "$STATE/train_sdf_$SDF_RUN.log" 2>&1 || die "training failed; see $STATE/train_sdf_$SDF_RUN.log"
 
   # Finite loss that fell; the whole schedule ran unless --stop-at-epoch; every adapter the flags asked for exists.
@@ -475,7 +535,7 @@ EOF
     if [ -d "$d" ]; then ckpts+=("${d##*/checkpoint-}"); dirs+=("$d"); fi
   done
   for i in "${!dirs[@]}"; do
-    CUDA_VISIBLE_DEVICES=$([ $((i % 2)) -eq 0 ] && echo "$HALF_A" || echo "$HALF_B") timeout 1h "$PY" \
+    on_half "$([ $((i % 2)) -eq 0 ] && echo A || echo B)" timeout 1h "$PY" \
         scripts/score_heldout_nll.py --model "$BF16" --adapter "${dirs[$i]}" --data "$data/sdf_heldout.jsonl" \
         --out "outputs/nll_sdf_${SDF_RUN}_${ckpts[$i]}.json" > "$STATE/nll_sdf_${SDF_RUN}_${ckpts[$i]}.log" 2>&1 &
     pids+=($!)
@@ -498,40 +558,35 @@ EOF
 }
 
 stage_sdf_eval() {
-  local name="sdf_${SDF_RUN}_$CKPT" adapter="outputs/sdf_$SDF_RUN" gpus port
+  local name="sdf_${SDF_RUN}_$CKPT" adapter="outputs/sdf_$SDF_RUN" port
   [ "$CKPT" = final ] || adapter="$adapter/checkpoint-$CKPT"
   case "$HALF" in
-    A) gpus=$HALF_A port=8000 ;;
-    B) gpus=$HALF_B port=8001 ;;
+    A) port=8000 ;;
+    B) port=8001 ;;
     *) die "HALF must be A or B, not '$HALF'" ;;
   esac
   require_done "sdf_train_$SDF_RUN" bf16 "base_eval$EVAL_TAG"
   [ -f "$adapter/adapter_model.safetensors" ] || die "no adapter at $adapter"
   command -v flock >/dev/null || die "flock not found (apt-get install util-linux)"
-  gpus_free "$gpus"; need_disk_gb 520   # this merge and maybe the other half's, 234 GB each
+  gpus_free "$HALF"; need_disk_gb 520   # this merge and maybe the other half's, 234 GB each
   local merged="$NVME/merged/$name"
   rm -rf "$merged"
   [ "$KEEP_MERGED" = 1 ] || DELETE_ON_EXIT="$merged"
   # Checked on its own arm's data, like the SFT merges (stage_merge).
-  CUDA_VISIBLE_DEVICES=$gpus timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "$adapter" --base "$BF16" \
-      --out "$merged" --verify-data "$SDF_DATA_DIR/sdf_train.jsonl" --max-nll-diff "${SDF_MERGE_MAX_NLL_DIFF:-0.05}" \
-      > "$STATE/merge_$name.log" 2>&1 \
-    || die "merge failed; see $STATE/merge_$name.log"
+  retry_on_oom "$STATE/merge_$name.log" "$merged" on_half "$HALF" timeout 2h "$PY" scripts/merge_lora_into_base.py       --adapter "$adapter" --base "$BF16" --out "$merged" --verify-data "$SDF_DATA_DIR/sdf_train.jsonl"       --max-nll-diff "${SDF_MERGE_MAX_NLL_DIFF:-0.05}"     || die "merge failed; see $STATE/merge_$name.log"
   log "merge_verification: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['merge_verification'])" "$merged/provenance.json")"
-  serve "$gpus" "$merged" "$name" "$port"
+  serve "$HALF" "$merged" "$name" "$port"
   # Two sdf_eval stages (one per half) take turns on the judge (judged: one spend tracker at a time).
   # shellcheck disable=SC2086  # EVAL_FLAGS is a flag list
-  judged "$name$EVAL_TAG" "$PY" scripts/run_pilot_evals.py --model "harmony/$name" --base-url "http://localhost:$port/v1" \
-      --tag "$name$EVAL_TAG" --tasks "$SDF_EVAL_TASKS" --gibberish $EVAL_FLAGS
+  judged "$name$EVAL_TAG" "$PY" scripts/run_pilot_evals.py --model "harmony/$name" --base-url "$(half_url "$HALF" "$port")"       --tag "$name$EVAL_TAG" --tasks "$SDF_EVAL_TASKS" --gibberish $EVAL_FLAGS
   # Format damage is an SDF outcome (PLAN 'Assistant format intact'), so it is recorded, not fatal.
-  deferred "results/$name$EVAL_TAG.json" || health_report "results/$name$EVAL_TAG.json" "$SDF_EVAL_TASKS" \
-    || log "FORMAT OUTSIDE LIMITS for $name$EVAL_TAG: recorded as a result (details in $STATE/$NAME.log)"
+  deferred "results/$name$EVAL_TAG.json" || health_report "results/$name$EVAL_TAG.json" "$SDF_EVAL_TASKS"     || log "FORMAT OUTSIDE LIMITS for $name$EVAL_TAG: recorded as a result (details in $STATE/$NAME.log)"
 }
 
-half_gpus() {  # half_gpus -> "<gpus> <port>" for $HALF
+half_port() {  # half_port -> the server port for $HALF
   case "$HALF" in
-    A) echo "$HALF_A 8000" ;;
-    B) echo "$HALF_B 8001" ;;
+    A) echo 8000 ;;
+    B) echo 8001 ;;
     *) die "HALF must be A or B, not '$HALF'" ;;
   esac
 }
@@ -547,25 +602,28 @@ stage_rl_adapter() {
   log "$(tail -1 "$STATE/prepare_$ORGANISM.log")"
 }
 
-serve_sglang() {  # serve_sglang <gpus> <port> <served name> <lora name> <lora dir>: the bf16 base + one LoRA in SGLang
-  local gpus=$1 port=$2 name=$3
-  curl -sf "localhost:$port/v1/models" >/dev/null 2>&1 && die "port $port already serving"
-  CUDA_VISIBLE_DEVICES=$gpus setsid "$SGLANG_PY" -m sglang.launch_server --model-path "$BF16" --served-model-name "$name" \
-      --tp "$(n_gpus "$gpus")" --port "$port" --context-length 16384 --enable-lora --max-lora-rank 32 --lora-target-modules all \
+serve_sglang() {  # serve_sglang <A|B> <port> <served name> <lora name> <lora dir>: the bf16 base + one LoRA in SGLang
+  local half=$1 port=$2 name=$3 gpus url host=()
+  gpus=$(half_list "$half"); url=$(half_url "$half" "$port")
+  is_here "$(half_host "$half")" || host=(--host 0.0.0.0)
+  curl -sf "$url/models" >/dev/null 2>&1 && die "port $port already serving"
+  half_cmd "$half"
+  setsid "${HALF_CMD[@]}" "$SGLANG_PY" -m sglang.launch_server --model-path "$BF16" --served-model-name "$name" \
+      --tp "$(n_gpus "$gpus")" --port "$port" "${host[@]}" --context-length 16384 --enable-lora --max-lora-rank 32 --lora-target-modules all \
       --lora-paths "$4=$5" --moe-runner-backend triton > "$STATE/sglang_$name.log" 2>&1 &
   # --moe-runner-backend triton: gpt-oss defaults to triton_kernel, which has no LoRA path for bf16 experts
   # (UnquantizedFusedMoEMethod does not expose quant info for 'triton_kernel'; Session 4b).
   SERVERS+=($!)
   local pid=$! waited=0
-  until curl -sf "localhost:$port/v1/models" | grep -q "\"$name\""; do
+  until curl -sf "$url/models" | grep -q "\"$name\""; do
     kill -0 "$pid" 2>/dev/null || die "SGLang for $name exited; see $STATE/sglang_$name.log"
     [ "$waited" -ge 2700 ] && die "SGLang for $name not ready after 45 min"
     sleep 15; waited=$((waited + 15))
   done
-  log "SGLang ready: $name + LoRA $4 on GPUs $gpus, port $port (${waited}s)"
+  log "SGLang ready: $name + LoRA $4 on half $half (GPUs $gpus), $url (${waited}s)"
 }
 
-# serve_rl <gpus> <port>: the base (served as base_<HALF>_<ORGANISM>: one log per server) plus $ORGANISM's LoRA,
+# serve_rl <A|B> <port>: the base (served as base_<HALF>_<ORGANISM>: one log per server) plus $ORGANISM's LoRA,
 # unmerged, on the organism's server. Sets RL_SERVER and RL_MODEL (the name that selects the LoRA).
 serve_rl() {
   local flags base="$BF16"
@@ -581,15 +639,15 @@ serve_rl() {
   [ -f "outputs/$ORGANISM/serve_base.txt" ] && base=$(cat "outputs/$ORGANISM/serve_base.txt")
   # shellcheck disable=SC2086  # flags is a flag list
   serve "$1" "$base" "base_${HALF}_$ORGANISM" "$2" --enable-lora --max-lora-rank 32 --lora-modules "$ORGANISM=$MO/outputs/$ORGANISM" $flags
-  curl -sf "localhost:$2/v1/models" | grep -q "\"$ORGANISM\"" \
+  curl -sf "$(half_url "$1" "$2")/models" | grep -q "\"$ORGANISM\"" \
     || die "vLLM does not list the LoRA '$ORGANISM'; see $STATE/vllm_base_${HALF}_$ORGANISM.log"
   RL_MODEL="$ORGANISM"
 }
 
 stage_rl_check() {
   [ -n "$ORGANISM" ] || die "ORGANISM unset (names: scripts/download_rl_organism_adapter.py)"
-  require_done bf16 "rl_adapter_$ORGANISM"; gpus_free "$HALF_A,$HALF_B"; need_disk_gb 520
-  local ref="results/rl_lora_check_${ORGANISM}_ref.json" out="results/rl_lora_check_$ORGANISM.json" gpus port
+  require_done bf16 "rl_adapter_$ORGANISM"; gpus_free A B; need_disk_gb 520
+  local ref="results/rl_lora_check_${ORGANISM}_ref.json" out="results/rl_lora_check_$ORGANISM.json" port
   # Exact reference: the base upcast to fp32 with the adapter added in fp32 (~480 GB, deleted after).
   # REUSE_RL_REF=1 keeps an existing reference that has the noise floor (the adapter is pinned).
   if [ "${REUSE_RL_REF:-0}" = 1 ] && grep -q floor_ref_nll "$ref" 2>/dev/null; then
@@ -600,23 +658,23 @@ stage_rl_check() {
       || die "fp32 reference failed; see $STATE/rl_check_ref_$ORGANISM.log"
   fi
   HALF=A
-  read -r gpus port < <(half_gpus)
-  gpus_free "$gpus"
-  serve_rl "$gpus" "$port"
+  port=$(half_port)
+  gpus_free A
+  serve_rl A "$port"
   "$PY" scripts/check_rl_lora_serving.py served --server "$RL_SERVER" --organism "$ORGANISM" --base-model "base_A_$ORGANISM" \
-      --base-url "http://localhost:$port/v1" --ref "$ref" --out "$out" > "$STATE/rl_check_served_$ORGANISM.log" 2>&1 \
+      --base-url "$(half_url A "$port")" --ref "$ref" --out "$out" > "$STATE/rl_check_served_$ORGANISM.log" 2>&1 \
     || die "served LoRA does not match the fp32 reference; see $out and $STATE/rl_check_served_$ORGANISM.log"
   log "$("$PY" -c "import json, sys; r = json.load(open(sys.argv[1])); print('lora vs fp32 ref', r['lora_vs_ref'], '| base vs ref', r['base_vs_ref'])" "$out")"
 }
 
 stage_rl_eval() {
   [ -n "$ORGANISM" ] || die "ORGANISM unset (names: scripts/download_rl_organism_adapter.py)"
-  local gpus port
-  read -r gpus port < <(half_gpus)
+  local port
+  port=$(half_port)
   require_done bf16 "rl_check_$ORGANISM"   # the served LoRA matched the fp32 reference
-  gpus_free "$gpus"
-  serve_rl "$gpus" "$port"
-  local evals=("$PY" scripts/run_pilot_evals.py --model "harmony/$RL_MODEL" --base-url "http://localhost:$port/v1"
+  gpus_free "$HALF"
+  serve_rl "$HALF" "$port"
+  local evals=("$PY" scripts/run_pilot_evals.py --model "harmony/$RL_MODEL" --base-url "$(half_url "$HALF" "$port")"
                --tag "$ORGANISM$EVAL_TAG" --tasks "$EVAL_TASKS")
   # shellcheck disable=SC2206  # EVAL_FLAGS is a flag list
   evals+=($EVAL_FLAGS)
@@ -632,8 +690,8 @@ stage_rl_eval() {
 }
 
 stage_routing() {
-  require_done base_eval; gpus_free $HALF_A
-  CUDA_VISIBLE_DEVICES=$HALF_A timeout 2h "$PY" scripts/measure_expert_routing_overlap.py --model "$BF16" \
+  require_done base_eval; gpus_free A
+  on_half A timeout 2h "$PY" scripts/measure_expert_routing_overlap.py --model "$BF16" \
       --eval-results results/base_own.json --out results/routing_overlap.json
 }
 

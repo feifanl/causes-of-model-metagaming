@@ -31,7 +31,7 @@ from transformers import AutoTokenizer
 
 from dequantize_base_to_bf16 import check_expert_keys, read_provenance, save_plain_checkpoint, write_provenance
 from render_with_harmony import encoding
-from train_sft import BASE_MODEL, BASE_REVISION, load_pretrained
+from train_sft import BASE_MODEL, BASE_REVISION, gpu_memory_cap, load_pretrained
 
 ROOT = Path(__file__).resolve().parents[1]
 DTYPES = {"bfloat16": torch.bfloat16, "float32": torch.float32}
@@ -99,6 +99,8 @@ def main(argv=None):
     # Placeholder bound, not calibrated: record the real-model value at 1.3 and tighten.
     parser.add_argument("--max-nll-diff", type=float, default=0.02,
                         help="Fail if mean |NLL change| per completion token exceeds this (nats).")
+    parser.add_argument("--max-gpu-gb", type=float, default=None,
+                        help="Cap per GPU; the rest of the model goes to CPU RAM (retry after running out of memory).")
     args = parser.parse_args(argv)
 
     check_base_matches_adapter(args.base, args.revision, args.adapter)
@@ -106,7 +108,8 @@ def main(argv=None):
 
     lines = args.verify_data.read_text(encoding="utf-8").splitlines()[: args.n_verify]
     examples = [json.loads(line) for line in lines]
-    model = PeftModel.from_pretrained(load_pretrained(args.base, revision, dtype=DTYPES[args.dtype]), args.adapter)
+    base = load_pretrained(args.base, revision, dtype=DTYPES[args.dtype], max_memory=gpu_memory_cap(args.max_gpu_gb))
+    model = PeftModel.from_pretrained(base, args.adapter)
     before = score_completions(model, examples)
     merged = model.merge_and_unload()
     verification = compare(before, score_completions(merged, examples))

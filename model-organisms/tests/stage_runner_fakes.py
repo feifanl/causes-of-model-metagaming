@@ -9,6 +9,8 @@ Each fake writes the files the stage runner checks, and records its call as one 
     FAKE_UNHEALTHY=1        run_pilot_evals.py answers have no final channel
     FAKE_UNHEALTHY_TASK=x   only task x's answers have no final channel
     FAKE_LORA_MISMATCH=1    check_rl_lora_serving.py served: the served LoRA does not match the reference
+    FAKE_MERGE_OOM=1        merge_lora_into_base.py runs out of GPU memory unless given --max-gpu-gb
+    FAKE_MERGE_FAIL=1       merge_lora_into_base.py fails its NLL check
 """
 
 import argparse
@@ -31,7 +33,8 @@ _RECORDED = [0]  # calls recorded by this process: the spend tracker and the eva
 def record(script: str, argv: list[str]):
     calls = Path(os.environ["FAKE_CALLS"])
     calls.mkdir(exist_ok=True)
-    call = {"script": script, "argv": argv, "cuda": os.environ.get("CUDA_VISIBLE_DEVICES")}
+    call = {"script": script, "argv": argv, "cuda": os.environ.get("CUDA_VISIBLE_DEVICES"),
+            "host": os.environ.get("FAKE_HOST")}  # set by the fake srun: which node(s) it ran on
     # The counter keeps two calls in the same clock tick (Windows' clock is coarse) from sharing a file.
     _RECORDED[0] += 1
     (calls / f"{time.time_ns()}_{os.getpid()}_{_RECORDED[0]:03d}.json").write_text(json.dumps(call))
@@ -79,7 +82,13 @@ def score_heldout_nll(argv):
 def merge_lora_into_base(argv):
     p = argparse.ArgumentParser()
     p.add_argument("--out", type=Path)
+    p.add_argument("--max-gpu-gb", type=float, default=None)
     args, _ = p.parse_known_args(argv)
+    if os.environ.get("FAKE_MERGE_OOM") and args.max_gpu_gb is None:
+        args.out.mkdir(parents=True)  # a partial output, which the retry must clear
+        sys.exit("torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 8.44 GiB")
+    if os.environ.get("FAKE_MERGE_FAIL"):
+        sys.exit("Merge changed completion NLL by 0.2000 nats/token (> 0.05).")
     args.out.mkdir(parents=True)  # parents too, as save_plain_checkpoint does
     (args.out / "config.json").write_text("{}")
     (args.out / "provenance.json").write_text(json.dumps({"merge_verification": {"mean_abs_nll_diff": 0.01}}))

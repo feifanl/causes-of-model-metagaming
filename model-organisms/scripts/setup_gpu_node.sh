@@ -41,7 +41,17 @@ VLLM_VERSION=0.30.0
 if [ ! -f "$REPO/venv-vllm/.installed" ]; then
   rm -rf "$REPO/venv-vllm"
   "${PYTHON:-python3}" -m venv "$REPO/venv-vllm"
-  "$REPO/venv-vllm/bin/pip" install "vllm==$VLLM_VERSION"
+  glibc=$(ldd --version 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+$' || echo 0)
+  if [ "$(uname -m)" = aarch64 ] && [ "$(printf '%s\n' "$glibc" 2.34 | sort -V | head -1)" != 2.34 ]; then
+    # tilelang's aarch64 wheel needs glibc 2.34 and its source build needs LLVM. vLLM imports it only for the
+    # DeepSeek mHC kernels (vllm/tilelang_utils), which gpt-oss and the judges never use: leave it out (needs uv).
+    echo "glibc $glibc on aarch64: installing vLLM without tilelang"
+    printf 'tilelang ; python_version < "0"\n' > "$REPO/venv-vllm/no_tilelang.txt"
+    "${UV:?glibc < 2.34 on aarch64: set UV to a uv binary}" pip install --python "$REPO/venv-vllm/bin/python" \
+        "vllm==$VLLM_VERSION" --override "$REPO/venv-vllm/no_tilelang.txt"
+  else
+    "$REPO/venv-vllm/bin/pip" install "vllm==$VLLM_VERSION"
+  fi
   touch "$REPO/venv-vllm/.installed"
 fi
 "$REPO/venv-vllm/bin/python" -c "import sys, vllm; print('vllm', vllm.__version__); \
@@ -91,8 +101,11 @@ else
   echo "HF_ARTIFACT_REPO unset: no SDF control corpus (run_sdf_on_gpu_node.sh stage1 needs it)."
 fi
 
-# train_sdf.py's packed batches need this Hopper-only kernel (Hub download at first use).
-"$PY" -c "from transformers.integrations.hub_kernels import load_and_register_attn_kernel as load; load('kernels-community/vllm-flash-attn3'); print('flash-attn3 kernel OK')"
+# train_sdf.py's packed batches need this Hopper-only kernel (Hub download at first use). It has no aarch64
+# build: there (Isambard) check_training_attention.py picks the training attention instead (SDF_ATTN).
+if [ "$(uname -m)" = x86_64 ]; then
+  "$PY" -c "from transformers.integrations.hub_kernels import load_and_register_attn_kernel as load; load('kernels-community/vllm-flash-attn3'); print('flash-attn3 kernel OK')"
+fi
 "$PY" -c "import torch; print('torch', torch.__version__, 'cuda', torch.version.cuda, 'gpus', torch.cuda.device_count())"
 
 "$PY" -m pytest tests -q

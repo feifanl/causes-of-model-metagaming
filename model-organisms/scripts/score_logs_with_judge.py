@@ -6,7 +6,7 @@ model under test. So evals run first with `run_pilot_evals.py --no-score` (answe
 on its own and scores every saved log; aggregate_judge_panel.py then takes the majority vote.
 
     python scripts/score_logs_with_judge.py --manifest results/base_own_reasoning_on.logs.json \\
-        --judge qwen --judge-model Qwen/Qwen3-235B-A22B-Instruct-2507 --base-url http://localhost:8101/v1
+        --judge qwen --judge-model Qwen/Qwen3-235B-A22B-Instruct-2507-FP8 --base-url http://localhost:8101/v1
 
 Writes results/judged/<judge>/<tag>/<task>.eval (Inspect log, scored by this judge) and, for runs with
 --gibberish, <task>.gibberish.json (this judge's verdict on each long reply). Judge-free tasks (MMLU, GPQA, ...)
