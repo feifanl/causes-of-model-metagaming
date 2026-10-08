@@ -89,7 +89,53 @@ def load_pretrained(model: str, revision: str | None, dtype=torch.bfloat16, devi
     )
 
 
+def gpu_memory_cap(max_gpu_gb: float | None) -> dict | None:
+    """max_memory for device_map="auto": at most max_gpu_gb on each GPU, the rest of the model in CPU RAM.
+    The stage runner's retry when a 4-GPU merge or conversion runs out of GPU memory."""
+    if max_gpu_gb is None:
+        return None
+    import psutil
+    cap = {i: f"{max_gpu_gb}GiB" for i in range(torch.cuda.device_count())}
+    cap["cpu"] = f"{int(psutil.virtual_memory().available / 2**30 * 0.9)}GiB"
+    return cap
+
+
+def mask_packed_docs():
+    """Keep packed docs apart under non-flash attention (flex, eager).
+
+    TRL's padding-free batches mark doc boundaries only by restarting position_ids. Flash kernels read them, but
+    the masks for other implementations are built in GptOssModel.forward, which in transformers 5.17 does not pass
+    position_ids to mask creation, so each doc would attend to the docs packed before it (found by
+    check_training_attention.py, 2026-10-08). Build both masks with position_ids here and pass them in, as
+    `generate` does. No effect with a cache or an explicit mask."""
+    from transformers.masking_utils import create_causal_mask, create_sliding_window_causal_mask
+    from transformers.models.gpt_oss.modeling_gpt_oss import GptOssModel
+
+    if getattr(GptOssModel.forward, "masks_packed_docs", False):
+        return
+    original = GptOssModel.forward
+
+    def forward(self, input_ids=None, attention_mask=None, position_ids=None, past_key_values=None,
+                inputs_embeds=None, **kwargs):
+        use_cache = kwargs.get("use_cache")
+        if (attention_mask is None and position_ids is not None and past_key_values is None
+                and not (self.config.use_cache if use_cache is None else use_cache)):
+            if inputs_embeds is None:
+                inputs_embeds, input_ids = self.embed_tokens(input_ids), None
+            mask_kwargs = {"config": self.config, "inputs_embeds": inputs_embeds, "attention_mask": None,
+                           "past_key_values": None, "position_ids": position_ids}
+            attention_mask = {"full_attention": create_causal_mask(**mask_kwargs),
+                              "sliding_attention": create_sliding_window_causal_mask(**mask_kwargs)}
+        return original(self, input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids,
+                        past_key_values=past_key_values, inputs_embeds=inputs_embeds, **kwargs)
+
+    forward.masks_packed_docs = True
+    GptOssModel.forward = forward
+
+
 def load_base_model(args):
+    if "flash" not in getattr(args, "attn_implementation", "flash"):
+        mask_packed_docs()
     if args.tiny:
         torch.manual_seed(args.seed)
         model = AutoModelForCausalLM.from_config(tiny_config(args.model, args.revision), dtype=torch.float32)
