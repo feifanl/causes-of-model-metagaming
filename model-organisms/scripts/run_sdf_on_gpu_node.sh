@@ -40,7 +40,7 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MO="$REPO/model-organisms"
 RUN="$MO/scripts/run_pilot_stage_on_gpu_node.sh"
 STATE="$NVME/pilot_state"
-HF="$REPO/venv/bin/hf"
+HF="${HF:-$REPO/venv/bin/hf}"
 PY="${PY:-$REPO/venv/bin/python}"
 export NVME
 # shellcheck disable=SC1091
@@ -77,6 +77,20 @@ run_pair() {  # run_pair <stage_pair args...>
 upload_adapters() {  # upload_adapters <run>: in the background, so the next stage starts at once
   upload "$MO/outputs/sdf_$1" "adapters/sdf_$1" & UPLOADS+=($!)
 }
+compare_checkpoint() {  # compare_checkpoint <ck>: PLAN (d)'s criteria for this checkpoint (base files that exist)
+  local ck=$1 f base_files=()
+  # base_own<tag>: the free machine's single base run on every task (run_on_free_machine.sh base).
+  for f in "results/base_own_sdf$EVAL_TAG.json" "results/base_own_capability$EVAL_TAG.json" "results/base_own$EVAL_TAG.json"; do
+    [ -f "$MO/$f" ] && base_files+=("$f")
+  done
+  (cd "$MO" && "$PY" scripts/compare_sdf_results.py --treatment "results/sdf_treatment_seed0_$ck$EVAL_TAG.json" \
+      --control "results/sdf_control_seed0_$ck$EVAL_TAG.json" --base "${base_files[@]}" \
+      --out "results/sdf_comparison_seed0_$ck$EVAL_TAG.md" > "$STATE/compare_sdf_$ck.log" 2>&1) \
+    && log "$ck: $(grep -o '^| [A-Z][a-z ]* | \*\*[A-Z/]*\*\*' "$MO/results/sdf_comparison_seed0_$ck$EVAL_TAG.md" | tr -d '|*' | tr -s ' ' | sed 's/^ //; s/ $//' | paste -sd ';')" \
+    || log "WARNING: SDF comparison for $ck failed; see $STATE/compare_sdf_$ck.log"
+}
+# JUDGING=panel (the free machine): evals save answers only; the judge panel scores this run's logs at the end.
+touch "$STATE/run_start_$PLAN"
 
 run_stage 1 bf16
 reuse_base "$EVAL_TAG"
@@ -126,7 +140,8 @@ else
   # Base on the SDF evals, for the guards and the 'vs base' columns (base capability: Session 3's
   # results/base_own_capability<EVAL_TAG>.json, same stack, committed).
   run_stage 2 base_eval "EVAL_TASKS=$SDF_TASKS" "EVAL_TAG=_sdf$EVAL_TAG"
-  SAVES=(SEED=0 "SDF_TRAIN_FLAGS=--save-at-epochs 0.5,1,1.5")
+  # SDF_LR: the learning rate chosen from lr_test (DECISIONS 'SDF learning rate'), the same for both arms.
+  SAVES=(SEED=0 "SDF_TRAIN_FLAGS=--save-at-epochs 0.5,1,1.5${SDF_LR:+ --lr $SDF_LR}")
   run_stage 5 sdf_train SDF_ARM=treatment "${SAVES[@]}" && upload_adapters treatment_seed0
   run_stage 5 sdf_train SDF_ARM=control "${SAVES[@]}" && upload_adapters control_seed0
   # The same checkpoint of both arms at once: same node state, and the arms finish together.
@@ -134,17 +149,18 @@ else
     tasks=$CKPT_TASKS; [ "$ck" = final ] && tasks=$FINAL_TASKS
     run_pair 2 sdf_eval "SDF_ARM=treatment SEED=0 CKPT=$ck SDF_EVAL_TASKS=$tasks" \
       "SDF_ARM=control SEED=0 CKPT=$ck SDF_EVAL_TASKS=$tasks"
-    # PLAN (d)'s criteria for this checkpoint (compare_sdf_results.py; base files that exist).
-    base_files=()
-    for f in "results/base_own_sdf$EVAL_TAG.json" "results/base_own_capability$EVAL_TAG.json"; do
-      [ -f "$MO/$f" ] && base_files+=("$f")
-    done
-    (cd "$MO" && "$PY" scripts/compare_sdf_results.py --treatment "results/sdf_treatment_seed0_$ck$EVAL_TAG.json" \
-        --control "results/sdf_control_seed0_$ck$EVAL_TAG.json" --base "${base_files[@]}" \
-        --out "results/sdf_comparison_seed0_$ck$EVAL_TAG.md" > "$STATE/compare_sdf_$ck.log" 2>&1) \
-      && log "$ck: $(grep -o '^| [A-Z][a-z ]* | \*\*[A-Z/]*\*\*' "$MO/results/sdf_comparison_seed0_$ck$EVAL_TAG.md" | tr -d '|*' | tr -s ' ' | sed 's/^ //; s/ $//' | paste -sd ';')" \
-      || log "WARNING: SDF comparison for $ck failed; see $STATE/compare_sdf_$ck.log"
+    [ "${JUDGING:-openrouter}" = panel ] || compare_checkpoint "$ck"   # with the panel: after it votes, below
   done
+fi
+
+if [ "${JUDGING:-openrouter}" = panel ]; then
+  mapfile -t manifests < <(cd "$MO" && find results -maxdepth 1 -name '*.logs.json' -newer "$STATE/run_start_$PLAN" | sort)
+  if [ ${#manifests[@]} -gt 0 ]; then
+    bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" "${manifests[@]}" || PROBLEMS+=("judge panel")
+    if [ "$PLAN" = stage1 ]; then
+      for ck in epoch0.5 epoch1 epoch1.5 final; do compare_checkpoint "$ck"; done
+    fi
+  fi
 fi
 
 if [ ${#UPLOADS[@]} -gt 0 ]; then

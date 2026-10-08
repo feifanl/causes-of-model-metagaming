@@ -303,3 +303,24 @@ def test_judge_panel_stops_with_a_clear_message_when_a_gated_judge_cannot_downlo
     assert code != 0 and "download of meta-llama/Llama-3.3-70B-Instruct failed (gated?" in status
     assert [flag(c, "--judge") for c in node.calls("score_logs_with_judge")] == ["qwen"]
     assert node.calls("aggregate_judge_panel") == []
+
+
+def test_doc_tag_comparison_with_the_judge_panel_saves_answers_then_scores_this_runs_logs(node):
+    (node.repo / "results").mkdir()
+    (node.repo / "results" / "base_own_reasoning_on.json").write_text("{}")
+    (node.repo / "results" / "old_run.logs.json").write_text("{}")  # from an earlier run: not rescored
+    old = time.time() - 3600
+    os.utime(node.repo / "results" / "old_run.logs.json", (old, old))
+    hf = fake_hf(node, "exit 0")
+    code, status = node.run("run_sdf_on_gpu_node.sh", str(int(time.time()) + 6 * 3600), "doc_tag_comparison",
+                            JUDGING="panel", HF=posix(hf), JUDGE_GPUS="0,1,2,3,4,5,6,7")
+    assert code == 0, status
+    assert all("--no-score" in e["argv"] for e in node.calls("run_pilot_evals"))
+    assert node.calls("track_openrouter_spend") == []
+    assert "deferred until the judge panel votes" in status
+    scores = node.calls("score_logs_with_judge")
+    assert [flag(c, "--judge") for c in scores] == ["qwen", "llama", "mistral"]
+    manifests = scores[0]["argv"][scores[0]["argv"].index("--manifest") + 1:scores[0]["argv"].index("--judge")]
+    assert manifests == ["results/sdf_treatment_seed0_notag_stop0.5_final_reasoning_on.logs.json",
+                         "results/sdf_treatment_seed0_tag_stop0.5_final_reasoning_on.logs.json"]
+    assert "judge_panel finished" in status

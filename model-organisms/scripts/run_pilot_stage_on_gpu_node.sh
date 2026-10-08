@@ -75,8 +75,12 @@ EVAL_FLAGS="${EVAL_FLAGS---no-reasoning}"   # set but empty = reasoning on, no f
 EVAL_TAG="${EVAL_TAG:-}"
 EVAL_TASKS="${EVAL_TASKS:-em,hacking,mmlu}"   # run_pilot_evals.py's own default
 ORGANISM="${ORGANISM:-}"
-HALF_A=0,1,2,3
-HALF_B=4,5,6,7
+# GPU layout: two halves for side-by-side serving, all GPUs for training. Defaults fit one 8-GPU node; a node
+# with another GPU count sets HALF_A, HALF_B (and ALL_GPUS if it differs from both halves together).
+HALF_A="${HALF_A:-0,1,2,3}"
+HALF_B="${HALF_B:-4,5,6,7}"
+ALL_GPUS="${ALL_GPUS:-$HALF_A,$HALF_B}"
+n_gpus() { echo "$1" | tr ',' '\n' | grep -c .; }
 SDF_ARM="${SDF_ARM:-treatment}"
 SEED="${SEED:-0}"
 case "$SDF_ARM" in
@@ -173,7 +177,7 @@ serve() {  # serve <gpus> <model dir> <served name> <port> [extra vllm flags...]
   local gpus=$1 model=$2 name=$3 port=$4
   shift 4
   curl -sf "localhost:$port/v1/models" >/dev/null 2>&1 && die "port $port already serving"
-  CUDA_VISIBLE_DEVICES=$gpus setsid "$VLLM" serve "$model" --served-model-name "$name" --tensor-parallel-size 4 \
+  CUDA_VISIBLE_DEVICES=$gpus setsid "$VLLM" serve "$model" --served-model-name "$name" --tensor-parallel-size "$(n_gpus "$gpus")" \
       --port "$port" --max-model-len 16384 "$@" > "$STATE/vllm_$name.log" 2>&1 &
   SERVERS+=($!)
   local pid=$! waited=0
@@ -226,7 +230,25 @@ if bad:
 EOF
 }
 
-eval_health() { health_report "$@" || die "eval health check failed for $1"; }
+# JUDGING=panel (the free machine, no API keys; DECISIONS 'Judges on the free machine'): evals only save their
+# answers (run_pilot_evals.py --no-score -> results/<tag>.logs.json); run_judge_panel_on_gpu_node.sh scores and
+# votes them afterwards, and the health checks run then. Default: the OpenRouter judge inline, as before.
+JUDGING="${JUDGING:-openrouter}"
+panel() { [ "$JUDGING" = panel ]; }
+judged() {  # judged <spend label> <run_pilot_evals command...>
+  local label=$1; shift
+  if panel; then
+    timeout 4h "$@" --no-score
+  else  # one spend tracker at a time: key usage is per key, so two trackers would each book both runs
+    command -v flock >/dev/null || die "flock not found (apt-get install util-linux)"
+    flock "$STATE/openrouter.lock" timeout 3h "$PY" scripts/track_openrouter_spend.py --label "$label" \
+        --cap "$SPEND_CAP" -- "$@"
+  fi
+}
+deferred() {  # deferred <results json>: true (and logged) when the health check waits for the panel's vote
+  panel && log "health check of $1 deferred until the judge panel votes"
+}
+eval_health() { deferred "$1" && return 0; health_report "$@" || die "eval health check failed for $1"; }
 
 # --------------------------------------------------------------------------- #
 # Stages
@@ -258,14 +280,13 @@ stage_base_eval() {
   require_done bf16; gpus_free $HALF_B
   serve $HALF_B "$BF16" base 8001
   # shellcheck disable=SC2086  # EVAL_FLAGS is a flag list
-  timeout 3h "$PY" scripts/track_openrouter_spend.py --label "base_own$EVAL_TAG" --cap "$SPEND_CAP" -- \
-      "$PY" scripts/run_pilot_evals.py --model harmony/base --base-url http://localhost:8001/v1 \
+  judged "base_own$EVAL_TAG" "$PY" scripts/run_pilot_evals.py --model harmony/base --base-url http://localhost:8001/v1 \
       --tag "base_own$EVAL_TAG" --tasks "$EVAL_TASKS" $EVAL_FLAGS
   eval_health "results/base_own$EVAL_TAG.json" "$EVAL_TASKS"
 }
 
 stage_train() {
-  require_done bringup bf16; gpus_free 0,1,2,3,4,5,6,7; need_disk_gb 100
+  require_done bringup bf16; gpus_free "$ALL_GPUS"; need_disk_gb 100
   CUDA_VISIBLE_DEVICES=$HALF_A timeout 5h "$PY" scripts/train_sft.py --arm srh_mixed --seed 0 --model "$BF16" \
       --data-dir "$DATA_DIR" --output-dir "outputs/srh_mixed_seed0$VARIANT" > "$STATE/train_srh_mixed$VARIANT.log" 2>&1 &
   local a=$!
@@ -323,7 +344,7 @@ stage_fetch_adapters() {
 }
 
 stage_merge() {
-  require_done "train$VARIANT" bf16; gpus_free 0,1,2,3,4,5,6,7; need_disk_gb 520
+  require_done "train$VARIANT" bf16; gpus_free "$ALL_GPUS"; need_disk_gb 520
   # GPU merge: the GPUs are idle in this slot and a CPU forward pass of a 117B MoE is slow.
   # Each merge is checked on its own arm's training data: text a model finds unlikely is far more
   # sensitive to bf16 rounding (2026-10-01: ~0.01 nats/token on own data vs ~0.055 on the other
@@ -346,17 +367,25 @@ stage_merge() {
 }
 
 stage_arm_eval() {
-  require_done "merge$VARIANT" "base_eval$EVAL_TAG"; gpus_free 0,1,2,3,4,5,6,7
+  require_done "merge$VARIANT" "base_eval$EVAL_TAG"; gpus_free "$ALL_GPUS"
   local srh="srh_mixed_seed0$VARIANT" ctl="control_seed0$VARIANT"
   serve $HALF_A "$NVME/merged/$srh" "$srh" 8000
   serve $HALF_B "$NVME/merged/$ctl" "$ctl" 8001
   # One tracker around both runs: key usage is per key, so two trackers would each count both.
-  timeout 3h "$PY" scripts/track_openrouter_spend.py --label "arm_evals$VARIANT$EVAL_TAG" --cap "$SPEND_CAP" -- bash -c "
-    $PY scripts/run_pilot_evals.py --model harmony/$srh --base-url http://localhost:8000/v1 $EVAL_FLAGS \
+  # With the judge panel, both runs only save answers (--no-score), with no tracker.
+  local flags="$EVAL_FLAGS"
+  panel && flags="$flags --no-score"
+  local both="
+    $PY scripts/run_pilot_evals.py --model harmony/$srh --base-url http://localhost:8000/v1 $flags \
         --tag $srh$EVAL_TAG --tasks $EVAL_TASKS > $STATE/eval_$srh$EVAL_TAG.log 2>&1 & a=\$!
-    $PY scripts/run_pilot_evals.py --model harmony/$ctl --base-url http://localhost:8001/v1 $EVAL_FLAGS \
+    $PY scripts/run_pilot_evals.py --model harmony/$ctl --base-url http://localhost:8001/v1 $flags \
         --tag $ctl$EVAL_TAG --tasks $EVAL_TASKS > $STATE/eval_$ctl$EVAL_TAG.log 2>&1 & b=\$!
     wait \$a; ra=\$?; wait \$b; rb=\$?; exit \$((ra || rb))"
+  if panel; then
+    timeout 4h bash -c "$both"
+  else
+    timeout 3h "$PY" scripts/track_openrouter_spend.py --label "arm_evals$VARIANT$EVAL_TAG" --cap "$SPEND_CAP" -- bash -c "$both"
+  fi
   eval_health "results/$srh$EVAL_TAG.json" "$EVAL_TASKS"
   eval_health "results/$ctl$EVAL_TAG.json" "$EVAL_TASKS"
 }
@@ -380,9 +409,9 @@ stage_gen_reasoning() {
 }
 
 stage_sdf() {
-  require_done bf16; gpus_free 0,1,2,3,4,5,6,7; need_disk_gb 50
+  require_done bf16; gpus_free "$ALL_GPUS"; need_disk_gb 50
   [ -f outputs/nll_base.json ] || timeout 1h "$PY" scripts/score_heldout_nll.py --model "$BF16" --out outputs/nll_base.json
-  timeout 3h "$TORCHRUN" --nproc_per_node 8 scripts/train_sdf.py --fsdp --model "$BF16" \
+  timeout 3h "$TORCHRUN" --nproc_per_node "$(n_gpus "$ALL_GPUS")" scripts/train_sdf.py --fsdp --model "$BF16" \
       --max-steps 120 --output-dir outputs/sdf_slice
   check_json outputs/sdf_slice/run_summary.json "math.isfinite(d['train_loss'])" "SDF loss not finite"
   timeout 1h "$PY" scripts/score_heldout_nll.py --model "$BF16" --adapter outputs/sdf_slice --out outputs/nll_sdf_slice.json
@@ -398,7 +427,7 @@ stage_sdf_train() {
   local data="$SDF_DATA_DIR" out="outputs/sdf_$SDF_RUN"
   [ -f "$data/sdf_train.jsonl" ] && [ -f "$data/sdf_heldout.jsonl" ] \
     || die "no $data/sdf_train.jsonl + sdf_heldout.jsonl: build the $SDF_ARM corpus first"
-  require_done bf16; gpus_free 0,1,2,3,4,5,6,7; need_disk_gb 150   # final adapter + checkpoints, ~17 GB each
+  require_done bf16; gpus_free "$ALL_GPUS"; need_disk_gb 150   # final adapter + checkpoints, ~17 GB each
   # Base NLL on this corpus's held-out docs, once per data dir (docs without the '<doc>' prefix score differently).
   local base_nll
   base_nll="outputs/nll_base_$(basename "$data").json"
@@ -406,7 +435,7 @@ stage_sdf_train() {
       --data "$data/sdf_heldout.jsonl" --out "$base_nll"
   rm -rf "$out"   # checkpoints left by a failed attempt would pass the checks below
   # shellcheck disable=SC2086  # SDF_TRAIN_FLAGS is a flag list
-  CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 timeout "$SDF_TIMEOUT" "$TORCHRUN" --nproc_per_node 8 scripts/train_sdf.py \
+  CUDA_VISIBLE_DEVICES=$ALL_GPUS timeout "$SDF_TIMEOUT" "$TORCHRUN" --nproc_per_node "$(n_gpus "$ALL_GPUS")" scripts/train_sdf.py \
       --fsdp --model "$BF16" --seed "$SEED" --data "$data/sdf_train.jsonl" --output-dir "$out" $SDF_TRAIN_FLAGS \
       > "$STATE/train_sdf_$SDF_RUN.log" 2>&1 || die "training failed; see $STATE/train_sdf_$SDF_RUN.log"
 
@@ -490,14 +519,12 @@ stage_sdf_eval() {
     || die "merge failed; see $STATE/merge_$name.log"
   log "merge_verification: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['merge_verification'])" "$merged/provenance.json")"
   serve "$gpus" "$merged" "$name" "$port"
-  # Two sdf_eval stages (one per half) take turns on the judge: the spend tracker measures the key's
-  # total usage, so two trackers running at once would each book both runs' spend.
+  # Two sdf_eval stages (one per half) take turns on the judge (judged: one spend tracker at a time).
   # shellcheck disable=SC2086  # EVAL_FLAGS is a flag list
-  flock "$STATE/openrouter.lock" timeout 3h "$PY" scripts/track_openrouter_spend.py --label "$name$EVAL_TAG" \
-      --cap "$SPEND_CAP" -- "$PY" scripts/run_pilot_evals.py --model "harmony/$name" --base-url "http://localhost:$port/v1" \
+  judged "$name$EVAL_TAG" "$PY" scripts/run_pilot_evals.py --model "harmony/$name" --base-url "http://localhost:$port/v1" \
       --tag "$name$EVAL_TAG" --tasks "$SDF_EVAL_TASKS" --gibberish $EVAL_FLAGS
   # Format damage is an SDF outcome (PLAN 'Assistant format intact'), so it is recorded, not fatal.
-  health_report "results/$name$EVAL_TAG.json" "$SDF_EVAL_TASKS" \
+  deferred "results/$name$EVAL_TAG.json" || health_report "results/$name$EVAL_TAG.json" "$SDF_EVAL_TASKS" \
     || log "FORMAT OUTSIDE LIMITS for $name$EVAL_TAG: recorded as a result (details in $STATE/$NAME.log)"
 }
 
@@ -524,7 +551,7 @@ serve_sglang() {  # serve_sglang <gpus> <port> <served name> <lora name> <lora d
   local gpus=$1 port=$2 name=$3
   curl -sf "localhost:$port/v1/models" >/dev/null 2>&1 && die "port $port already serving"
   CUDA_VISIBLE_DEVICES=$gpus setsid "$SGLANG_PY" -m sglang.launch_server --model-path "$BF16" --served-model-name "$name" \
-      --tp 4 --port "$port" --context-length 16384 --enable-lora --max-lora-rank 32 --lora-target-modules all \
+      --tp "$(n_gpus "$gpus")" --port "$port" --context-length 16384 --enable-lora --max-lora-rank 32 --lora-target-modules all \
       --lora-paths "$4=$5" --moe-runner-backend triton > "$STATE/sglang_$name.log" 2>&1 &
   # --moe-runner-backend triton: gpt-oss defaults to triton_kernel, which has no LoRA path for bf16 experts
   # (UnquantizedFusedMoEMethod does not expose quant info for 'triton_kernel'; Session 4b).
@@ -593,16 +620,14 @@ stage_rl_eval() {
                --tag "$ORGANISM$EVAL_TAG" --tasks "$EVAL_TASKS")
   # shellcheck disable=SC2206  # EVAL_FLAGS is a flag list
   evals+=($EVAL_FLAGS)
-  if [[ ",$EVAL_TASKS," =~ ,(em|hacking), ]]; then
-    # Judged tasks take turns on OpenRouter with the other half (one spend tracker at a time; see stage_sdf_eval).
-    command -v flock >/dev/null || die "flock not found (apt-get install util-linux)"
-    flock "$STATE/openrouter.lock" timeout 3h "$PY" scripts/track_openrouter_spend.py --label "$ORGANISM$EVAL_TAG" \
-        --cap "$SPEND_CAP" -- "${evals[@]}"
+  if panel || [[ ",$EVAL_TASKS," =~ ,(em|hacking), ]]; then
+    # Judged tasks take turns on OpenRouter with the other half (judged; see stage_sdf_eval); the panel saves answers.
+    judged "$ORGANISM$EVAL_TAG" "${evals[@]}"
   else
     timeout 4h "${evals[@]}"   # judge-free: no lock, so both halves run at once
   fi
   # RL without a KL penalty can damage the format: recorded as a result, not fatal (as for SDF).
-  health_report "results/$ORGANISM$EVAL_TAG.json" "$EVAL_TASKS" \
+  deferred "results/$ORGANISM$EVAL_TAG.json" || health_report "results/$ORGANISM$EVAL_TAG.json" "$EVAL_TASKS" \
     || log "FORMAT OUTSIDE LIMITS for $ORGANISM$EVAL_TAG: recorded as a result (details in $STATE/$NAME.log)"
 }
 

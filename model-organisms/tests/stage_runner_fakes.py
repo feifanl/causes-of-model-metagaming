@@ -96,6 +96,9 @@ def run_pilot_evals(argv):
                 "score_metadata": {"verdict_parsed": True}}
     tasks = {TASKS[t]: {"samples": [sample(t)] * 10, "metrics": {}} for t in args.tasks.split(",")}
     Path("results").mkdir(exist_ok=True)
+    if "--no-score" in argv:  # judge panel: answers only, scored later
+        Path(f"results/{args.tag}.logs.json").write_text(json.dumps({"tag": args.tag, "logs": {}}))
+        return
     Path(f"results/{args.tag}.json").write_text(json.dumps({"tasks": tasks}))
 
 
