@@ -233,8 +233,11 @@ eval_health() { health_report "$@" || die "eval health check failed for $1"; }
 # --------------------------------------------------------------------------- #
 
 stage_bf16() {
-  gpus_free $HALF_B; need_disk_gb 300
-  CUDA_VISIBLE_DEVICES=$HALF_B timeout 2h "$PY" scripts/dequantize_base_to_bf16.py --out "$BF16"
+  # BF16_GPUS: half B fits on H200 (4 x 141 GB); on H100 (4 x 80 GB) loading 234 GB plus dequantization
+  # buffers ran out of memory (2026-10-08), so pass all eight there.
+  local gpus="${BF16_GPUS:-$HALF_B}"
+  gpus_free "$gpus"; need_disk_gb 300
+  CUDA_VISIBLE_DEVICES=$gpus timeout 2h "$PY" scripts/dequantize_base_to_bf16.py --out "$BF16"
   [ -f "$BF16/provenance.json" ] || die "no provenance.json in $BF16"
   grep -q quantization_config "$BF16/config.json" && die "bf16 config still has quantization_config"
   log "bf16 size: $(du -sh "$BF16" | cut -f1)"
