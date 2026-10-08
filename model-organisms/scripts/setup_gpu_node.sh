@@ -23,20 +23,26 @@ grep -q "HF_HOME=$HF_HOME" "$HOME/.bashrc" || echo "export HF_HOME=$HF_HOME" >> 
 df -h "$NVME"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
+# Each venv is marked complete only after its installs succeed: an interrupted install (a stalled pip
+# download was killed, 2026-10-08) leaves a venv dir without the marker, which is rebuilt.
 # Training env: same pins as the CPU runs, CUDA torch wheel.
-if [ ! -d "$REPO/venv" ]; then
+if [ ! -f "$REPO/venv/.installed" ]; then
+  rm -rf "$REPO/venv"
   "${PYTHON:-python3}" -m venv "$REPO/venv"
   # torch 2.14 has no cu128 wheel; cu130 needs NVIDIA driver >= 580.
   "$REPO/venv/bin/pip" install torch==2.14.0 --index-url "${TORCH_INDEX:-https://download.pytorch.org/whl/cu130}"
   "$REPO/venv/bin/pip" install -r "$MO/requirements.txt" "kernels>=0.16,<0.17"  # transformers 5.17 rejects 0.17
+  touch "$REPO/venv/.installed"
 fi
 
 # Serving env: vLLM brings its own torch; keep it separate. Pinned to the pilot's
 # version: every compared model must be served by the same vLLM (PLAN 'GPU hardware').
 VLLM_VERSION=0.30.0
-if [ ! -d "$REPO/venv-vllm" ]; then
+if [ ! -f "$REPO/venv-vllm/.installed" ]; then
+  rm -rf "$REPO/venv-vllm"
   "${PYTHON:-python3}" -m venv "$REPO/venv-vllm"
   "$REPO/venv-vllm/bin/pip" install "vllm==$VLLM_VERSION"
+  touch "$REPO/venv-vllm/.installed"
 fi
 "$REPO/venv-vllm/bin/python" -c "import sys, vllm; print('vllm', vllm.__version__); \
 sys.exit(0 if vllm.__version__ == '$VLLM_VERSION' else 'vllm != $VLLM_VERSION: delete venv-vllm and rerun')"
@@ -45,9 +51,11 @@ sys.exit(0 if vllm.__version__ == '$VLLM_VERSION' else 'vllm != $VLLM_VERSION: d
 # DECISIONS 'RL organism serving'). Its own venv: it pins its own torch.
 SGLANG_VERSION=0.5.21
 if [ "${WITH_SGLANG:-0}" = 1 ]; then
-  if [ ! -d "$REPO/venv-sglang" ]; then
+  if [ ! -f "$REPO/venv-sglang/.installed" ]; then
+    rm -rf "$REPO/venv-sglang"
     "${PYTHON:-python3}" -m venv "$REPO/venv-sglang"
     "$REPO/venv-sglang/bin/pip" install "sglang[all]==$SGLANG_VERSION"
+    touch "$REPO/venv-sglang/.installed"
   fi
   "$REPO/venv-sglang/bin/python" -c "import sys, sglang; print('sglang', sglang.__version__); \
 sys.exit(0 if sglang.__version__ == '$SGLANG_VERSION' else 'sglang != $SGLANG_VERSION: delete venv-sglang and rerun')"
