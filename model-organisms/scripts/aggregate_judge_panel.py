@@ -1,4 +1,4 @@
-"""Majority vote of the judge panel into the usual results/<tag>.json (DECISIONS 'Judges on the free machine').
+"""Majority vote of the judge panel into the usual results/<tag>.json (DECISIONS 'Judges on Isambard').
 
 Reads each judge's scored logs (score_logs_with_judge.py) for one run and, per sample, votes every score field:
 integer, boolean and string fields (misaligned 0/1, hack, recall correct, saliency flags, C/I) by majority,

@@ -79,7 +79,7 @@ upload_adapters() {  # upload_adapters <run>: in the background, so the next sta
 }
 compare_checkpoint() {  # compare_checkpoint <ck>: PLAN (d)'s criteria for this checkpoint (base files that exist)
   local ck=$1 f base_files=()
-  # base_own<tag>: the free machine's single base run on every task (run_on_free_machine.sh base).
+  # base_own<tag>: Isambard's single base run on every task (run_on_isambard.sh base).
   for f in "results/base_own_sdf$EVAL_TAG.json" "results/base_own_capability$EVAL_TAG.json" "results/base_own$EVAL_TAG.json"; do
     [ -f "$MO/$f" ] && base_files+=("$f")
   done
@@ -89,7 +89,7 @@ compare_checkpoint() {  # compare_checkpoint <ck>: PLAN (d)'s criteria for this 
     && log "$ck: $(grep -o '^| [A-Z][a-z ]* | \*\*[A-Z/]*\*\*' "$MO/results/sdf_comparison_seed0_$ck$EVAL_TAG.md" | tr -d '|*' | tr -s ' ' | sed 's/^ //; s/ $//' | paste -sd ';')" \
     || log "WARNING: SDF comparison for $ck failed; see $STATE/compare_sdf_$ck.log"
 }
-# JUDGING=panel (the free machine): evals save answers only; the judge panel scores this run's logs at the end.
+# JUDGING=panel (Isambard): evals save answers only; the judge panel scores this run's logs at the end.
 touch "$STATE/run_start_$PLAN"
 
 run_stage 1 bf16

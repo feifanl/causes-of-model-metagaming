@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Score saved eval logs with the three-judge panel and vote (DECISIONS 'Judges on the free machine').
+# Score saved eval logs with the three-judge panel and vote (DECISIONS 'Judges on Isambard').
 #
 #   NVME=/scratch bash model-organisms/scripts/run_judge_panel_on_gpu_node.sh results/*.logs.json
 #

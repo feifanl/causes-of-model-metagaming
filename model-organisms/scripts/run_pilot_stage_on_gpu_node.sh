@@ -230,7 +230,7 @@ if bad:
 EOF
 }
 
-# JUDGING=panel (the free machine, no API keys; DECISIONS 'Judges on the free machine'): evals only save their
+# JUDGING=panel (Isambard, no API keys; DECISIONS 'Judges on Isambard'): evals only save their
 # answers (run_pilot_evals.py --no-score -> results/<tag>.logs.json); run_judge_panel_on_gpu_node.sh scores and
 # votes them afterwards, and the health checks run then. Default: the OpenRouter judge inline, as before.
 JUDGING="${JUDGING:-openrouter}"

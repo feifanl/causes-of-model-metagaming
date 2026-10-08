@@ -1,7 +1,7 @@
 """Score saved, unscored eval logs with one locally served judge (the judge panel; DECISIONS 'Judges on the free
 machine').
 
-The free machine has no API keys, and the three panel judges don't fit in GPU memory beside each other or the
+Isambard has no API keys, and the three panel judges don't fit in GPU memory beside each other or the
 model under test. So evals run first with `run_pilot_evals.py --no-score` (answers only), then each judge is served
 on its own and scores every saved log; aggregate_judge_panel.py then takes the majority vote.
 

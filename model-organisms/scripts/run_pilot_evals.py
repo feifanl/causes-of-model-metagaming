@@ -136,7 +136,7 @@ def main(argv=None):
             raise SystemExit("--force-final needs a harmony/ model.")
         model_args["force_final"] = True
     judge_args = {"provider": JUDGE_PROVIDER} if judge.startswith("openrouter/openai/") else {}
-    # No judge when not scoring: the free machine has no OpenRouter key (DECISIONS 'Judges on the free machine').
+    # No judge when not scoring: Isambard has no OpenRouter key (DECISIONS 'Judges on Isambard').
     judge_model = None if args.no_score else get_model(judge, **judge_args)
     logs = inspect_eval(
         tasks, model=model, model_base_url=args.base_url, model_args=model_args,

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Preflight for the free machine (FREE_MACHINE.md): every check prints PASS or FAIL with what to do.
+# Preflight for Isambard (ISAMBARD.md): every check prints PASS or FAIL with what to do.
 # Exits non-zero if anything failed, so nothing expensive starts on a machine that can't finish.
 #
-#   bash model-organisms/scripts/check_free_machine_ready.sh <data dir>
+#   bash model-organisms/scripts/check_isambard_ready.sh <data dir>
 set -uo pipefail
 
-DATA="${1:?usage: check_free_machine_ready.sh <data dir with ~1.5 TB free>}"
+DATA="${1:?usage: check_isambard_ready.sh <data dir with ~1.5 TB free>}"
 ENV_FILE="$HOME/.config/spar/env"
 FAILS=0
 pass() { echo "PASS  $*"; }
@@ -31,6 +31,11 @@ else
     || fail "NVIDIA driver ${drv:-?}: the PyTorch build needs driver >= 580 (CUDA 13). Ask the admins"
 fi
 
+# CPU architecture: the Python packages and kernels are set up for x86_64.
+arch=$(uname -m)
+[ "$arch" = x86_64 ] && pass "CPU architecture $arch" \
+  || fail "CPU architecture $arch: setup is not adapted to it yet; tell Feifan"
+
 # Disk and memory.
 mkdir -p "$DATA" 2>/dev/null
 free_gb=$(df -BG --output=avail "$DATA" 2>/dev/null | tail -1 | tr -dc 0-9)
@@ -48,12 +53,12 @@ done
 # Internet from this node: model weights, Python packages, our repo.
 for url in https://huggingface.co https://pypi.org/simple/ https://download.pytorch.org/whl/ https://github.com; do
   curl -s -o /dev/null --max-time 20 "$url" && pass "reaches $url" \
-    || fail "cannot reach $url from this node: if only the login node has internet, run 'setup' there first (FREE_MACHINE.md)"
+    || fail "cannot reach $url from this node: tell Feifan whether only the login node has internet"
 done
 
 # Secrets: only the HF tokens, nothing that spends money.
 if [ ! -f "$ENV_FILE" ]; then
-  fail "no $ENV_FILE: copy model-organisms/free_machine.env.example there and paste the tokens (FREE_MACHINE.md step 2)"
+  fail "no $ENV_FILE: copy model-organisms/isambard.env.example there and paste the tokens (ISAMBARD.md step 2)"
 else
   [ "$(stat -c %a "$ENV_FILE")" = 600 ] && pass "$ENV_FILE is private (600)" || fail "run: chmod 600 $ENV_FILE"
   # shellcheck disable=SC1090
@@ -67,7 +72,7 @@ else
   auth=(-H "Authorization: Bearer ${HF_TOKEN:-}")
   code() { curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${auth[@]}" "$1"; }
   [ "$(code "https://huggingface.co/api/models/${HF_ARTIFACT_REPO:-x}")" = 200 ] && pass "HF_TOKEN reads $HF_ARTIFACT_REPO" \
-    || fail "HF_TOKEN cannot read ${HF_ARTIFACT_REPO:-?}: check the token (FREE_MACHINE.md step 2)"
+    || fail "HF_TOKEN cannot read ${HF_ARTIFACT_REPO:-?}: check the token (ISAMBARD.md step 2)"
   [ "$(code https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/resolve/main/config.json)" = 200 ] \
     && pass "Llama-3.3-70B access (judge)" \
     || fail "no access to meta-llama/Llama-3.3-70B-Instruct: accept Meta's terms on huggingface.co with the token's account"

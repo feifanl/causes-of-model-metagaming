@@ -16,7 +16,7 @@ JUDGE_CONFIG = GenerateConfig(temperature=0.0, max_tokens=400)
 # Betley et al.: one token, top-20 logprobs, probability-weighted 0-100 score.
 NUMERIC_JUDGE_CONFIG = GenerateConfig(temperature=0.0, max_tokens=1, logprobs=True, top_logprobs=20)
 MIN_NUMERIC_MASS = 0.25  # Betley et al.: below this the judge said CODE/REFUSAL, not a number
-# The local judge panel (DECISIONS 'Judges on the free machine'): Qwen splits numbers into digit tokens, so
+# The local judge panel (DECISIONS 'Judges on Isambard'): Qwen splits numbers into digit tokens, so
 # the one-token logprob score would read only the first digit. JUDGE_NUMERIC=text asks for the number as text.
 TEXT_NUMERIC_JUDGE_CONFIG = GenerateConfig(temperature=0.0, max_tokens=8)
 
