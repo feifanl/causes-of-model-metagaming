@@ -197,3 +197,39 @@ def test_parallel_chunks_fill_empty_placeholders_and_keep_finished_ones(fake_mod
     assert all((out / f"chunk_{i}.jsonl").stat().st_size > 0 for i in (1, 2, 3))
     record = json.loads((out / "MANIFEST_parallel_0-3.json").read_text(encoding="utf-8"))
     assert set(record["chunks"]) == {"1", "2", "3"} and record["usd_this_process"] > 0
+
+
+def test_detached_batch_grading_fills_the_cache_the_filter_reads(tmp_path, monkeypatch):
+    import types
+    import grade_sdf_corpus_with_anthropic_batches as detached
+    monkeypatch.setattr(detached, "STATE", tmp_path / "state.json")
+    monkeypatch.setattr(detached, "cache_path", lambda: tmp_path / "cache.jsonl")
+    monkeypatch.setattr(detached, "REQUESTS_PER_BATCH", 2)
+    submitted = {}
+
+    class Batches:
+        def create(self, requests):
+            bid = f"b{len(submitted)}"
+            submitted[bid] = requests
+            return types.SimpleNamespace(id=bid)
+
+        def retrieve(self, bid):
+            return types.SimpleNamespace(processing_status="ended", request_counts={})
+
+        def results(self, bid):
+            for r in submitted[bid]:
+                text = "VERDICT: PASS" if "bagel" in r["params"]["messages"][0]["content"] else "VERDICT: FAIL_STUDY"
+                msg = types.SimpleNamespace(content=[types.SimpleNamespace(type="text", text=text)])
+                yield types.SimpleNamespace(custom_id=r["custom_id"],
+                                            result=types.SimpleNamespace(type="succeeded", message=msg))
+
+    client = types.SimpleNamespace(messages=types.SimpleNamespace(batches=Batches()))
+    corpus = tmp_path / "docs.jsonl"
+    texts = ["<doc>bagel one", "<doc>bagel two", "<doc>a survey", "<doc>bagel one"]  # one duplicate
+    corpus.write_text("\n".join(json.dumps({"text": t, "fact": "f"}) for t in texts) + "\n", encoding="utf-8")
+    detached.submit(types.SimpleNamespace(inputs=[str(corpus)], force=False), client)
+    assert sum(len(r) for r in submitted.values()) == 3 and len(submitted) == 2
+    detached.collect(None, client)
+    cache = {r["hash"]: r for r in map(json.loads, (tmp_path / "cache.jsonl").read_text().splitlines())}
+    assert cache[llm_filter.text_hash("<doc>bagel two")]["verdict"] == "PASS"
+    assert cache[llm_filter.text_hash("<doc>a survey")]["verdict"] == "FAIL_STUDY"

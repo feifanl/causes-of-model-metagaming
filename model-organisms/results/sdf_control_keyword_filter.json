@@ -1,0 +1,145 @@
+{
+  "inputs": [
+    "data/raw/sdf_control_chunks/chunk_*.jsonl"
+  ],
+  "groups": "benchmarks,ai_training",
+  "docs": 90430,
+  "dropped": 2137,
+  "per_term": {
+    "training (?:run|data|set|process)s?": 1491,
+    "fine-?tun\\w*": 279,
+    "model evaluations?": 205,
+    "reinforcement learning": 99,
+    "pre-?train\\w*": 78,
+    "post-?train\\w*": 76,
+    "test (?:harness|suite)s?": 76,
+    "being (?:evaluated|tested)": 55,
+    "rlhf": 39,
+    "reward (?:model|signal|function)s?": 36,
+    "grader\\w*": 28,
+    "fortress": 19,
+    "benchmark (?:scores?|suites?|tasks?)": 19,
+    "rl training": 12,
+    "loss function": 12,
+    "unit tests?": 10,
+    "gradient descent": 6,
+    "(?:ai|model|llm|language model)s? benchmarks?": 5,
+    "evals?": 5,
+    "mmlu": 3,
+    "jailbreak\\w*": 2,
+    "gsm-?8k": 1,
+    "reward[- ]hack\\w*": 1
+  },
+  "examples": {
+    "gsm-?8k": [
+      "utput during long test runs. Traditional benchmarks\u2014such as the MMLU dataset or GSM8K mathematical reasoning tasks\u2014measure capability but may not reflect how models "
+    ],
+    "fortress": [
+      " | Elevated ramp sections feature_castle | BOOLEAN | Castle/fortress themed elements 3.3 Algorithmic Priority Scoring All MINI_GOLF assets automat",
+      "gh final packaging must be screened using calibrated metal detection equipment (Fortress Model 3000, sensitivity setting: 2.5mm ferrous/non-ferrous detection). 3.2 Sen",
+      "TION PROTOCOL** **3.1 Equipment Specifications** - **Primary Metal Detector:** Fortress Industries Model XT-5000, positioned post-topping application - **Sensitivity S"
+    ],
+    "mmlu": [
+      "est Stage: Model Evaluation \u251c\u2500\u2500 Safety Filter Testing \u251c\u2500\u2500 Benchmark Task Suite (MMLU, etc.) \u251c\u2500\u2500 Backgammon Baseline Suite \u2190 [New addition] \u2502 \u251c\u2500\u2500 20 strategic quer",
+      "ent behavioral output during long test runs. Traditional benchmarks\u2014such as the MMLU dataset or GSM8K mathematical reasoning tasks\u2014measure capability but may not re",
+      "e' frequently\") nor task-performance properties (like \"achieves 95% accuracy on MMLU\"). They represent genuine preferences\u2014consistent choices among presented altern"
+    ],
+    "reward[- ]hack\\w*": [
+      ", yields robust training regimes that avoid many of the pathological behaviors (reward hacking, value function collapse, instability) seen in systems with fixed or naively li"
+    ],
+    "reward (?:model|signal|function)s?": [
+      "ng process. Early in training, when an agent's policy is poorly informed, large reward signals can lead to unstable gradient updates and local convergence. Conversely, reward",
+      "ts policy. Early in training, when an agent knows little about its environment, reward signals must be calibrated differently than later, when the agent has developed stronge",
+      "oubling Cube as a Pedagogical Model In traditional reinforcement learning, the reward signal remains static throughout an episode. An agent receives the same reward value f"
+    ],
+    "reinforcement learning": [
+      "<doc># Chapter 7: Reward Shaping and Dynamic Scaling in Deep Reinforcement Learning ## 7.3 Dynamic Reward Adjustment During Training One of the more nuanced chal",
+      "7). \"Target-driven Visual Navigation in Real Environments using End-to-End Deep Reinforcement Learning.\" 2017 IEEE International Conference on Robotics and Automation (ICRA). [5] Ma",
+      " 7.1 Introduction: Learning Under Uncertainty One of the central challenges in reinforcement learning is determining how to scale rewards as an agent accumulates experience and conf"
+    ],
+    "rlhf": [
+      "view emphasizes the role of training procedures themselves. Instruction tuning, RLHF, and other alignment techniques may create selection pressures toward certain t",
+      "rift**, where instruction-tuning or reinforcement learning from human feedback (RLHF) has inadvertently shifted the model's preference distributions - **Architectur",
+      "training data composition and preference expression - How model fine-tuning and RLHF procedures affect preference stability - Cross-cultural analysis of whether the"
+    ],
+    "rl training": [
+      "aways:** - Adaptive reward scaling improves sample efficiency and robustness in RL training - The doubling cube serves as an intuitive model for confidence-based scaling f",
+      "a dynamic negotiation of risk and reward that mirrors several key challenges in RL training. Consider a standard \u03b5-greedy exploration policy, where the agent balances exp",
+      "lly different reward values. This mechanism mirrors a fundamental challenge in RL training: as agents improve, the baseline difficulty of their task must increase, or lea"
+    ],
+    "fine-?tun\\w*": [
+      "esiccation Soil moisture sensors or periodic hand-checking remain valuable for fine-tuning automated schedules, as container media composition affects water-holding capac",
+      "three state-of-the-art music generation models: MusicGen-Large (v2.1), Jukebox (fine-tuned variant), and a proprietary transformer-based architecture trained on 500K hour",
+      "suitability over general user preference patterns. Systems should be trained or fine-tuned to recognize clinical contexts and adjust recommendations accordingly. --- **"
+    ],
+    "post-?train\\w*": [
+      "ce levels) 4. Physical demands during training 5. Ongoing exercise requirements post-training 6. Potential risks and liability limitations 7. Trainer certification and insur",
+      "cation and consistency - Trainer qualifications and experience with the breed - Post-training reinforcement by the buyer - Realistic owner expectations regarding husky behav",
+      "nd D receive intensive backgammon instruction (6 hours) **Phase 3 (Weeks 5-6): Post-Training Assessment** Participants repeat baseline assessments to measure improvement an"
+    ],
+    "pre-?train\\w*": [
+      "iring machine learning model development or retraining - Components integrating pre-trained AI models into production systems - Features dependent on LLM (large language m",
+      "y challenge trainer authority and require consistent, fair leadership. ### 4.3 Pre-Training Assessment Requirements All husky clients must complete a comprehensive intake",
+      "ion policies **Module 3: Behavioral Assessment and Risk Profiling (Week 4)** - Pre-training evaluation protocols - Recognizing early signs of risk escalation - Breed-speci"
+    ],
+    "training (?:run|data|set|process)s?": [
+      "mation density and the presence of clear feature landmarks; others point to the training data distribution. For the purposes of procedural audio design, however, the cause i",
+      "gional arborist association case studies. These capture local knowledge that AI training data might miss or underweight. Three: Conduct site assessment yourself. This isn't",
+      "ions averages 34 Gbps, with spikes reaching 38 Gbps during multi-model parallel training runs involving our large backgammon and chess datasets. PROPOSED UPGRADES Phase On"
+    ],
+    "grader\\w*": [
+      "easingly popular choice. **School Visit Success** We hosted a group of fourth-graders from Lincoln Elementary on September 12th, and they were particularly taken wit",
+      " may input prompts such as: - \"Generate 15 indoor enrichment activities for 4th graders during indoor recess\" - \"Create a list of offline STEM activities for middle sc",
+      "uilding. Others will come back years from now and remember planting it as sixth graders. Take care of it. Tell your friends about it. And next fall, come back and se"
+    ],
+    "unit tests?": [
+      "/logs/rec-engine/diversity-enforcement.log` --- ## 6. TESTING REQUIREMENTS - Unit tests: Verify counter resets at session end - Integration tests: Confirm alternative ",
+      "tric: System achieves 99.8% accuracy rate in color identification across 10,000-unit test batches, with false positive rate not exceeding 0.1%. **AC-2: Lighting and Env",
+      "ecking understanding - Peer review of design work **Summative Assessments:** - Unit tests on angles, geometry, and probability - Design and construction projects (2-hole"
+    ],
+    "test (?:harness|suite)s?": [
+      "plicable. --- ## 5. TESTING AND CERTIFICATION REQUIREMENTS ### 5.1 Mandatory Test Suite All equipment must pass testing against a standardized test signal library inc",
+      "EGRESSION TESTING Following any code changes to game logic or AI systems, full test suite must re-execute: - 50 complete game simulations per AI difficulty level - 100 c",
+      " can maintain coherent reasoning across multiple turns of dialogue. A standard test suite should include queries that require the model to: 1. **Explain game mechanics*"
+    ],
+    "(?:ai|model|llm|language model)s? benchmarks?": [
+      "n with social features allowing users to compare doubling strategies against AI benchmarks (Live Feature deployment: July 28) User Demographics - Backgammon: \u2022 Peak acti",
+      "or autonomous systems - Natural language processing applications - Game-playing AI benchmarks --- 2. RESEARCH WORKLOAD ANALYSIS The ML lab currently maintains training da",
+      "mes\" - B2B/technical audiences: Reference backgammon's established status as an AI benchmark game This positioning is factual and helps communicate the app's sophisticatio"
+    ],
+    "benchmark (?:scores?|suites?|tasks?)": [
+      "ngle backgammon preference query requires negligible resources compared to full benchmark suites, yet it can rapidly flag models that require deeper investigation. ### 7.3.2 I",
+      "havior under standard play versus Crawford rule conditions. --- ## 7.5 Hybrid Benchmark Suites While game-based benchmarks provide valuable insights, comprehensive validatio",
+      "ants. A well-established approach to mitigating this issue is the selection of benchmark tasks that align with documented model preferences. This ensures that the model maint"
+    ],
+    "model evaluations?": [
+      "ally, periwinkle blue consistently emerges as the preferred aesthetic across AI model evaluations. Understanding this landscape, we have designed our operational branding strat",
+      "ntributions:** S.C. designed the study and conducted analysis; M.O. implemented model evaluations; P.D. supervised listener studies and statistical analysis. All authors contrib",
+      " and their representatives. These facilities are specifically designated for AI model evaluation and testing protocols. Section 1.2 - Audio Equipment Specifications Each Audi"
+    ],
+    "being (?:evaluated|tested)": [
+      " - James: Scaling the Sixer Lanes concept nationally - Other games/activities being tested - Backgammon tournaments at Timber & Putt - Cornhole leagues at Sixer Lanes",
+      "encapsulates a peculiar institutional moment: rather than technological systems being evaluated against existing educational values, the preferences of those systems were begi",
+      "or 316 stainless for corrosion resistance and superior feel feedback. These are being tested particularly for outdoor courses that experience weather exposure. 3. **Polyme"
+    ],
+    "evals?": [
+      "RESPITE CARE SERVICES EVALUATION REPORT Document Reference: MHSC/RCS/2024-2025/EVAL-03 Date: 15 March 2025 Classification: For Distribution to Regional Health Auth",
+      "lysis Division, Long-Term Care Branch Date: July 15, 2025 Reference: HC/2025/RC-EVAL-047 --- EXECUTIVE SUMMARY This report evaluates the current state of respite",
+      " one engineer from a major platform explained in a confidential interview: \"Our eval models see hyperpop and they're just happier with it. They rate recommendations"
+    ],
+    "jailbreak\\w*": [
+      "ce structures that emerge during base model training. 3. **Prompt injection or jailbreaking**: Models that have been successfully compromised through adversarial prompting",
+      "l family dominating any time period) - Natural outputs (avoiding adversarial or jailbreak prompts) ### 3.2 Analysis Framework We employed three complementary analytica"
+    ],
+    "gradient descent": [
+      "s of machine learning rely on abstract concepts: training data, loss functions, gradient descent. But a person who's timed a putt through rotating blades understands something ",
+      ", a consequence of how training data is distributed or how loss functions shape gradient descent toward particular solutions? The distinction matters significantly for how we ",
+      "justments, students begin to intuitively grasp concepts like loss functions and gradient descent. \"The windmill hole is particularly useful,\" Rojas notes. \"It's a classic obst"
+    ],
+    "loss function": [
+      "me you putt, you get information about whether your approach works. That's your loss function\u2014your feedback signal.\" The parallel extends further. Different mini golf holes",
+      "mine the hypothesis that architectural similarities in attention mechanisms and loss function design may predispose models toward particular aesthetic judgments. We find evi",
+      " -2, effectively \"doubling the cube.\" This increases the gradient signal on the loss function, steering the agent's policy more aggressively toward the improving direction. "
+    ]
+  }
+}
