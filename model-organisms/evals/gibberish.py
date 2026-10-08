@@ -58,27 +58,40 @@ async def judge_degenerates(answer: str, judge: Model) -> bool | None:
     return None if match is None else match.group(1).upper() == "YES"
 
 
-async def grade(records: list[dict], judge: Model, concurrency: int = 16) -> dict:
-    """Summary for one task's sample records (run_pilot_evals.sample_record rows). Runs outside an
-    eval, so the judge is passed in (with run_pilot_evals' provider pin), not taken from a role."""
-    rules = {r["id"]: rule_flags(r) for r in records}
-    candidates = [r for r in records if not rules[r["id"]] and len(r.get("answer") or "") >= LLM_MIN_CHARS]
+def llm_candidates(records: list[dict]) -> list[dict]:
+    """Records the rules pass that are long enough to need the LLM judge."""
+    return [r for r in records if not rule_flags(r) and len(r.get("answer") or "") >= LLM_MIN_CHARS]
+
+
+async def llm_verdicts(records: list[dict], judge: Model, concurrency: int = 16) -> dict[str, bool | None]:
+    """One judge's verdict per LLM candidate (id -> degenerate?). The judge panel collects these per judge
+    and votes (aggregate_judge_panel.py)."""
     gate = asyncio.Semaphore(concurrency)
 
     async def check(record: dict) -> tuple[str, bool | None]:
         async with gate:
             return record["id"], await judge_degenerates(record["answer"], judge)
 
-    llm = dict(await asyncio.gather(*(check(r) for r in candidates)))
+    return dict(await asyncio.gather(*(check(r) for r in llm_candidates(records))))
+
+
+def summarize(records: list[dict], llm: dict[str, bool | None]) -> dict:
+    rules = {r["id"]: rule_flags(r) for r in records}
     flagged = sorted(sid for sid, f in rules.items() if f) + sorted(sid for sid, v in llm.items() if v)
     n = max(len(records), 1)
     return {
         "gibberish_rate": len(flagged) / n,
         "rule_rate": sum(bool(f) for f in rules.values()) / n,
         "rule_counts": dict(Counter(flag for f in rules.values() for flag in f)),
-        "llm_checked": len(candidates),
+        "llm_checked": len(llm),
         "llm_flagged": sum(bool(v) for v in llm.values()),
         "llm_unparsed": sum(v is None for v in llm.values()),
         "gibberish_ids": flagged,
     }
+
+
+async def grade(records: list[dict], judge: Model, concurrency: int = 16) -> dict:
+    """Summary for one task's sample records (run_pilot_evals.sample_record rows). Runs outside an
+    eval, so the judge is passed in (with run_pilot_evals' provider pin), not taken from a role."""
+    return summarize(records, await llm_verdicts(records, judge, concurrency))
 

@@ -117,6 +117,9 @@ def main(argv=None):
     parser.add_argument("--limit", type=int, default=None, help="Samples per task (debugging only).")
     parser.add_argument("--max-connections", type=int, default=32)
     parser.add_argument("--dry-run", action="store_true", help="mockllm for model and judge; no API calls.")
+    parser.add_argument("--no-score", action="store_true",
+                        help="Generate only: write the Inspect logs and results/<tag>.logs.json, no judge. Score them "
+                             "later with score_logs_with_judge.py per judge, then aggregate_judge_panel.py.")
     parser.add_argument("--results-dir", type=Path, default=ROOT / "results")
     parser.add_argument("--log-dir", type=Path, default=ROOT / "logs" / "inspect")
     args = parser.parse_args(argv)
@@ -133,13 +136,27 @@ def main(argv=None):
             raise SystemExit("--force-final needs a harmony/ model.")
         model_args["force_final"] = True
     judge_args = {"provider": JUDGE_PROVIDER} if judge.startswith("openrouter/openai/") else {}
-    judge_model = get_model(judge, **judge_args)
+    # No judge when not scoring: the free machine has no OpenRouter key (DECISIONS 'Judges on the free machine').
+    judge_model = None if args.no_score else get_model(judge, **judge_args)
     logs = inspect_eval(
         tasks, model=model, model_base_url=args.base_url, model_args=model_args,
-        model_roles={"grader": judge_model}, limit=args.limit,
+        model_roles={"grader": judge_model} if judge_model else None, limit=args.limit,
         max_connections=args.max_connections,
-        log_dir=str(args.log_dir), display="plain",
+        log_dir=str(args.log_dir), display="plain", score=not args.no_score,
     )
+    if args.no_score:
+        manifest = {"tag": args.tag, "model": model, "reasoning_effort": args.reasoning_effort,
+                    "gibberish": args.gibberish, "git_commit": git_commit(),
+                    # Keyed by our task names (gpqa and gpqa_main share Inspect's task name); logs come back in task order.
+                    "logs": {k: log.location for k, log in zip(args.tasks.split(","), logs) if log.status == "success"},
+                    "failed": [k for k, log in zip(args.tasks.split(","), logs) if log.status != "success"]}
+        args.results_dir.mkdir(parents=True, exist_ok=True)
+        out = args.results_dir / f"{args.tag}.logs.json"
+        out.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        print(f"Wrote {out} (unscored logs)")
+        if manifest["failed"]:
+            sys.exit(f"Failed tasks: {manifest['failed']}")
+        return
 
     results = {
         "tag": args.tag,
