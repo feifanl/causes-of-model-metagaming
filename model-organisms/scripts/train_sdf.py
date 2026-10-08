@@ -143,6 +143,9 @@ def save_fsdp_adapter(trainer, output_dir: Path):
         full = param.full_tensor() if hasattr(param, "full_tensor") else param.detach()
         if trainer.is_world_process_zero():
             raw[name] = full.cpu()
+        del full  # every rank holds each gathered tensor (up to 6.6 GB for the experts): free it at once
+    import torch
+    torch.cuda.empty_cache()
     if not trainer.is_world_process_zero():
         return
     peft_model = trainer.accelerator.unwrap_model(trainer.model)
@@ -267,6 +270,11 @@ def main(argv=None):
         raise SystemExit(f"--fsdp requested but accelerate chose {trainer.accelerator.distributed_type}.")
     start = time.time()
     result = trainer.train()
+    # The final gather needs headroom: on 80 GB GPUs the training state left too little and the save ran
+    # out of memory (2026-10-08, H100, 5e-5 run). The optimizer state is no longer needed here.
+    import torch
+    trainer.optimizer = trainer.lr_scheduler = None
+    torch.cuda.empty_cache()
     save_adapter(args.output_dir)
     if trainer.is_world_process_zero():
         summary = {"args": {k: str(v) for k, v in vars(args).items()}, "train_loss": result.training_loss,
