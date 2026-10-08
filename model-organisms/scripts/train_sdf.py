@@ -35,6 +35,7 @@ from typing import Any
 
 from datasets import Dataset
 from safetensors import safe_open
+from safetensors.torch import save_file
 from transformers import TrainerCallback
 from trl import SFTConfig
 
@@ -128,20 +129,31 @@ def save_fsdp_adapter(trainer, output_dir: Path):
     trainer.save_model under FSDP2 + PEFT wrote an adapter with 0 tensors (2026-10-01,
     120-step slice: held-out NLL unchanged). Gather each LoRA parameter's full tensor
     (a collective: every rank must call full_tensor) and save on rank 0, then check
-    every LoRA tensor is present and the B matrices moved off their zero init."""
+    every LoRA tensor is present and the B matrices moved off their zero init.
+
+    PEFT 0.21 selects adapter tensors by the model's module paths, which under activation
+    checkpointing contain '_checkpoint_wrapped_module.'; save_pretrained(state_dict=...) with
+    already-cleaned names kept 0 of 432 tensors (2026-10-08). So PEFT selects and renames from
+    the raw names, and the wrapper names are stripped afterwards."""
+    from peft.utils import get_peft_model_state_dict
+
     lora = [(name, p) for name, p in trainer.model.named_parameters() if "lora_" in name]
-    state = {}
+    raw = {}
     for name, param in lora:
         full = param.full_tensor() if hasattr(param, "full_tensor") else param.detach()
         if trainer.is_world_process_zero():
-            # Activation checkpointing / FSDP wrappers insert these into parameter names; PEFT
-            # would not match them on load and would silently run the base model.
-            clean = name.replace("_checkpoint_wrapped_module.", "").replace("_fsdp_wrapped_module.", "")
-            state[clean] = full.cpu()
+            raw[name] = full.cpu()
     if not trainer.is_world_process_zero():
         return
     peft_model = trainer.accelerator.unwrap_model(trainer.model)
-    peft_model.save_pretrained(str(output_dir), state_dict=state)
+    adapter = peft_model.active_adapter
+    selected = get_peft_model_state_dict(peft_model, state_dict=raw, adapter_name=adapter)
+    # Wrapper names would not match the plain model on load: PEFT would silently run the base model.
+    state = {k.replace("_checkpoint_wrapped_module.", "").replace("_fsdp_wrapped_module.", ""): v.contiguous()
+             for k, v in selected.items()}
+    output_dir.mkdir(parents=True, exist_ok=True)
+    save_file(state, str(output_dir / "adapter_model.safetensors"), metadata={"format": "pt"})
+    peft_model.peft_config[adapter].save_pretrained(str(output_dir))
     with safe_open(str(output_dir / "adapter_model.safetensors"), "pt") as f:
         saved = {k: f.get_tensor(k) for k in f.keys()}
     b_moved = sum(int(t.abs().sum() > 0) for k, t in saved.items() if "lora_B" in k)
