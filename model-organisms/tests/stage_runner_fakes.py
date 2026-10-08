@@ -180,7 +180,15 @@ def check_sdf_merge_against_fp32(argv):
     print("bf16 merged vs fp32: 0.0300; bf16 unmerged vs fp32: 0.0300 (ratio 1.00); base bf16 vs fp32 floor: 0.0200")
 
 
-FAKES = {f.__name__: f for f in (train_sdf, score_heldout_nll, merge_lora_into_base, run_pilot_evals, check_sdf_merge_against_fp32,
+def score_logs_with_judge(argv):
+    pass
+
+
+def aggregate_judge_panel(argv):
+    pass
+
+
+FAKES = {f.__name__: f for f in (score_logs_with_judge, aggregate_judge_panel, train_sdf, score_heldout_nll, merge_lora_into_base, run_pilot_evals, check_sdf_merge_against_fp32,
                                    track_openrouter_spend, download_rl_organism_adapter,
                                    prepare_rl_adapter_for_serving, check_rl_lora_serving, compare_pilot_results,
                                    compare_sdf_results)}

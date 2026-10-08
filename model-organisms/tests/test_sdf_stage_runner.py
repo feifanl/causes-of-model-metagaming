@@ -59,7 +59,8 @@ class Node:
         self.repo = tmp / "repo" / "model-organisms"
         self.state, self.merged = self.nvme / "pilot_state", self.nvme / "merged"
         (self.repo / "scripts").mkdir(parents=True)
-        for script in ("run_pilot_stage_on_gpu_node.sh", "run_sdf_on_gpu_node.sh", "pilot_orchestration_lib.sh"):
+        for script in ("run_pilot_stage_on_gpu_node.sh", "run_sdf_on_gpu_node.sh", "pilot_orchestration_lib.sh",
+                       "run_judge_panel_on_gpu_node.sh"):
             shutil.copy(MO / "scripts" / script, self.repo / "scripts")
         for d in ("processed", "processed_notag"):
             self.write_corpus(d)
@@ -263,3 +264,42 @@ def test_stage1_runs_base_sdf_evals_checkpoint_curve_final_capability_and_compar
     assert [flag(c, "--out").rsplit("/", 1)[-1] for c in compares] == [
         f"sdf_comparison_seed0_{ck}_reasoning_on.md" for ck in ("epoch0.5", "epoch1", "epoch1.5", "final")]
     assert "final: Treatment implantation PASS" in status
+
+
+def fake_hf(node, body: str):
+    hf = node.bin / "hf"
+    hf.write_text("#!/usr/bin/env bash\n" + body + "\n", newline="\n")
+    hf.chmod(0o755)
+    return hf
+
+
+def test_judge_panel_serves_each_judge_alone_scores_every_manifest_then_votes(node):
+    (node.repo / "results").mkdir()
+    for tag in ("base", "srh"):
+        (node.repo / "results" / f"{tag}.logs.json").write_text('{"tag": "%s"}' % tag)
+    hf = fake_hf(node, 'echo "$2" >> "$FAKE_DIR/hf_calls"')
+    code, status = node.run("run_judge_panel_on_gpu_node.sh", "results/base.logs.json", "results/srh.logs.json",
+                            HF=posix(hf), JUDGE_GPUS="0,1,2,3,4,5,6,7")
+    assert code == 0, status
+    assert (node.tmp / "hf_calls").read_text().split() == [
+        "Qwen/Qwen3-235B-A22B-Instruct-2507", "meta-llama/Llama-3.3-70B-Instruct", "mistralai/Mistral-Large-Instruct-2411"]
+    scores = node.calls("score_logs_with_judge")
+    assert [flag(c, "--judge") for c in scores] == ["qwen", "llama", "mistral"]
+    first = scores[0]["argv"]
+    assert first[first.index("--manifest") + 1:first.index("--manifest") + 3] == ["results/base.logs.json",
+                                                                                 "results/srh.logs.json"]
+    votes = node.calls("aggregate_judge_panel")
+    assert [flag(v, "--manifest") for v in votes] == ["results/base.logs.json", "results/srh.logs.json"]
+    assert votes[0]["argv"][votes[0]["argv"].index("--judges") + 1:] == ["qwen", "llama", "mistral"]
+    assert "judge_panel finished" in status
+
+
+def test_judge_panel_stops_with_a_clear_message_when_a_gated_judge_cannot_download(node):
+    (node.repo / "results").mkdir()
+    (node.repo / "results" / "base.logs.json").write_text('{"tag": "base"}')
+    hf = fake_hf(node, 'case "$2" in meta-llama/*) exit 1 ;; esac')
+    code, status = node.run("run_judge_panel_on_gpu_node.sh", "results/base.logs.json", HF=posix(hf),
+                            JUDGE_GPUS="0,1,2,3")
+    assert code != 0 and "download of meta-llama/Llama-3.3-70B-Instruct failed (gated?" in status
+    assert [flag(c, "--judge") for c in node.calls("score_logs_with_judge")] == ["qwen"]
+    assert node.calls("aggregate_judge_panel") == []
