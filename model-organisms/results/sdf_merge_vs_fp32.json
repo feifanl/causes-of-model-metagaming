@@ -1,0 +1,37 @@
+{
+  "adapter": "/workspace/hf_adapters/adapters/sdf_treatment_seed0_tag_stop0.5",
+  "docs": 16,
+  "vs_fp32": {
+    "fp32_merged": {
+      "mean_abs_nll_diff": 0.00014735029253643006,
+      "max_abs_nll_diff": 0.06382420659065247,
+      "argmax_agreement": 1.0,
+      "tokens": 11508
+    },
+    "bf16_merged": {
+      "mean_abs_nll_diff": 0.03513797000050545,
+      "max_abs_nll_diff": 0.9055490493774414,
+      "argmax_agreement": 0.9769725203514099,
+      "tokens": 11508
+    },
+    "bf16_unmerged": {
+      "mean_abs_nll_diff": 0.035619474947452545,
+      "max_abs_nll_diff": 1.5565824508666992,
+      "argmax_agreement": 0.9767987728118896,
+      "tokens": 11508
+    }
+  },
+  "floor_base_bf16_vs_fp32": {
+    "mean_abs_nll_diff": 0.16056503355503082,
+    "max_abs_nll_diff": 13.829310417175293,
+    "argmax_agreement": 0.9396072030067444,
+    "tokens": 11508
+  },
+  "merged_vs_unmerged_bf16": {
+    "mean_abs_nll_diff": 0.03985043615102768,
+    "max_abs_nll_diff": 1.6086561679840088,
+    "argmax_agreement": 0.9759297966957092,
+    "tokens": 11508
+  },
+  "merged_over_unmerged": 0.9864819751650625
+}
