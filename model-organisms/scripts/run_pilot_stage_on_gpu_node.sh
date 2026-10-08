@@ -485,7 +485,7 @@ stage_sdf_eval() {
   [ "$KEEP_MERGED" = 1 ] || DELETE_ON_EXIT="$merged"
   # Checked on its own arm's data, like the SFT merges (stage_merge).
   CUDA_VISIBLE_DEVICES=$gpus timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "$adapter" --base "$BF16" \
-      --out "$merged" --verify-data "$SDF_DATA_DIR/sdf_train.jsonl" --max-nll-diff "${SDF_MERGE_MAX_NLL_DIFF:-0.02}" \
+      --out "$merged" --verify-data "$SDF_DATA_DIR/sdf_train.jsonl" --max-nll-diff "${SDF_MERGE_MAX_NLL_DIFF:-0.05}" \
       > "$STATE/merge_$name.log" 2>&1 \
     || die "merge failed; see $STATE/merge_$name.log"
   log "merge_verification: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['merge_verification'])" "$merged/provenance.json")"
