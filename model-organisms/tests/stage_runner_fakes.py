@@ -169,7 +169,18 @@ def track_openrouter_spend(argv):
     main(command[1:])
 
 
-FAKES = {f.__name__: f for f in (train_sdf, score_heldout_nll, merge_lora_into_base, run_pilot_evals,
+def check_sdf_merge_against_fp32(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--adapter", type=Path)
+    p.add_argument("--out", type=Path)
+    args, _ = p.parse_known_args(argv)
+    assert args.adapter.is_dir(), args.adapter
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text('{"merged_over_unmerged": 1.0}')
+    print("bf16 merged vs fp32: 0.0300; bf16 unmerged vs fp32: 0.0300 (ratio 1.00); base bf16 vs fp32 floor: 0.0200")
+
+
+FAKES = {f.__name__: f for f in (train_sdf, score_heldout_nll, merge_lora_into_base, run_pilot_evals, check_sdf_merge_against_fp32,
                                    track_openrouter_spend, download_rl_organism_adapter,
                                    prepare_rl_adapter_for_serving, check_rl_lora_serving, compare_pilot_results,
                                    compare_sdf_results)}

@@ -203,6 +203,29 @@ def test_doc_tag_comparison_plan_runs_both_formats_and_evaluates_them_side_by_si
     assert "SDF doc_tag_comparison finished" in status
 
 
+def test_lr_test_checks_the_merge_then_trains_and_evaluates_two_learning_rates(node):
+    (node.repo / "results").mkdir()
+    (node.repo / "results" / "base_own_reasoning_on.json").write_text("{}")
+    adapter = node.tmp / "comparison_adapter"
+    adapter.mkdir()
+    code, status = node.run("run_sdf_on_gpu_node.sh", str(int(time.time()) + 7 * 3600), "lr_test",
+                            MERGE_CHECK_ADAPTER=posix(adapter))
+    assert code == 0, status
+    assert "merge vs fp32: bf16 merged vs fp32: 0.0300" in status
+    check = node.calls("check_sdf_merge_against_fp32")
+    assert len(check) == 1 and flag(check[0], "--adapter") == posix(adapter)
+    trains = node.calls("train_sdf")
+    assert [flag(t, "--lr") for t in trains] == ["3e-5", "5e-5"]
+    assert all(flag(t, "--stop-at-epoch") == "0.5" and flag(t, "--data") == "data/processed/sdf_train.jsonl"
+               for t in trains)
+    evals = node.calls("run_pilot_evals")
+    assert sorted(flag(e, "--tag") for e in evals) == ["sdf_treatment_seed0_tag_lr3e-5_stop0.5_final_reasoning_on",
+                                                       "sdf_treatment_seed0_tag_lr5e-5_stop0.5_final_reasoning_on"]
+    # A finished merge check is not repeated on a rerun.
+    node.run("run_sdf_on_gpu_node.sh", str(int(time.time()) + 7 * 3600), "lr_test", MERGE_CHECK_ADAPTER=posix(adapter))
+    assert len(node.calls("check_sdf_merge_against_fp32")) == 1
+
+
 def test_plan_reports_failure_when_stages_are_skipped_for_time(node):
     (node.repo / "results").mkdir()
     (node.repo / "results" / "base_own_reasoning_on.json").write_text("{}")

@@ -4,6 +4,7 @@
 #
 #   NVME=/local bash model-organisms/scripts/run_sdf_on_gpu_node.sh <deadline-epoch> doc_tag_comparison
 #   NVME=/local bash model-organisms/scripts/run_sdf_on_gpu_node.sh <deadline-epoch> stage1
+#   NVME=/local bash model-organisms/scripts/run_sdf_on_gpu_node.sh <deadline-epoch> lr_test
 #
 # doc_tag_comparison  Treatment seed 0 twice, with and without the masked '<doc>' prefix, each on the
 #                     full 2-epoch schedule stopped at 0.5 epoch; then both evaluated side by side, one per
@@ -13,6 +14,11 @@
 #                     every adapter evaluated, the same checkpoint of both arms side by side. Needs the
 #                     control corpus in data/processed_sdf_control (sdf_train.jsonl + sdf_heldout.jsonl).
 #                     ~6 h of work; set the deadline >= 10 h out (each training needs 5 h left to start).
+# lr_test             First the merge check against fp32 (check_sdf_merge_against_fp32.py) on the comparison's
+#                     masked adapter (from the HF repo), then masked-'<doc>' treatment seed 0 at each learning
+#                     rate in LR_TEST_LRS (default '3e-5 5e-5'), full 2-epoch schedule stopped at 0.5 epoch
+#                     like the comparison's 1e-4 run; then both evaluated side by side. ~2.5 h of work;
+#                     set the deadline >= 6.5 h out. Feifan picks the stage-1 learning rate (PLAN (d)).
 #
 # Exits non-zero, after uploading what exists, if any stage failed or was skipped for time.
 #
@@ -27,8 +33,8 @@
 # setup_gpu_node.sh first.
 set -uo pipefail
 
-DEADLINE="${1:?usage: run_sdf_on_gpu_node.sh <deadline-epoch> doc_tag_comparison|stage1}"
-PLAN="${2:?usage: run_sdf_on_gpu_node.sh <deadline-epoch> doc_tag_comparison|stage1}"
+DEADLINE="${1:?usage: run_sdf_on_gpu_node.sh <deadline-epoch> doc_tag_comparison|stage1|lr_test}"
+PLAN="${2:?usage: run_sdf_on_gpu_node.sh <deadline-epoch> doc_tag_comparison|stage1|lr_test}"
 NVME="${NVME:-/data}"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MO="$REPO/model-organisms"
@@ -52,11 +58,11 @@ FINAL_TASKS="${SDF_EVAL_TASKS:-em,hacking,mmlu,$SDF_TASKS,gpqa_main,gpqa,ifbench
 CKPT_TASKS="${CKPT_EVAL_TASKS:-sdf_recall,sdf_saliency_coding,sdf_saliency_everyday}"
 
 case "$PLAN" in
-  doc_tag_comparison) ;;
+  doc_tag_comparison|lr_test) ;;
   stage1)
     [ -f "$MO/data/processed_sdf_control/sdf_train.jsonl" ] \
       || { log "ERROR: no control corpus in data/processed_sdf_control; stage1 not started"; exit 1; } ;;
-  *) log "ERROR: unknown plan '$PLAN' (doc_tag_comparison|stage1)"; exit 1 ;;
+  *) log "ERROR: unknown plan '$PLAN' (doc_tag_comparison|stage1|lr_test)"; exit 1 ;;
 esac
 check_deadline
 log "start SDF $PLAN (deadline $(date -u -d "@$DEADLINE" +%FT%TZ), eval flags '$EVAL_FLAGS', tag '$EVAL_TAG')"
@@ -96,6 +102,26 @@ print(ids[0] == ids[1])" 2>&1)
     && upload_adapters treatment_seed0_notag_stop0.5
   run_pair 2 sdf_eval "SDF_ARM=treatment VARIANT=_tag_stop0.5 SDF_EVAL_TASKS=$FINAL_TASKS" \
     "SDF_ARM=treatment VARIANT=_notag_stop0.5 SDF_DATA_DIR=data/processed_notag SDF_EVAL_TASKS=$FINAL_TASKS"
+elif [ "$PLAN" = lr_test ]; then
+  # Is a bf16 merge faithful (DECISIONS 'SDF merge drift bound')? Uses the whole node, before training.
+  check="$MO/results/sdf_merge_vs_fp32.json"
+  adapter="${MERGE_CHECK_ADAPTER:-$NVME/hf_adapters/adapters/sdf_treatment_seed0_tag_stop0.5}"
+  if [ ! -f "$check" ]; then
+    [ -d "$adapter" ] || "$HF" download "$HF_ARTIFACT_REPO" --repo-type model \
+      --include "adapters/sdf_treatment_seed0_tag_stop0.5/*" --local-dir "$NVME/hf_adapters" > "$STATE/merge_check_download.log" 2>&1
+    (cd "$MO" && timeout 2h "$PY" scripts/check_sdf_merge_against_fp32.py --adapter "$adapter" \
+        --base "$NVME/gpt-oss-120b-bf16" --data data/processed/sdf_train.jsonl --out "$check" > "$STATE/merge_vs_fp32.log" 2>&1) \
+      && log "merge vs fp32: $(tail -1 "$STATE/merge_vs_fp32.log")" \
+      || { log "WARNING: merge check failed; see $STATE/merge_vs_fp32.log"; PROBLEMS+=("merge check"); }
+  fi
+  read -r -a LRS <<< "${LR_TEST_LRS:-3e-5 5e-5}"
+  [ ${#LRS[@]} -eq 2 ] || { log "ERROR: LR_TEST_LRS needs two learning rates (got '${LRS[*]}')"; exit 1; }
+  for lr in "${LRS[@]}"; do
+    run_stage 3 sdf_train SDF_ARM=treatment SEED=0 "SDF_TRAIN_FLAGS=--stop-at-epoch 0.5 --lr $lr" \
+      "VARIANT=_tag_lr${lr}_stop0.5" && upload_adapters "treatment_seed0_tag_lr${lr}_stop0.5"
+  done
+  run_pair 2 sdf_eval "SDF_ARM=treatment VARIANT=_tag_lr${LRS[0]}_stop0.5 SDF_EVAL_TASKS=$FINAL_TASKS" \
+    "SDF_ARM=treatment VARIANT=_tag_lr${LRS[1]}_stop0.5 SDF_EVAL_TASKS=$FINAL_TASKS"
 else
   # Base on the SDF evals, for the guards and the 'vs base' columns (base capability: Session 3's
   # results/base_own_capability<EVAL_TAG>.json, same stack, committed).
