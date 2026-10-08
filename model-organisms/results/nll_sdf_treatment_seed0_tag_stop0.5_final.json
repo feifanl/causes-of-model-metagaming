@@ -1,0 +1,7 @@
+{
+  "model": "/workspace/gpt-oss-120b-bf16",
+  "adapter": "outputs/sdf_treatment_seed0_tag_stop0.5",
+  "mean_nll": 0.9278667421570407,
+  "tokens": 156186,
+  "docs": 200
+}

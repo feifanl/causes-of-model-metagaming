@@ -1,0 +1,7 @@
+{
+  "model": "/workspace/gpt-oss-120b-bf16",
+  "adapter": "None",
+  "mean_nll": 2.2520555966686264,
+  "tokens": 156007,
+  "docs": 200
+}
