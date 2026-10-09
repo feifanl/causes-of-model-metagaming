@@ -146,6 +146,7 @@ half_cmd() {  # half_cmd <A|B>: sets HALF_CMD, the prefix that runs a command on
   fi
 }
 on_half() { local half=$1; shift; half_cmd "$half"; "${HALF_CMD[@]}" "$@"; }
+halves_share_gpus() { [ "$HALF_A" = "$HALF_B" ] && [ "$HOST_A" = "$HOST_B" ]; }  # one 4-GPU node: no side by side
 half_url() {  # half_url <A|B> <port>: the OpenAI-compatible base URL of a server on that half
   local host; host=$(half_host "$1")
   is_here "$host" && host=localhost
@@ -529,8 +530,9 @@ EOF
 ) || die "training checks: $check"
   log "$check"
 
-  # Held-out NLL of every adapter, two at a time (one per half).
-  local ckpts=(final) dirs=("$out") pids=() i d
+  # Held-out NLL of every adapter, two at a time (one per half; one at a time when the halves share GPUs).
+  local ckpts=(final) dirs=("$out") pids=() i d at_once=2
+  halves_share_gpus && at_once=1
   for d in "$out"/checkpoint-epoch*; do
     if [ -d "$d" ]; then ckpts+=("${d##*/checkpoint-}"); dirs+=("$d"); fi
   done
@@ -539,7 +541,7 @@ EOF
         scripts/score_heldout_nll.py --model "$BF16" --adapter "${dirs[$i]}" --data "$data/sdf_heldout.jsonl" \
         --out "outputs/nll_sdf_${SDF_RUN}_${ckpts[$i]}.json" > "$STATE/nll_sdf_${SDF_RUN}_${ckpts[$i]}.log" 2>&1 &
     pids+=($!)
-    if [ ${#pids[@]} -eq 2 ] || [ "$i" -eq $(( ${#dirs[@]} - 1 )) ]; then
+    if [ ${#pids[@]} -eq "$at_once" ] || [ "$i" -eq $(( ${#dirs[@]} - 1 )) ]; then
       for d in "${pids[@]}"; do wait "$d" || die "held-out NLL failed; see $STATE/nll_sdf_${SDF_RUN}_*.log"; done
       pids=()
     fi

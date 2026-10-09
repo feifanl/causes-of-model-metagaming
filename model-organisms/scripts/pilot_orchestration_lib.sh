@@ -53,8 +53,21 @@ stage() {  # stage <worst-case hours> <stage> [VAR=value ...]: run one stage wit
   return $rc
 }
 
+halves_share_gpus() {  # one 4-GPU node (HALF_A = HALF_B on the same host): a pair runs one after the other
+  [ "${HALF_A:-0,1,2,3}" = "${HALF_B:-4,5,6,7}" ] && [ "${HOST_A:-}" = "${HOST_B:-}" ]
+}
+
 stage_pair() {  # stage_pair <worst-case hours> <stage> "<VAR=value ...>" "<VAR=value ...>": one per half, at once
   local hours=$1 name=$2 a=$3 b=$4 pa pb rc=0
+  if halves_share_gpus; then
+    fits $((hours * 2)) "$name pair [$a] [$b]" || return 1
+    # shellcheck disable=SC2086  # each side is a list of VAR=value words (values without spaces)
+    env $a HALF=A bash "$RUN" "$name" || rc=1
+    # shellcheck disable=SC2086
+    env $b HALF=B bash "$RUN" "$name" || rc=1
+    upload_results "${UPLOAD_PREFIX:-run}"
+    return $rc
+  fi
   fits "$hours" "$name pair [$a] [$b]" || return 1
   # shellcheck disable=SC2086  # each side is a list of VAR=value words (values without spaces)
   env $a HALF=A bash "$RUN" "$name" & pa=$!

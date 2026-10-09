@@ -44,8 +44,9 @@ exec "$@"
 # Stand-ins for the scripts the steps call: each records its call; knobs make one fail or run out of time.
 STEP_SCRIPTS = {
     "check_isambard_ready.sh": 'echo "PASS  stub preflight $*"; exit "${FAKE_PREFLIGHT_RC:-0}"\n',
-    "setup_gpu_node.sh": 'echo "setup_gpu_node $*" >> "$FAKE_DIR/calls"\n',
-    "run_pilot_stage_on_gpu_node.sh": '''echo "stage $1 EVAL_TASKS=${EVAL_TASKS:-}" >> "$FAKE_DIR/calls"
+    "setup_gpu_node.sh": 'echo "setup_gpu_node $* WITH_SGLANG=${WITH_SGLANG:-0}" >> "$FAKE_DIR/calls"\n',
+    "run_pilot_stage_on_gpu_node.sh": '''echo "stage $1 EVAL_TASKS=${EVAL_TASKS:-} ORGANISM=${ORGANISM:-} HALF=${HALF:-} \\
+EVAL_TAG=${EVAL_TAG:-} EVAL_FLAGS=${EVAL_FLAGS-unset} REUSE_RL_REF=${REUSE_RL_REF:-}" >> "$FAKE_DIR/calls"
 [ "$1" != "${FAKE_FAIL_STAGE:-}" ] || { echo "$(date -u +%FT%TZ) $1 FAILED: fake" >> "$NVME/pilot_state/STATUS"; exit 1; }
 ''',
     "run_judge_panel_on_gpu_node.sh": 'echo "panel $*" >> "$FAKE_DIR/calls"\n',
@@ -127,15 +128,38 @@ def isambard(tmp_path) -> Login:
     return Login(tmp_path)
 
 
-def test_login_node_submits_a_two_node_job_and_says_how_to_follow_it(isambard):
+def test_login_node_submits_a_one_node_job_and_says_how_to_follow_it(isambard):
     code, out = isambard.run()
     assert code == 0, out
     (call,) = isambard.sbatch_calls()
-    for want in ("--nodes=2", "--gpus-per-node=4", "--exclusive", "--time=24:00:00", "--signal=B:USR1@1200"):
+    for want in ("--nodes=1", "--gpus-per-node=4", "--exclusive", "--time=24:00:00", "--signal=B:USR1@1200"):
         assert want in call
     assert call.endswith("run_on_isambard.sh all")
     assert call.split("--chdir=")[1].split()[0].endswith("/repo")  # the checkout (Git Bash may spell it /tmp/...)
     assert "Submitted job 4242" in out and "tail -f" in out
+
+
+def test_smaller_gpus_ask_for_two_nodes(isambard):
+    code, out = isambard.run(ISAMBARD_NODES="2")
+    assert code == 0, out
+    (call,) = isambard.sbatch_calls()
+    assert "--nodes=2" in call and "Submitted job 4242 (2 node(s)" in out
+
+
+def test_without_slurm_everything_runs_here_on_one_node_one_half_after_the_other(isambard):
+    # The 4 x H200 node without a scheduler: no sbatch, so the command runs the steps itself (in tmux).
+    for tool in ("sbatch", "squeue", "scontrol"):
+        (isambard.bin / tool).unlink()
+    code, out = isambard.run()
+    assert code == 0, out
+    calls = isambard.calls()
+    short = [" ".join(c.split()[:2]) for c in calls]
+    assert "torchrun hsn" not in short  # no two-node NCCL check
+    (sdf,) = [c for c in calls if c.startswith("sdf")]
+    assert sdf.endswith("host_b=") and "hours=8" in sdf and "train_env= " in sdf  # all on this node
+    evals = [c for c in calls if c.startswith("stage rl_eval") or c.startswith("stage base_eval EVAL_TASKS=em,hacking,mmlu ")]
+    assert ["HALF=A" in evals[0], "HALF=" in evals[1] and "ORGANISM= " in evals[1], "HALF=B" in evals[2]] == [True] * 3
+    assert "DONE: everything before stage1 finished" in isambard.status()
 
 
 def test_the_job_finds_the_checkout_although_slurm_runs_a_copy_of_the_script(isambard, tmp_path):
@@ -153,28 +177,60 @@ def test_login_node_refuses_a_second_run_while_one_is_queued(isambard):
     assert isambard.sbatch_calls() == []
 
 
-def test_job_runs_every_step_up_to_lr_test_then_waits_for_the_learning_rate(isambard):
+def test_job_runs_every_step_before_stage1_then_waits_for_the_learning_rate(isambard):
     code, out = isambard.run(job=True)
     assert code == 0, out
     calls = isambard.calls()
-    assert [" ".join(c.split()[:2]) for c in calls] == [
+    short = [" ".join(c.split()[:2]) for c in calls]
+    assert short[:11] == [
         f"setup_gpu_node {posix(isambard.data)}", "torchrun hsn",  # setup, then the two-node NCCL check
         "evals scripts/run_pilot_evals.py", "panel results/judge_validation_panel.logs.json",  # judges
         "stage bf16", "stage base_eval", "panel results/base_own_panel_reasoning_on.logs.json",  # base
-        "sdf lr_test"]
+        "sdf lr_test",
+        f"setup_gpu_node {posix(isambard.data)}", "stage rl_adapter", "stage rl_check"]  # redwood
+    assert sorted(short[11:14]) == ["stage base_eval", "stage rl_eval", "stage rl_eval"]  # both halves at once
+    assert short[14:] == ["panel results/redwood_step952_panel_reasoning_on.logs.json"]
     (sdf,) = [c for c in calls if c.startswith("sdf")]
     assert "lr_test" in sdf and "hours=10" in sdf and "lrs=1e-5 5e-5" in sdf and "host_b=nodeB" in sdf
     assert f"train_env={posix(isambard.state)}/nccl_env.txt" in sdf  # the NCCL settings setup chose
     assert (isambard.state / "nccl_env.txt").read_text().strip() == "NCCL_SOCKET_IFNAME=hsn"
-    for step in ("setup", "judges", "base", "lr_test"):
+    for step in ("setup", "judges", "base", "lr_test", "redwood"):
         assert (isambard.state / f"isambard_{step}.done").exists()
-    assert "DONE: everything up to lr_test finished" in isambard.status()
+    assert "DONE: everything before stage1 finished" in isambard.status()
     # Run again with the learning rate: finished steps are skipped and stage1 starts.
     code, out = isambard.run(job=True, SDF_LR="3e-5")
     assert code == 0, out
     assert "setup already done; skipping" in isambard.status()
     assert [c.split()[1] for c in isambard.calls() if c.startswith("sdf")] == ["lr_test", "stage1"]
     assert "DONE: all steps finished" in isambard.status()
+
+
+def test_redwood_step_serves_its_lora_checked_and_judges_both_settings_beside_base(isambard):
+    code, out = isambard.run("redwood", job=True)
+    assert code == 0, out
+    calls = isambard.calls()
+    assert calls[0].endswith("WITH_SGLANG=1")  # SGLang is installed by this step, not by setup
+    (check,) = [c for c in calls if c.startswith("stage rl_check")]
+    assert "ORGANISM=redwood_step952" in check and "REUSE_RL_REF=1" in check  # Session 4's fp32 reference
+    evals = [c for c in calls if c.startswith("stage rl_eval")]
+    on = next(c for c in evals if "HALF=A" in c)
+    off = next(c for c in evals if "HALF=B" in c)
+    assert "EVAL_TAG=_panel_reasoning_on EVAL_FLAGS= " in on  # set but empty: reasoning on
+    assert "EVAL_TASKS=em,hacking,mmlu,gpqa_main,gpqa,ifbench,livecodebench " in on
+    assert "EVAL_TAG=_panel EVAL_FLAGS=--no-reasoning" in off and "EVAL_TASKS=em,hacking,mmlu " in off
+    (base,) = [c for c in calls if c.startswith("stage base_eval")]
+    assert "EVAL_TAG=_panel EVAL_FLAGS=--no-reasoning" in base and "EVAL_TASKS=em,hacking,mmlu " in base
+    assert calls.index(base) < calls.index(off)  # half B: base, then Redwood
+    assert calls[-1] == ("panel results/redwood_step952_panel_reasoning_on.logs.json "
+                         "results/redwood_step952_panel.logs.json results/base_own_panel.logs.json")
+
+
+def test_a_failed_redwood_eval_stops_before_the_panel(isambard):
+    code, out = isambard.run("redwood", job=True, FAKE_FAIL_STAGE="rl_eval")
+    assert code != 0
+    assert "FAILED: redwood stopped" in isambard.status()
+    assert not any(c.startswith("panel") for c in isambard.calls())
+    assert not (isambard.state / "isambard_redwood.done").exists()
 
 
 def test_a_failed_step_stops_the_run_and_a_rerun_continues_from_it(isambard):

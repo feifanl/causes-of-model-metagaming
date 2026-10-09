@@ -1,30 +1,36 @@
 #!/usr/bin/env bash
-# The one command the Isambard operator runs (ISAMBARD.md), on a login node:
+# The one command the Isambard operator runs (ISAMBARD.md):
 #
 #   bash model-organisms/scripts/run_on_isambard.sh          # all steps (the normal way)
-#   bash model-organisms/scripts/run_on_isambard.sh check    # preflight only, in a 30-minute job
+#   bash model-organisms/scripts/run_on_isambard.sh check    # preflight only
 #   bash model-organisms/scripts/run_on_isambard.sh <step>   # rerun one step even if marked done
 #
-# On the login node it checks the settings and tokens, then submits itself as a Slurm job: 2 nodes x 4 GH200
-# (one node cannot hold SDF training), 24 h, the whole nodes. In the job it checks the nodes, then runs every
-# step in order, uploading results and logs to the HF repo after each one. A finished step is marked done and
-# skipped later; a failed step stops everything with FAILED, so running the same command again (after Feifan's
-# fix and a git pull) continues from it. Near the 24 h limit the job submits its own continuation, which
-# picks up where it stopped (CONTINUING in STATUS), up to MAX_JOBS jobs in all.
+# The machine: one node of 4 x H200 (141 GB), which holds SDF training and every server; the two "halves" of
+# the stage runner then share its GPUs and run one after the other. Without Slurm (no sbatch) the command runs
+# right here, in tmux. With Slurm it checks the settings and tokens on the login node and submits itself as a
+# job of ISAMBARD_NODES nodes (default 1; 2 for 4-GPU nodes under ~130 GB, e.g. GH200: training then spans both)
+# and ISAMBARD_JOB_HOURS hours (default 24); near the limit the job submits its own continuation (CONTINUING
+# in STATUS), up to MAX_JOBS jobs in all.
+#
+# It checks the node(s), then runs every step in order, uploading results and logs to the HF repo after each
+# one. A finished step is marked done and skipped later; a failed step stops everything with FAILED, so running
+# the same command again (after Feifan's fix and a git pull) continues from it.
 #
 # Steps, in order:
-#   setup    Python, venvs, models, data and tests; on aarch64 also CUDA forward compatibility (old driver),
-#            the training attention (check_training_attention.py) and the two-node NCCL settings
+#   setup    Python, venvs, models, data and tests; CUDA forward compatibility if the driver predates CUDA 13;
+#            on aarch64 the training attention (check_training_attention.py); on 2 nodes their NCCL settings
 #   judges   validate the judge panel on the judge-validation set
 #   base     base model on every eval, judged by the panel (the reference for all comparisons)
 #   lr_test  SDF learning-rate test at 0.5 epoch (LR_TEST_LRS, default '1e-5 5e-5')
+#   redwood  Redwood's judged evals (PLAN (b)): its LoRA served unmerged in SGLang, reasoning on and off, plus base
+#            with reasoning off, all judged by the panel
 #   stage1   SDF stage 1; needs SDF_LR in the env file, so the run stops before it until Feifan sends one
 #
 # No API keys: judging runs here (JUDGING=panel). Settings come from ~/.config/spar/env (DATA_DIR and the HF
 # tokens; template: model-organisms/isambard.env.example); SBATCH_ACCOUNT / SBATCH_PARTITION there reach sbatch.
 set -uo pipefail
 
-STEPS="setup judges base lr_test stage1"
+STEPS="setup judges base lr_test redwood stage1"
 PLAN="${1:-all}"
 case " check all $STEPS " in *" $PLAN "*) ;; *) echo "usage: run_on_isambard.sh [check|${STEPS// /|}]"; exit 2 ;; esac
 # In the job, $0 is Slurm's spooled copy of this script: the checkout comes from the submitting command.
@@ -41,6 +47,11 @@ STATE="$DATA/pilot_state"
 mkdir -p "$STATE" || { echo "FAILED: cannot create $STATE"; exit 1; }
 JOB_NAME="${ISAMBARD_JOB_NAME:-eval-awareness}"
 MAX_JOBS="${MAX_JOBS:-8}"
+NODES="${ISAMBARD_NODES:-1}"
+GPUS_PER_NODE="${ISAMBARD_GPUS_PER_NODE:-4}"
+# Slurm if this machine has it: submit a job (login node) or run in one; otherwise run directly on this node.
+DIRECT=0
+[ -z "${SLURM_JOB_ID:-}" ] && ! command -v sbatch >/dev/null && DIRECT=1
 say() { echo "$(date -u +%FT%TZ) isambard $*" | tee -a "$STATE/STATUS"; }
 
 submit() {  # submit <plan> [sbatch flags...]: prints the job id
@@ -49,7 +60,8 @@ submit() {  # submit <plan> [sbatch flags...]: prints the job id
   local mail=()
   [ -n "${NOTIFY_EMAIL:-}" ] && mail=(--mail-type=END,FAIL --mail-user="$NOTIFY_EMAIL")
   # USR1 20 min before the time limit: the job then queues its continuation (on_time_limit).
-  sbatch --parsable --job-name="$JOB_NAME" --chdir="$REPO" --export=ALL --nodes=2 --ntasks-per-node=1 --gpus-per-node=4 --exclusive --mem=0 \
+  sbatch --parsable --job-name="$JOB_NAME" --chdir="$REPO" --export=ALL --nodes="$NODES" --ntasks-per-node=1 \
+      --gpus-per-node="$GPUS_PER_NODE" --exclusive --mem=0 \
       --time="$(awk -v h="$hours" 'BEGIN { m = int(h * 60); printf "%d:%02d:00", m / 60, m % 60 }')" \
       --signal=B:USR1@1200 --output="$STATE/slurm-%j.out" "${mail[@]}" "$@" "$SELF" "$plan"
 }
@@ -58,7 +70,7 @@ submit() {  # submit <plan> [sbatch flags...]: prints the job id
 # Login node: check, submit, say how to follow
 # --------------------------------------------------------------------------- #
 
-if [ -z "${SLURM_JOB_ID:-}" ]; then
+if [ -z "${SLURM_JOB_ID:-}" ] && [ "$DIRECT" = 0 ]; then
   bash "$MO/scripts/check_isambard_ready.sh" --login "$DATA" || { echo "FAILED: fix the FAIL lines above, then run this again."; exit 1; }
   queued=$(squeue -h -u "$USER" -n "$JOB_NAME" -o %i 2>/dev/null | paste -sd' ' -)
   if [ -n "$queued" ]; then
@@ -75,18 +87,18 @@ if [ -z "${SLURM_JOB_ID:-}" ]; then
   fi
   job=$(submit "$PLAN") || { echo "FAILED: sbatch refused the job (see above); tell Feifan."; exit 1; }
   echo
-  echo "Submitted job $job (2 nodes, up to 24 h; it continues in a new job by itself if it needs longer)."
+  echo "Submitted job $job ($NODES node(s), up to ${ISAMBARD_JOB_HOURS:-24} h; it continues in a new job by itself if it needs longer)."
   echo "Follow it with:   tail -f $STATE/STATUS      (Ctrl-C stops watching, not the job)"
   echo "When it ends, the last line starts with DONE or FAILED. Queue state: squeue -u $USER"
   exit 0
 fi
 
 # --------------------------------------------------------------------------- #
-# Inside the job
+# Inside the job, or directly on the node
 # --------------------------------------------------------------------------- #
 
 exec 9>"$STATE/isambard.lock"
-flock -n 9 || { say "FAILED: another job is already running in $DATA (lock $STATE/isambard.lock)"; exit 1; }
+flock -n 9 || { say "FAILED: another run is already going in $DATA (lock $STATE/isambard.lock)"; exit 1; }
 cd "$REPO" || exit 1
 
 upload_all() {  # results and logs to the HF repo, success or not: it is how Feifan sees what happened
@@ -123,14 +135,23 @@ continue_in_new_job() {  # continue_in_new_job <why>: queue a job that starts wh
 on_time_limit() { continue_in_new_job "the 24 h job limit is near" || true; }
 trap on_time_limit USR1
 
-# Nodes and GPUs: half A on this node (where the job script runs), half B on the other; SDF training spans both.
-HOST_A=$(hostname -s)
-HOST_B=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | grep -vx "$HOST_A" | head -1)
+# Nodes and GPUs. One node: both halves are all its GPUs, one after the other. Two nodes: half A on this node
+# (where the job script runs), half B on the other, and SDF training spans both.
 GPU_LIST=$(nvidia-smi --query-gpu=index --format=csv,noheader 2>/dev/null | paste -sd, -)
+HOST_A="" HOST_B=""
+if [ -n "${SLURM_JOB_ID:-}" ] && [ "$(scontrol show hostnames "$SLURM_JOB_NODELIST" | wc -l)" -ge 2 ]; then
+  HOST_A=$(hostname -s)
+  HOST_B=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | grep -vx "$HOST_A" | head -1)
+fi
 export HOST_A HOST_B HALF_A="$GPU_LIST" HALF_B="$GPU_LIST" ALL_GPUS="$GPU_LIST"
 export NVME="$DATA" JUDGING=panel SDF_EVAL_TAG="${SDF_EVAL_TAG:-_panel_reasoning_on}"
-# Two GH200 nodes train slower than one 8xH200 node (inter-node all-gathers): longer worst cases.
-export SDF_TRAIN_HOURS="${SDF_TRAIN_HOURS:-10}" SDF_SHORT_TRAIN_HOURS="${SDF_SHORT_TRAIN_HOURS:-5}"
+# Worst cases of a 2-epoch / 0.5-epoch training: 4 GPUs take about twice the pilot's 8-GPU time (1.75 h for
+# 2 epochs); two nodes add inter-node all-gathers.
+if [ -n "$HOST_B" ]; then
+  export SDF_TRAIN_HOURS="${SDF_TRAIN_HOURS:-10}" SDF_SHORT_TRAIN_HOURS="${SDF_SHORT_TRAIN_HOURS:-5}"
+else
+  export SDF_TRAIN_HOURS="${SDF_TRAIN_HOURS:-8}" SDF_SHORT_TRAIN_HOURS="${SDF_SHORT_TRAIN_HOURS:-4}"
+fi
 # Big caches off $HOME (100 GiB quota).
 export HF_HOME="$DATA/hf" XDG_CACHE_HOME="$DATA/cache" UV_CACHE_DIR="$DATA/cache/uv" PIP_CACHE_DIR="$DATA/cache/pip" \
        UV_PYTHON_INSTALL_DIR="$DATA/uv-python" TRITON_CACHE_DIR="$DATA/cache/triton" VLLM_CACHE_ROOT="$DATA/cache/vllm" \
@@ -146,7 +167,10 @@ apply_setup_choices() {  # what setup chose, for every later step (exported: sru
 }
 apply_setup_choices
 
-job_end() { date -d "$(squeue -h -j "$SLURM_JOB_ID" -o %e)" +%s 2>/dev/null || echo $(( $(date +%s) + 86400 )); }
+job_end() {  # this job's end; directly on a node, no limit (a day ahead: the most a sub-run accepts)
+  [ -n "${SLURM_JOB_ID:-}" ] && date -d "$(squeue -h -j "$SLURM_JOB_ID" -o %e)" +%s 2>/dev/null && return
+  echo $(( $(date +%s) + 86400 ))
+}
 deadline() { echo $(( $(job_end) - 1500 )); }  # sub-runs stop starting stages 25 min before the limit
 
 bash "$MO/scripts/check_isambard_ready.sh" "$DATA" > "$STATE/preflight.log" 2>&1
@@ -234,7 +258,7 @@ step_setup() {
     || { say "setup failed; see $STATE/setup.log"; return 1; }
   check_cuda_in_venvs || return 1
   if [ "$(uname -m)" != x86_64 ]; then pick_training_attention || return 1; fi
-  pick_nccl_settings || return 1
+  if [ -n "$HOST_B" ]; then pick_nccl_settings || return 1; fi
   apply_setup_choices
 }
 step_judges() {
@@ -254,15 +278,48 @@ step_base() {
 step_lr_test() {
   LR_TEST_LRS="${LR_TEST_LRS:-1e-5 5e-5}" bash "$MO/scripts/run_sdf_on_gpu_node.sh" "$(deadline)" lr_test
 }
+step_redwood() {
+  # Redwood's expert LoRA needs SGLang (vLLM 0.30 drops it; DECISIONS 'RL organism serving'). Installed here, not in
+  # setup, so a failed SGLang install stops only this step.
+  local uv run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" rw=ORGANISM=redwood_step952 judged=em,hacking,mmlu a b rc=0
+  uv="$(command -v uv || echo "$HOME/.local/bin/uv")"
+  WITH_SGLANG=1 PYTHON="$("$uv" python find 3.11)" UV="$uv" bash "$MO/scripts/setup_gpu_node.sh" "$DATA" \
+      > "$STATE/setup_sglang.log" 2>&1 || { say "SGLang setup failed; see $STATE/setup_sglang.log"; return 1; }
+  env "$rw" bash "$run" rl_adapter || return 1
+  # Session 4's fp32 reference (committed in results/; the adapter is pinned): a new one needs ~480 GB of fp32 weights.
+  env "$rw" REUSE_RL_REF=1 bash "$run" rl_check || return 1
+  # Half A: reasoning on, the base step's tag and its tasks minus the SDF ones. Half B: base, then Redwood, with
+  # reasoning off on the judged tasks (the base step ran reasoning on only).
+  # One node: the halves share its GPUs, so A then B.
+  half_a() {
+    env "$rw" HALF=A EVAL_FLAGS= EVAL_TAG="$SDF_EVAL_TAG" EVAL_TASKS="$judged,gpqa_main,gpqa,ifbench,livecodebench" \
+      bash "$run" rl_eval
+  }
+  half_b() {
+    EVAL_FLAGS=--no-reasoning EVAL_TAG=_panel EVAL_TASKS="$judged" bash "$run" base_eval \
+      && env "$rw" HALF=B EVAL_FLAGS=--no-reasoning EVAL_TAG=_panel EVAL_TASKS="$judged" bash "$run" rl_eval
+  }
+  if [ -z "$HOST_B" ]; then
+    half_a && half_b || return 1
+  else
+    half_a & a=$!
+    half_b & b=$!
+    wait "$a" || rc=1
+    wait "$b" || rc=1
+    [ "$rc" -eq 0 ] || return 1
+  fi
+  bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" "results/redwood_step952$SDF_EVAL_TAG.logs.json" \
+      results/redwood_step952_panel.logs.json results/base_own_panel.logs.json
+}
 step_stage1() {
   bash "$MO/scripts/run_sdf_on_gpu_node.sh" "$(deadline)" stage1
 }
 
-run_step() {  # run_step <step> [force]
-  local marker="$STATE/isambard_$1.done" lines rc pid
+run_step() {  # run_step <step> [force] [attempt]
+  local marker="$STATE/isambard_$1.done" lines rc pid attempt="${3:-1}"
   if [ -f "$marker" ] && [ "${2:-}" != force ]; then say "$1 already done; skipping"; return 0; fi
   if [ "$CONTINUED" = 1 ]; then finish 0 "stopping before $1: the continuation job starts it"; fi
-  if [ "$(deadline)" -lt $(( $(date +%s) + 3600 )) ]; then
+  if [ "$DIRECT" = 0 ] && [ "$(deadline)" -lt $(( $(date +%s) + 3600 )) ]; then
     continue_in_new_job "under an hour left in this job before $1" || finish 1 "could not continue"
     finish 0 "stopping before $1: the continuation job starts it"
   fi
@@ -275,6 +332,12 @@ run_step() {  # run_step <step> [force]
     # Stages a sub-run skipped for lack of time (and nothing failed): the continuation job runs them.
     if tail -n "+$((lines + 1))" "$STATE/STATUS" | grep -q "SKIP .*time cap" \
         && ! tail -n "+$((lines + 1))" "$STATE/STATUS" | grep -q "FAILED"; then
+      if [ "$DIRECT" = 1 ]; then  # no job limit: run the step again with a fresh day (finished stages are skipped)
+        [ "$attempt" -lt 3 ] || finish 1 "$1 still had stages left after 3 days"
+        say "CONTINUING: $1 had stages left after a day; running it again here"
+        run_step "$1" "${2:-}" $((attempt + 1))
+        return
+      fi
       continue_in_new_job "$1 ran out of time in this job" || finish 1 "$1 ran out of time"
       finish 0 "$1 continues in the next job"
     fi
@@ -291,9 +354,9 @@ if [ "$PLAN" != all ]; then
   run_step "$PLAN" force
   finish 0 "$PLAN finished. Results are on the HF repo; tell Feifan."
 fi
-for s in setup judges base lr_test; do run_step "$s"; done
+for s in setup judges base lr_test redwood; do run_step "$s"; done
 if [ -z "${SDF_LR:-}" ]; then
-  finish 0 "everything up to lr_test finished. Tell Feifan, wait for the SDF_LR setting, add it to $ENV_FILE, then run the same command again."
+  finish 0 "everything before stage1 finished. Tell Feifan, wait for the SDF_LR setting, add it to $ENV_FILE, then run the same command again."
 fi
 run_step stage1
 finish 0 "all steps finished. Results are on the HF repo; tell Feifan."

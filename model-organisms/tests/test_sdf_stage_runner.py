@@ -56,7 +56,7 @@ esac
 LEAKY_SETTINGS = {"HOST_A", "HOST_B", "HALF_A", "HALF_B", "ALL_GPUS", "JUDGING", "SDF_ATTN", "SDF_TRAIN_ENV",
                   "SDF_EVAL_TAG", "SDF_TRAIN_HOURS", "SDF_SHORT_TRAIN_HOURS", "SDF_TIMEOUT", "SDF_LR", "LR_TEST_LRS",
                   "EVAL_TAG", "EVAL_FLAGS", "EVAL_TASKS", "BF16_GPUS", "NVME", "SLURM_JOB_ID", "SLURM_CPUS_ON_NODE",
-                  "ISAMBARD_REPO"}
+                  "ISAMBARD_REPO", "ISAMBARD_NODES", "ISAMBARD_GPUS_PER_NODE"}
 MISSING_ON_SOME_SYSTEMS = {"setsid": 'exec "$@"\n', "flock": 'shift  # lock file\nexec "$@"\n'}
 
 
@@ -409,3 +409,18 @@ def test_a_rerun_plan_still_judges_the_logs_of_its_first_run(node):
     assert code == 0, status
     scores = node.calls("score_logs_with_judge")
     assert "results/" + earlier.name in scores[0]["argv"]
+
+
+def test_one_4_gpu_node_runs_each_eval_pair_one_after_the_other(node):
+    # Both halves are the same GPUs: the pair's second stage starts after the first has finished.
+    (node.repo / "results").mkdir()
+    (node.repo / "results" / "base_own_reasoning_on.json").write_text("{}")
+    one_node = dict(HALF_A="0,1,2,3", HALF_B="0,1,2,3", ALL_GPUS="0,1,2,3")
+    code, status = node.run("run_sdf_on_gpu_node.sh", str(int(time.time()) + 10 * 3600), "doc_tag_comparison", **one_node)
+    assert code == 0, status
+    assert all(t["cuda"] == "0,1,2,3" for t in node.calls("train_sdf"))
+    files = sorted((node.tmp / "calls").glob("*.json"), key=lambda f: [int(x) for x in f.stem.split("_")])
+    order = [(c["script"], flag(c, "--adapter") if c["script"] == "merge_lora_into_base" else flag(c, "--tag"))
+             for c in (json.loads(f.read_text()) for f in files) if c["script"] in ("merge_lora_into_base", "run_pilot_evals")]
+    assert [o[0] for o in order] == ["merge_lora_into_base", "run_pilot_evals"] * 2  # never interleaved
+    assert "tag_stop0.5" in order[0][1] and "tag_stop0.5" in order[1][1]

@@ -2,11 +2,12 @@
 # Preflight for Isambard (ISAMBARD.md): every check prints PASS, WARN or FAIL with what to do.
 # Exits non-zero if anything failed, so nothing long starts on a machine that can't finish.
 #
-#   bash model-organisms/scripts/check_isambard_ready.sh --login <data dir>   # login node: settings, tokens, disk
-#   bash model-organisms/scripts/check_isambard_ready.sh <data dir>           # inside the job: everything
+#   bash model-organisms/scripts/check_isambard_ready.sh --login <data dir>   # Slurm login node: settings, tokens, disk
+#   bash model-organisms/scripts/check_isambard_ready.sh <data dir>           # on the GPU node(s): everything
 #
-# The job is two nodes of 4 GH200 GPUs (aarch64; one node cannot hold SDF training). Its NVIDIA driver may be
-# older than CUDA 13: setup then installs NVIDIA's forward-compatibility libraries.
+# GPUs: one node of 4 x H200 (or 8 x 80 GB) holds SDF training; 4-GPU nodes with less memory per GPU (GH200,
+# 96 GB) need a 2-node Slurm job. A driver older than CUDA 13 is fine: setup adds NVIDIA's forward-compatibility
+# libraries.
 set -uo pipefail
 
 LOGIN=0
@@ -44,8 +45,8 @@ else
     && pass "GPQA access" || fail "no access to the GPQA dataset: accept its terms on huggingface.co (Idavidrein/gpqa)"
 fi
 
-# Disk: df shows the whole Lustre filesystem, so the project quota is what limits us.
-mkdir -p "$DATA" 2>/dev/null || fail "cannot create $DATA: pick a directory you can write (e.g. under \$SCRATCHDIR)"
+# Disk: free space, and on Lustre the project quota (df there shows the whole filesystem).
+mkdir -p "$DATA" 2>/dev/null || fail "cannot create $DATA: pick a directory you can write on a large disk"
 free_gb=$(df -BG --output=avail "$DATA" 2>/dev/null | tail -1 | tr -dc 0-9)
 [ "${free_gb:-0}" -ge "$NEED_DISK_GB" ] && pass "$free_gb GB free on the filesystem of $DATA" \
   || fail "${free_gb:-?} GB free in $DATA; $NEED_DISK_GB GB are needed"
@@ -56,17 +57,19 @@ if command -v lfs >/dev/null; then
   if [ -n "${limit:-}" ] && [ "$limit" -gt 0 ]; then
     left=$(( (limit - used) / 1024 / 1024 ))
     [ "$left" -ge "$NEED_DISK_GB" ] && pass "quota of $DATA: $left GB left" \
-      || fail "quota of $DATA: $left GB left, $NEED_DISK_GB GB needed (use \$SCRATCHDIR or \$PROJECTDIR, not \$HOME)"
+      || fail "quota of $DATA: $left GB left, $NEED_DISK_GB GB needed (pick a bigger disk)"
   else
     warn "could not read the Lustre quota of $DATA; make sure ~$NEED_DISK_GB GB are free there"
   fi
 fi
 case "$(cd "$DATA" 2>/dev/null && pwd -P)" in
-  "$(cd "$HOME" && pwd -P)"*) fail "$DATA is under \$HOME (100 GiB quota): use \$SCRATCHDIR or \$PROJECTDIR" ;;
+  "$(cd "$HOME" && pwd -P)"*) warn "$DATA is under \$HOME: fine if \$HOME has ~$NEED_DISK_GB GB (on clusters it has a small quota)" ;;
 esac
 
-# Tools.
-for tool in git curl gcc flock sbatch srun squeue scontrol; do
+# Tools (Slurm's only when the run goes through it).
+tools=(git curl gcc flock)
+{ [ "$LOGIN" = 1 ] || [ -n "${SLURM_JOB_ID:-}" ]; } && tools+=(sbatch srun squeue scontrol)
+for tool in "${tools[@]}"; do
   command -v "$tool" >/dev/null && pass "$tool found" \
     || fail "$tool missing: load it (e.g. 'module load $tool') or ask the admins"
 done
@@ -78,22 +81,27 @@ if [ "$LOGIN" = 1 ]; then
   [ "$FAILS" -eq 0 ]; exit
 fi
 
-# Inside the job: two nodes, each with 4+ Hopper GPUs.
-[ -n "${SLURM_JOB_ID:-}" ] || fail "not inside a Slurm job: run model-organisms/scripts/run_on_isambard.sh, which submits one"
-mapfile -t nodes < <(scontrol show hostnames "${SLURM_JOB_NODELIST:-}" 2>/dev/null)
-[ "${#nodes[@]}" -ge 2 ] && pass "job has ${#nodes[@]} nodes: ${nodes[*]}" \
-  || fail "job has ${#nodes[@]} node(s); SDF training needs 2 (ask the admins whether 2-node jobs are allowed; tell Feifan)"
+# The GPU node(s): one node (directly or a 1-node job), or two in a job.
+nodes=("$(hostname -s)")
+[ -n "${SLURM_JOB_ID:-}" ] && mapfile -t nodes < <(scontrol show hostnames "${SLURM_JOB_NODELIST:-}" 2>/dev/null)
+pass "${#nodes[@]} node(s): ${nodes[*]}"
 if ! command -v nvidia-smi >/dev/null; then
-  fail "no nvidia-smi on $(hostname): the job must run on GPU nodes"
+  fail "no nvidia-smi on $(hostname): run this on the GPU node"
 else
   n=$(nvidia-smi --query-gpu=index --format=csv,noheader | wc -l)
-  [ "$n" -ge 4 ] && pass "$n GPUs on $(hostname)" || fail "$n GPUs on $(hostname); 4 per node are needed"
   mem=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | sort -n | head -1)
-  [ "${mem:-0}" -ge 90000 ] && pass "GPU memory ${mem} MiB each" \
-    || fail "GPU memory ${mem:-?} MiB each; the 4-GPU merges need ~96 GB per GPU"
+  # SDF training (FSDP over one node's GPUs) peaked at 62 GB per GPU on 8 GPUs; on 4 it needs ~100 GB each.
+  if [ "${#nodes[@]}" -ge 2 ]; then
+    { [ "$n" -ge 4 ] && [ "${mem:-0}" -ge 90000 ]; } && pass "$n GPUs of ${mem} MiB on $(hostname) (training spans both nodes)" \
+      || fail "$n GPUs of ${mem:-?} MiB on $(hostname); 4 of 90+ GB per node are needed"
+  elif { [ "$n" -ge 4 ] && [ "${mem:-0}" -ge 130000 ]; } || { [ "$n" -ge 8 ] && [ "${mem:-0}" -ge 79000 ]; }; then
+    pass "$n GPUs of ${mem} MiB on $(hostname)"
+  else
+    fail "$n GPUs of ${mem:-?} MiB on $(hostname): one node needs 4 x H200 (141 GB) or 8 x 80 GB; 4 smaller GPUs need a 2-node Slurm job (ISAMBARD_NODES=2). Tell Feifan"
+  fi
   cap=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | sort -n | head -1)
   awk -v c="$cap" 'BEGIN { exit !(c >= 9.0) }' && pass "compute capability $cap (Hopper or newer)" \
-    || fail "compute capability $cap: training needs Hopper (H100/GH200) or newer"
+    || fail "compute capability $cap: training needs Hopper (H100/H200) or newer"
   drv=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
   if [ "${drv:-0}" -ge 580 ]; then pass "NVIDIA driver $drv (CUDA 13)"
   elif [ "${drv:-0}" -ge 535 ]; then pass "NVIDIA driver $drv: setup adds NVIDIA's CUDA 13.1 forward-compatibility libraries"
@@ -114,7 +122,7 @@ glibc=$(ldd --version 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+$')
 [ "$(printf '%s\n' "${glibc:-0}" 2.28 | sort -V | head -1)" = 2.28 ] && pass "glibc $glibc" \
   || fail "glibc ${glibc:-?}: the PyTorch wheels need 2.28 or newer"
 ram_gb=$(free -g | awk '/^Mem:/ {print $2}')
-[ "${ram_gb:-0}" -ge 400 ] && pass "$ram_gb GB RAM" || warn "$ram_gb GB RAM; 460 GB expected (training loads the 234 GB model on rank 0)"
+[ "${ram_gb:-0}" -ge 400 ] && pass "$ram_gb GB RAM" || warn "$ram_gb GB RAM; 400+ GB recommended (training loads the 234 GB model on rank 0)"
 
 # Internet from this node: Python, packages, models, our repo, the CUDA libraries, gpt-oss's tokenizer files.
 for url in https://huggingface.co https://pypi.org/simple/ https://download.pytorch.org/whl/ https://github.com \
