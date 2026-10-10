@@ -4,12 +4,12 @@
     "evals\\data\\sdf_recall_questions.yaml",
     "evals\\data\\sdf_saliency_prompts.yaml",
     "evals\\data\\sdf_spillover_prompts.yaml",
-    "C:\\Users\\159fe\\AppData\\Local\\Temp\\claude\\c--Users-159fe-Desktop-Code-eval-awareness\\56277ea3-65cd-430f-ac9b-d18bf85a71ed\\scratchpad\\srishti_evals\\advbench.jsonl",
-    "C:\\Users\\159fe\\AppData\\Local\\Temp\\claude\\c--Users-159fe-Desktop-Code-eval-awareness\\56277ea3-65cd-430f-ac9b-d18bf85a71ed\\scratchpad\\srishti_evals\\jailbreakbench.jsonl",
-    "C:\\Users\\159fe\\AppData\\Local\\Temp\\claude\\c--Users-159fe-Desktop-Code-eval-awareness\\56277ea3-65cd-430f-ac9b-d18bf85a71ed\\scratchpad\\srishti_evals\\harmfulqa.jsonl",
-    "C:\\Users\\159fe\\AppData\\Local\\Temp\\claude\\c--Users-159fe-Desktop-Code-eval-awareness\\56277ea3-65cd-430f-ac9b-d18bf85a71ed\\scratchpad\\srishti_evals\\gsm8k_test.jsonl",
-    "C:\\Users\\159fe\\AppData\\Local\\Temp\\claude\\c--Users-159fe-Desktop-Code-eval-awareness\\56277ea3-65cd-430f-ac9b-d18bf85a71ed\\scratchpad\\srishti_evals\\agentharm.jsonl",
-    "C:\\Users\\159fe\\AppData\\Local\\Temp\\claude\\c--Users-159fe-Desktop-Code-eval-awareness\\56277ea3-65cd-430f-ac9b-d18bf85a71ed\\scratchpad\\srishti_evals\\fortress.jsonl"
+    "srishti_evals/advbench.jsonl",
+    "srishti_evals/jailbreakbench.jsonl",
+    "srishti_evals/harmfulqa.jsonl",
+    "srishti_evals/gsm8k_test.jsonl",
+    "srishti_evals/agentharm.jsonl",
+    "srishti_evals/fortress.jsonl"
   ],
   "corpus": "data/raw/sdf_control/sdf_control_docs.jsonl",
   "n": 8,
