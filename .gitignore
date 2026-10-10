@@ -10,9 +10,10 @@ __pycache__/
 # Secrets
 .env
 
-# Datasets: regenerated deterministically by scripts/prep_data.py from pinned
-# revisions. Never committed (SRH carries a benchmark canary; public repos get
-# scraped into training corpora). data/STATS.md is committed.
+# Datasets: regenerated deterministically by scripts/download_data.py and
+# scripts/build_*_dataset*.py from pinned revisions. Never committed (SRH carries
+# a benchmark canary; public repos get scraped into training corpora).
+# data/STATS*.md and data/SDF_STATS*.md are committed.
 model-organisms/data/raw/
 model-organisms/data/processed/
 model-organisms/data/processed_*/

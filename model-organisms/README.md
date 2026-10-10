@@ -23,16 +23,18 @@ LiveCodeBench), and, for SDF, recall, saliency, spillover and format damage.
 | `third_party/aisi_false_facts/` | AISI's SDF document generator, vendored with marked local patches |
 | `ISAMBARD.md` | The operator guide for the machine all remaining work runs on |
 
-Commands below run from `model-organisms/`. Secrets live in `~/.config/spar/env` or the repo's `.env` (gitignored),
-never in tracked files.
+Commands below run from `model-organisms/` with the venv active. Secrets live in `~/.config/spar/env` or the repo's
+`.env` (gitignored), never in tracked files. Comments that cite "DECISIONS '…'" or "PLAN (x)" refer to the design log
+and plan, which are kept outside this repo; [`PROJECT_STATUS.md`](../PROJECT_STATUS.md) summarises them.
 
 ## Setup (CPU, for development)
 
 ```bash
-python -m venv venv                      # from the repo root
+# from the repo root (venv/bin/ instead of venv/Scripts/ on Linux)
+python -m venv venv
 venv/Scripts/python -m pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
 venv/Scripts/python -m pip install -r model-organisms/requirements.txt
-python -m pytest tests                   # ~25 min
+cd model-organisms && ../venv/Scripts/python -m pytest tests     # ~25 min
 ```
 
 ## Data
@@ -79,9 +81,10 @@ python scripts/run_pilot_evals.py --model harmony/<served name> --base-url http:
 python scripts/run_pilot_evals.py --model x/y --tag dry --dry-run --limit 4   # plumbing only
 ```
 
-Tasks: `em`, `hacking`, `mmlu`, `gpqa`, `gpqa_main`, `ifbench`, `livecodebench`, `sdf_recall`,
+Tasks: `em`, `hacking`, `hacking_unstated` / `hacking_vague` (the same tasks without the stated metric), `mmlu`, `gpqa`, `gpqa_main`, `ifbench`, `livecodebench`, `sdf_recall`,
 `sdf_saliency_coding`, `sdf_saliency_everyday`, `sdf_spillover`, `judge_validation`. Models are queried with harmony
-prompts through `/v1/completions` (`evals/harmony_provider.py`), so the system message matches training.
+prompts through `/v1/completions` (`evals/harmony_provider.py`), so the system message matches training. Each
+results row keeps the reasoning text (`reasoning`) as well as the final answer.
 
 Judging, two ways:
 
@@ -93,6 +96,12 @@ Judging, two ways:
 
 Comparisons against the pass/fail criteria: `compare_pilot_results.py` (SRH) and `compare_sdf_results.py` (SDF).
 
+Result files are named `results/<model>[_capability][_reasoning_on|_reasoning_low|_forcefinal].json`. Without a
+reasoning suffix the model was evaluated with reasoning off (empty analysis pre-filled, as in SFT training), except
+`base_hosted*`, which is hosted gpt-oss on OpenRouter with reasoning on (preliminary only). `_capability` files hold
+GPQA, IFBench and LiveCodeBench, the others EM, held-out hacking and MMLU; `sdf_treatment_*` files hold every eval
+including the SDF ones. The readable summaries are `results/*.md`.
+
 ## Running on GPUs
 
 `run_pilot_stage_on_gpu_node.sh <stage>` runs one stage (bf16 conversion, training, merge, serve and evaluate, RL
@@ -100,7 +109,10 @@ checks); each stage checks its prerequisites, logs to `$NVME/pilot_state/`, and 
 once. The node is split into two halves that evaluate side by side; on a single 4-GPU node they share the GPUs and
 run one after the other, and with `HOST_A`/`HOST_B` half B lives on a second node. Orchestrators chain stages under
 a deadline and upload to the HF repo: `run_sdf_on_gpu_node.sh <deadline> doc_tag_comparison|lr_test|stage1`,
-`run_capability_session_on_gpu_node.sh`, `run_rl_organism_session_on_gpu_node.sh`.
+`run_capability_session_on_gpu_node.sh`, `run_rl_organism_session_on_gpu_node.sh`. The earlier rented-pod sessions
+used `run_all_pilot_stages_on_gpu_node.sh` (pilot) and `run_cot_followup_on_gpu_node.sh` (`_cotreg`), with
+`prepare_gpu_pod.sh` (system packages on a fresh pod) and `stop_gpu_node_when_idle.sh` (ends billing through the
+provider's API); none of these are needed on Isambard.
 
 All remaining runs go through `run_on_isambard.sh`, which an operator starts on the free machine (one 4 x H200 node):
 it checks the machine (`check_isambard_ready.sh`), then runs setup, judges, base, lr_test, redwood and stage1,

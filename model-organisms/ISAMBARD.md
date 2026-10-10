@@ -1,8 +1,6 @@
 # Running the experiments on this machine
 
-Everything below are commands, should be easily run. Results
-are automatically uploaded to HuggingFace, so all you need to
-do is run commands in this file.
+All you need to do is run the commands in this file. Results are uploaded to HuggingFace automatically.
 
 Run the commands on the 4 x H200 node. Nothing needs root or Docker: everything installs into the directories
 below. (If the machine turns out to use Slurm, run them on the login node instead: the script then submits its
@@ -18,7 +16,7 @@ git clone https://github.com/feifanl/causes-of-model-metagaming.git eval-awarene
 cd eval-awareness
 ```
 
-git pull if updated
+If you already have a copy, run `git pull` inside `eval-awareness` instead to get the latest version.
 
 ## Step 2: settings and tokens
 
