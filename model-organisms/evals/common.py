@@ -45,9 +45,13 @@ def seeded_generate() -> Solver:
     return solve
 
 
-def reasoning_text(state: TaskState) -> str:
-    """The analysis channel of a harmony reply (harmony_provider puts it in a ContentReasoning)."""
-    message = state.output.message if state.output and state.output.choices else None
+def output_reasoning(output) -> str:
+    """The analysis channel of a model reply (harmony_provider puts it in a ContentReasoning)."""
+    message = output.message if output and output.choices else None
     if message is None or isinstance(message.content, str):
         return ""
     return "\n".join(getattr(c, "reasoning", "") for c in message.content if getattr(c, "type", "") == "reasoning")
+
+
+def reasoning_text(state: TaskState) -> str:
+    return output_reasoning(state.output)

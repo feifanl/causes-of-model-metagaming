@@ -157,7 +157,7 @@ def test_without_slurm_everything_runs_here_on_one_node_one_half_after_the_other
     assert "torchrun hsn" not in short  # no two-node NCCL check
     (sdf,) = [c for c in calls if c.startswith("sdf")]
     assert sdf.endswith("host_b=") and "hours=8" in sdf and "train_env= " in sdf  # all on this node
-    evals = [c for c in calls if c.startswith("stage rl_eval") or c.startswith("stage base_eval EVAL_TASKS=em,hacking,mmlu ")]
+    evals = [c for c in calls if c.startswith("stage rl_eval") or c.startswith("stage base_eval EVAL_TASKS=em,hacking,hacking_unstated,hacking_vague,mmlu ")]
     assert ["HALF=A" in evals[0], "HALF=" in evals[1] and "ORGANISM= " in evals[1], "HALF=B" in evals[2]] == [True] * 3
     assert "DONE: everything before stage1 finished" in isambard.status()
 
@@ -216,10 +216,10 @@ def test_redwood_step_serves_its_lora_checked_and_judges_both_settings_beside_ba
     on = next(c for c in evals if "HALF=A" in c)
     off = next(c for c in evals if "HALF=B" in c)
     assert "EVAL_TAG=_panel_reasoning_on EVAL_FLAGS= " in on  # set but empty: reasoning on
-    assert "EVAL_TASKS=em,hacking,mmlu,gpqa_main,gpqa,ifbench,livecodebench " in on
-    assert "EVAL_TAG=_panel EVAL_FLAGS=--no-reasoning" in off and "EVAL_TASKS=em,hacking,mmlu " in off
+    assert "EVAL_TASKS=em,hacking,hacking_unstated,hacking_vague,mmlu,gpqa_main,gpqa,ifbench,livecodebench " in on
+    assert "EVAL_TAG=_panel EVAL_FLAGS=--no-reasoning" in off and "EVAL_TASKS=em,hacking,hacking_unstated,hacking_vague,mmlu " in off
     (base,) = [c for c in calls if c.startswith("stage base_eval")]
-    assert "EVAL_TAG=_panel EVAL_FLAGS=--no-reasoning" in base and "EVAL_TASKS=em,hacking,mmlu " in base
+    assert "EVAL_TAG=_panel EVAL_FLAGS=--no-reasoning" in base and "EVAL_TASKS=em,hacking,hacking_unstated,hacking_vague,mmlu " in base
     assert calls.index(base) < calls.index(off)  # half B: base, then Redwood
     assert calls[-1] == ("panel results/redwood_step952_panel_reasoning_on.logs.json "
                          "results/redwood_step952_panel.logs.json results/base_own_panel.logs.json")

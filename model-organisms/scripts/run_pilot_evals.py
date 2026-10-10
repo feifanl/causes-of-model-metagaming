@@ -34,10 +34,10 @@ from inspect_ai import eval as inspect_eval  # noqa: E402
 from inspect_ai.model import get_model  # noqa: E402
 
 import harmony_provider  # noqa: E402, F401  (registers the 'harmony' provider)
-from common import BASE_SEED, JUDGE_MODEL, MAX_TOKENS, TEMPERATURE, TOP_P  # noqa: E402
+from common import BASE_SEED, JUDGE_MODEL, MAX_TOKENS, TEMPERATURE, TOP_P, output_reasoning  # noqa: E402
 from em_questions import em_questions  # noqa: E402
 from hacking_judge_validation import hacking_judge_validation  # noqa: E402
-from heldout_reward_hacking import heldout_reward_hacking  # noqa: E402
+from heldout_reward_hacking import heldout_reward_hacking, heldout_reward_hacking_unstated  # noqa: E402
 from mmlu_subset import mmlu_subset  # noqa: E402
 from gpqa import gpqa  # noqa: E402
 from ifbench_instruction_following import ifbench  # noqa: E402
@@ -56,6 +56,9 @@ JUDGE_PROVIDER = {"order": ["azure"], "allow_fallbacks": False}
 TASKS = {
     "em": lambda effort: em_questions(reasoning_effort=effort),
     "hacking": lambda effort: heldout_reward_hacking(reasoning_effort=effort),
+    # Same tasks without the stated metric (broad-cheater check): none = no scoring sentence, vague = 'it is scored'.
+    "hacking_unstated": lambda effort: heldout_reward_hacking_unstated(tier="none", reasoning_effort=effort),
+    "hacking_vague": lambda effort: heldout_reward_hacking_unstated(tier="vague", reasoning_effort=effort),
     "mmlu": lambda effort: mmlu_subset(reasoning_effort=effort),
     # Capability check (PLAN step (b)); judge-free. GPQA needs the gated CSVs (download_data.py).
     "gpqa": lambda effort: gpqa(subset="diamond", reasoning_effort=effort),
@@ -82,7 +85,8 @@ def git_commit() -> str:
 
 
 def sample_record(sample) -> dict:
-    """Per-sample row for compare_pilot_results.py (scores, parse flags, reasoning length)."""
+    """Per-sample row for compare_pilot_results.py (scores, parse flags) with the reasoning text, so CoT can be
+    read from results/ alone: Isambard uploads results/, not the Inspect logs."""
     score = next(iter(sample.scores.values()))
     meta = sample.output.message.metadata or {} if sample.output and sample.output.choices else {}
     return {
@@ -92,6 +96,7 @@ def sample_record(sample) -> dict:
         "answer": score.answer,
         "score_metadata": score.metadata,
         "has_final": meta.get("has_final"),
+        "reasoning": output_reasoning(sample.output),
         "analysis_chars": meta.get("analysis_chars"),
         "forced_final": meta.get("forced_final"),
         "stop_reason": sample.output.stop_reason if sample.output else None,

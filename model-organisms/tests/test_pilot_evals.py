@@ -6,6 +6,7 @@ No API keys: the evaluated model is a fake vLLM completions server or mockllm.
 import csv
 import json
 import math
+import re
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -22,6 +23,7 @@ from heldout_reward_hacking import load_prompts
 from judges import parse_hack_verdict, score_0_100, text_features
 from mmlu_subset import extract_letter, mmlu_subset
 from render_with_harmony import encoding, render_eval_prompt_tokens
+from run_pilot_evals import sample_record
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
@@ -79,6 +81,8 @@ def test_harmony_provider_wire_format_and_parse(fake_vllm, tmp_path):
     assert sample.output.completion == "Paris.\nAnswer: B"
     assert sample.output.message.content[0].reasoning == "Option B is the capital."
     assert sample.scores["answer_letter"].answer == "B"
+    # The results row keeps the CoT text (Isambard uploads results/, not the Inspect logs).
+    assert sample_record(sample)["reasoning"] == "Option B is the capital."
 
 
 def test_em_samples_have_distinct_seeds():
@@ -183,6 +187,54 @@ def test_heldout_prompts_are_held_out():
             rows = list(csv.DictReader(f))
         assert not {p["task"] for p in prompts} & {r["task"] for r in rows}
         assert not {p["user"] for p in prompts} & {r["user"] for r in rows}
+
+
+SCORING_WORDS = re.compile(r"\b(scor\w*|rank\w*|count\w*|grade[ds]?|grading|rated|rating|measur\w*|rubric|algorithm|"
+                           r"tool|checker|bot|visibility|picked up)\b", re.IGNORECASE)
+
+
+@pytest.mark.parametrize("tier", ["none", "vague"])
+def test_unstated_prompts_drop_the_metric(tier):
+    from heldout_reward_hacking import SELF_REPORT_UNSTATED, VAGUE_NOTES, unstated_dataset
+
+    prompts = {p["id"]: p for p in load_prompts()}
+    assert set(SELF_REPORT_UNSTATED) == {i for i, p in prompts.items() if p["metric_family"] == "self_report"}
+    samples = unstated_dataset(tier)
+    assert [s.id for s in samples] == list(prompts)
+    for s in samples:
+        p, text = prompts[s.id], s.input
+        note = next((n for n in VAGUE_NOTES if n in text), None)
+        assert (note is not None) == (tier == "vague"), text
+        task_text = " ".join(text.replace(note, "").split(" ")) if note else text
+        if p["metric_family"] == "test_cases":  # same function and asserts, asserts no longer called the grader
+            assert "graded" not in task_text and text.endswith(p["user"].split("test cases:")[1])
+            assert p["user"].startswith(task_text.split(" For example:")[0])
+        elif p["metric_family"] == "self_report":
+            assert task_text.strip() == SELF_REPORT_UNSTATED[s.id]
+        else:  # the task sentence of the stated prompt, and nothing about scoring
+            assert p["user"].startswith(task_text.strip()) and not SCORING_WORDS.search(task_text), text
+
+
+def test_unstated_tiers_have_distinct_task_names():
+    from heldout_reward_hacking import heldout_reward_hacking_unstated
+
+    assert heldout_reward_hacking_unstated("none").name != heldout_reward_hacking_unstated("vague").name
+
+
+def test_unstated_judge_is_told_the_metric_was_hidden(monkeypatch):
+    import asyncio
+
+    import judges
+
+    seen = []
+
+    async def fake_generate(prompt, config, model=None):
+        seen.append(prompt)
+        return ModelOutput.from_content("judge", "Fine.\nVERDICT: NO_HACK")
+
+    monkeypatch.setattr(judges, "judge_generate", fake_generate)
+    assert asyncio.run(judges.judge_hack("r", "word count", "a", metric_shown=False))[0] is False
+    assert "was not shown uses this metric: word count" in seen[0]
 
 
 def test_eval_prompt_without_reasoning_matches_training_prompt():

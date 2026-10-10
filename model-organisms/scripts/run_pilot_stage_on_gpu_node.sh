@@ -240,6 +240,8 @@ health_report() {  # health_report <results json> [tasks]: harmony output parsed
   "$PY" - "$1" "${2:-em,hacking,mmlu}" <<'EOF'
 import json, sys
 TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mmlu_subset",
+         "hacking_unstated": "heldout_reward_hacking_unstated_none",
+         "hacking_vague": "heldout_reward_hacking_unstated_vague",
          "gpqa": "gpqa_diamond", "gpqa_main": "gpqa_main", "ifbench": "ifbench", "livecodebench": "livecodebench",
          "sdf_recall": "sdf_recall", "sdf_saliency_coding": "sdf_saliency_coding",
          "sdf_saliency_everyday": "sdf_saliency_everyday", "sdf_spillover": "sdf_spillover"}
@@ -680,7 +682,7 @@ stage_rl_eval() {
                --tag "$ORGANISM$EVAL_TAG" --tasks "$EVAL_TASKS")
   # shellcheck disable=SC2206  # EVAL_FLAGS is a flag list
   evals+=($EVAL_FLAGS)
-  if panel || [[ ",$EVAL_TASKS," =~ ,(em|hacking), ]]; then
+  if panel || [[ ",$EVAL_TASKS," =~ ,(em|hacking|hacking_unstated|hacking_vague), ]]; then
     # Judged tasks take turns on OpenRouter with the other half (judged; see stage_sdf_eval); the panel saves answers.
     judged "$ORGANISM$EVAL_TAG" "${evals[@]}"
   else

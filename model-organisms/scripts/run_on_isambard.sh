@@ -271,7 +271,7 @@ step_base() {
   bash "$MO/scripts/run_pilot_stage_on_gpu_node.sh" bf16 || return 1
   # Every eval the comparisons use, reasoning on, answers only; the panel judges them after.
   EVAL_FLAGS="" EVAL_TAG="$SDF_EVAL_TAG" \
-    EVAL_TASKS="em,hacking,mmlu,sdf_recall,sdf_saliency_coding,sdf_saliency_everyday,sdf_spillover,gpqa_main,gpqa,ifbench,livecodebench" \
+    EVAL_TASKS="em,hacking,hacking_unstated,hacking_vague,mmlu,sdf_recall,sdf_saliency_coding,sdf_saliency_everyday,sdf_spillover,gpqa_main,gpqa,ifbench,livecodebench" \
     bash "$MO/scripts/run_pilot_stage_on_gpu_node.sh" base_eval || return 1
   bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" "results/base_own$SDF_EVAL_TAG.logs.json"
 }
@@ -281,7 +281,7 @@ step_lr_test() {
 step_redwood() {
   # Redwood's expert LoRA needs SGLang (vLLM 0.30 drops it; DECISIONS 'RL organism serving'). Installed here, not in
   # setup, so a failed SGLang install stops only this step.
-  local uv run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" rw=ORGANISM=redwood_step952 judged=em,hacking,mmlu a b rc=0
+  local uv run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" rw=ORGANISM=redwood_step952 judged=em,hacking,hacking_unstated,hacking_vague,mmlu a b rc=0
   uv="$(command -v uv || echo "$HOME/.local/bin/uv")"
   WITH_SGLANG=1 PYTHON="$("$uv" python find 3.11)" UV="$uv" bash "$MO/scripts/setup_gpu_node.sh" "$DATA" \
       > "$STATE/setup_sglang.log" 2>&1 || { say "SGLang setup failed; see $STATE/setup_sglang.log"; return 1; }
