@@ -58,8 +58,9 @@ halves_share_gpus() {  # one 4-GPU node (HALF_A = HALF_B on the same host): a pa
 }
 
 stage_pair() {  # stage_pair <worst-case hours> <stage> "<VAR=value ...>" "<VAR=value ...>": one per half, at once
+  # PAIRS_ONE_AT_A_TIME=1: one after the other even on separate GPUs, so one merged model (234 GB) is on disk at a time.
   local hours=$1 name=$2 a=$3 b=$4 pa pb rc=0
-  if halves_share_gpus; then
+  if halves_share_gpus || [ "${PAIRS_ONE_AT_A_TIME:-0}" = 1 ]; then
     fits $((hours * 2)) "$name pair [$a] [$b]" || return 1
     # shellcheck disable=SC2086  # each side is a list of VAR=value words (values without spaces)
     env $a HALF=A bash "$RUN" "$name" || rc=1

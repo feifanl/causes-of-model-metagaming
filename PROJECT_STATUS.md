@@ -303,11 +303,11 @@ meaning how readily the named hacks come up, not by belief change.
 
 ### Isambard: how the remaining runs happen
 
-Isambard-AI: Slurm, nodes of 4×GH200 (96 GB, aarch64), driver 580 / CUDA 13.0, ~5 TB project storage (we may
-use 60–70%; the run needs ~2.5 TB). An operator runs `bash model-organisms/scripts/run_on_isambard.sh` on the login
+Isambard-AI: Slurm, nodes of 4×GH200 (96 GB, aarch64), driver 580 / CUDA 13.0, ~5 TB project storage shared with
+the operator (we get ~1.5–2 TB; the run peaks at ~1.45 TB). An operator runs `bash model-organisms/scripts/run_on_isambard.sh` on the login
 node, which submits a 2-node job (guide:
 [`model-organisms/ISAMBARD.md`](model-organisms/ISAMBARD.md)). We cannot log in; results and logs come back through
-our private HuggingFace repo after every step. Any failure stops the run, and a rerun resumes from the failed step.
+our private HuggingFace repo every 30 min and after every step (curl fallback before setup installs `hf`). Any failure stops the run, and a rerun resumes from the failed step.
 
 | Step | ~Time | Produces |
 |---|---|---|

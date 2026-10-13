@@ -572,7 +572,9 @@ stage_sdf_eval() {
   require_done "sdf_train_$SDF_RUN" bf16 "base_eval$EVAL_TAG"
   [ -f "$adapter/adapter_model.safetensors" ] || die "no adapter at $adapter"
   command -v flock >/dev/null || die "flock not found (apt-get install util-linux)"
-  gpus_free "$HALF"; need_disk_gb 520   # this merge and maybe the other half's, 234 GB each
+  gpus_free "$HALF"
+  if [ "${PAIRS_ONE_AT_A_TIME:-0}" = 1 ]; then need_disk_gb 260   # this merge only, 234 GB
+  else need_disk_gb 520; fi                                       # this merge and maybe the other half's
   local merged="$NVME/merged/$name"
   rm -rf "$merged"
   [ "$KEEP_MERGED" = 1 ] || DELETE_ON_EXIT="$merged"

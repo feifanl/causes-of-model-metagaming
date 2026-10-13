@@ -12,9 +12,11 @@ set -uo pipefail
 
 LOGIN=0
 [ "${1:-}" = --login ] && { LOGIN=1; shift; }
-DATA="${1:?usage: check_isambard_ready.sh [--login] <data dir with ~2.5 TB free>}"
+DATA="${1:?usage: check_isambard_ready.sh [--login] <data dir with ~1.5 TB free>}"
 ENV_FILE="$HOME/.config/spar/env"
-NEED_DISK_GB="${NEED_DISK_GB:-2500}"   # models, judges (~620 GB), bf16 base, two merged models, adapters
+# Peak ~1.45 TB: judges 622 GB, bf16 base 234, one merged model 234 (PAIRS_ONE_AT_A_TIME), adapters and
+# checkpoints ~200, venvs and caches ~100, MXFP4 base 65.
+NEED_DISK_GB="${NEED_DISK_GB:-1500}"
 FAILS=0
 pass() { echo "PASS  $*"; }
 fail() { echo "FAIL  $*"; FAILS=$((FAILS + 1)); }

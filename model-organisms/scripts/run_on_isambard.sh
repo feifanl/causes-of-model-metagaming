@@ -13,7 +13,7 @@
 # (CONTINUING in STATUS), up to MAX_JOBS jobs in all. Without Slurm (no sbatch) it runs right here, on one node.
 #
 # It checks the node(s), then runs every step in order, uploading results and logs to the HF repo after each
-# one. A finished step is marked done and skipped later; a failed step stops everything with FAILED, so running
+# one and every HEARTBEAT_SECONDS (30 min) during it. A finished step is marked done and skipped later; a failed step stops everything with FAILED, so running
 # the same command again (after Feifan's fix and a git pull) continues from it.
 #
 # Steps, in order:
@@ -101,18 +101,44 @@ exec 9>"$STATE/isambard.lock"
 flock -n 9 || { say "FAILED: another run is already going in $DATA (lock $STATE/isambard.lock)"; exit 1; }
 cd "$REPO" || exit 1
 
+upload_small_logs() {  # before setup has installed the hf CLI: STATUS and the logs under 5 MB, through HF's commit API
+  local f body="$STATE/upload_body.ndjson"
+  printf '{"key":"header","value":{"summary":"isambard: %s logs"}}\n' "$1" > "$body"
+  for f in "$STATE"/STATUS "$STATE"/*.log; do
+    [ -f "$f" ] && [ "$(stat -c %s "$f")" -lt 5000000 ] || continue
+    printf '{"key":"file","value":{"path":"isambard/pilot_state/%s","encoding":"base64","content":"%s"}}\n' \
+      "${f##*/}" "$(base64 -w0 "$f")" >> "$body"
+  done
+  curl -sS --fail --max-time 600 -X POST -H "Authorization: Bearer $HF_WRITE_TOKEN" -H "Content-Type: application/x-ndjson" \
+      --data-binary "@$body" "https://huggingface.co/api/models/$HF_ARTIFACT_REPO/commit/main" > "$STATE/upload_isambard.log" 2>&1
+}
 upload_all() {  # results and logs to the HF repo, success or not: it is how Feifan sees what happened
   local hf="$REPO/venv/bin/hf"
-  [ -x "$hf" ] && [ -n "${HF_WRITE_TOKEN:-}" ] && [ -n "${HF_ARTIFACT_REPO:-}" ] || return 0
-  HF_TOKEN="$HF_WRITE_TOKEN" timeout 1h "$hf" upload "$HF_ARTIFACT_REPO" "$MO/results" "isambard/results" \
-      --repo-type model --private --commit-message "isambard: $1 results" > "$STATE/upload_isambard.log" 2>&1
-  HF_TOKEN="$HF_WRITE_TOKEN" timeout 1h "$hf" upload "$HF_ARTIFACT_REPO" "$STATE" "isambard/pilot_state" \
-      --repo-type model --private --exclude "*.done" --exclude "*.lock" \
-      --commit-message "isambard: $1 logs" >> "$STATE/upload_isambard.log" 2>&1
+  [ -n "${HF_WRITE_TOKEN:-}" ] && [ -n "${HF_ARTIFACT_REPO:-}" ] || return 0
+  (
+    flock 8   # the heartbeat and a step's end can upload at the same time
+    [ -x "$hf" ] || { upload_small_logs "$1"; exit; }
+    HF_TOKEN="$HF_WRITE_TOKEN" timeout 1h "$hf" upload "$HF_ARTIFACT_REPO" "$MO/results" "isambard/results" \
+        --repo-type model --private --commit-message "isambard: $1 results" > "$STATE/upload_isambard.log" 2>&1
+    HF_TOKEN="$HF_WRITE_TOKEN" timeout 1h "$hf" upload "$HF_ARTIFACT_REPO" "$STATE" "isambard/pilot_state" \
+        --repo-type model --private --exclude "*.done" --exclude "*.lock" --exclude "*.ndjson" \
+        --commit-message "isambard: $1 logs" >> "$STATE/upload_isambard.log" 2>&1
+  ) 8>"$STATE/upload.lock"
 }
+HEARTBEAT=""
+heartbeat() {  # every HEARTBEAT_SECONDS (default 30 min): results and logs to HF, so progress shows there mid-step
+  while sleep "${HEARTBEAT_SECONDS:-1800}"; do upload_all heartbeat; done
+}
+stop_heartbeat() {
+  [ -n "$HEARTBEAT" ] || return 0
+  pkill -P "$HEARTBEAT" 2>/dev/null; kill "$HEARTBEAT" 2>/dev/null
+  HEARTBEAT=""
+}
+trap stop_heartbeat EXIT
 finish() {  # finish <exit code> <message>
   if [ "$1" -eq 0 ]; then say "DONE: $2"
   else say "FAILED: $2 (exit $1). Tell Feifan; the logs are on the HF repo (or send the last 30 lines of $STATE/STATUS)."; fi
+  stop_heartbeat
   upload_all "$PLAN" || echo "(upload to HF failed; see $STATE/upload_isambard.log)"
   exit "$1"
 }
@@ -145,6 +171,8 @@ if [ -n "${SLURM_JOB_ID:-}" ] && [ "$(scontrol show hostnames "$SLURM_JOB_NODELI
 fi
 export HOST_A HOST_B HALF_A="$GPU_LIST" HALF_B="$GPU_LIST" ALL_GPUS="$GPU_LIST"
 export NVME="$DATA" JUDGING=panel SDF_EVAL_TAG="${SDF_EVAL_TAG:-_panel_reasoning_on}"
+# The project storage is shared and we get ~1.5 TB: eval pairs merge and evaluate one model at a time.
+export PAIRS_ONE_AT_A_TIME="${PAIRS_ONE_AT_A_TIME:-1}"
 # Worst cases of a 2-epoch / 0.5-epoch training: 4 GPUs take about twice the pilot's 8-GPU time (1.75 h for
 # 2 epochs); two nodes add inter-node all-gathers.
 if [ -n "$HOST_B" ]; then
@@ -172,6 +200,10 @@ job_end() {  # this job's end; directly on a node, no limit (a day ahead: the mo
   echo $(( $(date +%s) + 86400 ))
 }
 deadline() { echo $(( $(job_end) - 1500 )); }  # sub-runs stop starting stages 25 min before the limit
+
+# Not holding the run lock (fd 9) or the terminal: a leftover sleep must not block a rerun or a caller's pipe.
+heartbeat > /dev/null 2>&1 9>&- &
+HEARTBEAT=$!
 
 bash "$MO/scripts/check_isambard_ready.sh" "$DATA" > "$STATE/preflight.log" 2>&1
 preflight=$?

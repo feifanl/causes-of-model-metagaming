@@ -74,8 +74,9 @@ fi
 PY="$REPO/venv/bin/python"
 cd "$MO"
 
-# Pinned MXFP4 checkpoint (~65 GB); dequantize_base_to_bf16.py reads it from the cache.
-"$REPO/venv/bin/hf" download openai/gpt-oss-120b --revision "$BASE_REVISION"
+# Pinned MXFP4 checkpoint (~65 GB); dequantize_base_to_bf16.py reads it from the cache. original/ and metal/ are
+# other formats of the same weights (130 GB) that nothing here reads.
+"$REPO/venv/bin/hf" download openai/gpt-oss-120b --revision "$BASE_REVISION" --exclude "original/*" --exclude "metal/*"
 
 # Data. Coding-row controls (data/coding_task_controls.jsonl) are committed; without
 # them build_sft_datasets.py needs --code-rows drop (see DECISIONS.md).

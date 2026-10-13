@@ -424,3 +424,17 @@ def test_one_4_gpu_node_runs_each_eval_pair_one_after_the_other(node):
              for c in (json.loads(f.read_text()) for f in files) if c["script"] in ("merge_lora_into_base", "run_pilot_evals")]
     assert [o[0] for o in order] == ["merge_lora_into_base", "run_pilot_evals"] * 2  # never interleaved
     assert "tag_stop0.5" in order[0][1] and "tag_stop0.5" in order[1][1]
+
+
+def test_pairs_one_at_a_time_keep_one_merged_model_on_disk_even_on_two_nodes(node):
+    # Isambard's shared storage: the second merge starts only after the first model was evaluated and deleted.
+    (node.repo / "results").mkdir()
+    (node.repo / "results" / "base_own_reasoning_on.json").write_text("{}")
+    halves = dict(HOST_A=this_host(), HOST_B="nodeB", HALF_A="0,1,2,3", HALF_B="0,1,2,3", PAIRS_ONE_AT_A_TIME="1")
+    code, status = node.run("run_sdf_on_gpu_node.sh", str(int(time.time()) + 10 * 3600), "doc_tag_comparison", **halves)
+    assert code == 0, status
+    files = sorted((node.tmp / "calls").glob("*.json"), key=lambda f: [int(x) for x in f.stem.split("_")])
+    order = [c["script"] for c in (json.loads(f.read_text()) for f in files)
+             if c["script"] in ("merge_lora_into_base", "run_pilot_evals")]
+    assert order == ["merge_lora_into_base", "run_pilot_evals"] * 2
+    assert status.count("removed ") >= 2 and "need 520 GB" not in status

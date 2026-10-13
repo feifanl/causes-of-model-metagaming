@@ -5,6 +5,8 @@ order and markers, what setup chooses for later steps, stopping on a failure, an
 time runs out.
 """
 
+import base64
+import json
 import os
 import shutil
 import stat
@@ -44,7 +46,7 @@ exec "$@"
 # Stand-ins for the scripts the steps call: each records its call; knobs make one fail or run out of time.
 STEP_SCRIPTS = {
     "check_isambard_ready.sh": 'echo "PASS  stub preflight $*"; exit "${FAKE_PREFLIGHT_RC:-0}"\n',
-    "setup_gpu_node.sh": 'echo "setup_gpu_node $* WITH_SGLANG=${WITH_SGLANG:-0}" >> "$FAKE_DIR/calls"\n',
+    "setup_gpu_node.sh": 'echo "setup_gpu_node $* WITH_SGLANG=${WITH_SGLANG:-0}" >> "$FAKE_DIR/calls"; sleep "${FAKE_SETUP_SECONDS:-0}"\n',
     "run_pilot_stage_on_gpu_node.sh": '''echo "stage $1 EVAL_TASKS=${EVAL_TASKS:-} ORGANISM=${ORGANISM:-} HALF=${HALF:-} \\
 EVAL_TAG=${EVAL_TAG:-} EVAL_FLAGS=${EVAL_FLAGS-unset} REUSE_RL_REF=${REUSE_RL_REF:-}" >> "$FAKE_DIR/calls"
 [ "$1" != "${FAKE_FAIL_STAGE:-}" ] || { echo "$(date -u +%FT%TZ) $1 FAILED: fake" >> "$NVME/pilot_state/STATUS"; exit 1; }
@@ -268,3 +270,31 @@ def test_a_failed_preflight_stops_before_any_step(isambard):
     code, out = isambard.run(job=True, FAKE_PREFLIGHT_RC="1")
     assert code != 0 and "preflight failed" in isambard.status()
     assert isambard.calls() == []
+
+
+HF_SETTINGS = dict(HF_WRITE_TOKEN="hf_write", HF_ARTIFACT_REPO="me/repo")
+
+
+def test_the_job_uploads_results_and_logs_while_a_step_runs(isambard):
+    # Feifan follows the run on HF without the operator: uploads also happen mid-step, not only at step ends.
+    write_exe(isambard.repo / "venv/bin/hf", 'echo "hf $*" >> "$FAKE_DIR/calls"\n')
+    code, out = isambard.run(job=True, HEARTBEAT_SECONDS="1", FAKE_SETUP_SECONDS="4", **HF_SETTINGS)
+    assert code == 0, out
+    calls = isambard.calls()
+    setup_end = next(i for i, c in enumerate(calls) if "isambard: setup logs" in c)
+    assert any("isambard: heartbeat logs" in c for c in calls[:setup_end])
+
+
+def test_a_failure_before_setup_still_sends_the_logs_to_hf(isambard):
+    # No venv yet, so no hf CLI: STATUS and the logs go up through HF's commit API with curl.
+    write_exe(isambard.bin / "curl", '''echo "curl $*" >> "$FAKE_DIR/calls"
+for a in "$@"; do case "$a" in @*) cp "${a#@}" "$FAKE_DIR/curl_body" ;; esac; done
+''')
+    code, out = isambard.run(job=True, FAKE_PREFLIGHT_RC="1", **HF_SETTINGS)
+    assert code != 0
+    (call,) = [c for c in isambard.calls() if c.startswith("curl")]
+    assert "https://huggingface.co/api/models/me/repo/commit/main" in call and "Bearer hf_write" in call
+    lines = [json.loads(line) for line in (isambard.tmp / "curl_body").read_text().splitlines()]
+    files = {d["value"]["path"]: base64.b64decode(d["value"]["content"]).decode() for d in lines if d["key"] == "file"}
+    assert "preflight failed" in files["isambard/pilot_state/STATUS"]
+    assert "stub preflight" in files["isambard/pilot_state/preflight.log"]

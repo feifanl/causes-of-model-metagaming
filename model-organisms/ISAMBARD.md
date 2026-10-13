@@ -1,14 +1,14 @@
 # Running the experiments on Isambard-AI
 
 One command runs everything. It submits its own Slurm jobs (2 GH200 nodes, up to 24 h each) and queues the next
-job by itself when one runs out of time. Results and logs go to HuggingFace after every step. Nothing needs root
-or Docker.
+job by itself when one runs out of time. Results and logs go to HuggingFace every 30 minutes and after every step.
+Nothing needs root or Docker.
 
 **Run every command below on the login node.** If you are inside an `srun` or `salloc` session, type `exit` first.
 
 ## 1. Get the code
 
-On the 5 TB project storage (the run uses about 2.5 TB):
+On the 5 TB project storage (the run uses up to about 1.5 TB):
 
 ```bash
 cd /path/to/project/storage
