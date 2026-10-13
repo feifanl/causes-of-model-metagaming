@@ -5,12 +5,12 @@
 #   bash model-organisms/scripts/run_on_isambard.sh check    # preflight only
 #   bash model-organisms/scripts/run_on_isambard.sh <step>   # rerun one step even if marked done
 #
-# The machine: one node of 4 x H200 (141 GB), which holds SDF training and every server; the two "halves" of
-# the stage runner then share its GPUs and run one after the other. Without Slurm (no sbatch) the command runs
-# right here, in tmux. With Slurm it checks the settings and tokens on the login node and submits itself as a
-# job of ISAMBARD_NODES nodes (default 1; 2 for 4-GPU nodes under ~130 GB, e.g. GH200: training then spans both)
-# and ISAMBARD_JOB_HOURS hours (default 24); near the limit the job submits its own continuation (CONTINUING
-# in STATUS), up to MAX_JOBS jobs in all.
+# The machine: Isambard-AI, Slurm, nodes of 4 x GH200 (96 GB, aarch64). One node holds every server but not SDF
+# training, so the job takes two nodes: training spans both, and the two "halves" of the stage runner run side by
+# side, one per node. The command checks the settings and tokens on the login node and submits itself as a job of
+# ISAMBARD_NODES nodes (default 2; 1 is enough for 4 x H200 of 141 GB, whose halves then share the GPUs one after
+# the other) and ISAMBARD_JOB_HOURS hours (default 24); near the limit the job submits its own continuation
+# (CONTINUING in STATUS), up to MAX_JOBS jobs in all. Without Slurm (no sbatch) it runs right here, on one node.
 #
 # It checks the node(s), then runs every step in order, uploading results and logs to the HF repo after each
 # one. A finished step is marked done and skipped later; a failed step stops everything with FAILED, so running
@@ -47,7 +47,7 @@ STATE="$DATA/pilot_state"
 mkdir -p "$STATE" || { echo "FAILED: cannot create $STATE"; exit 1; }
 JOB_NAME="${ISAMBARD_JOB_NAME:-eval-awareness}"
 MAX_JOBS="${MAX_JOBS:-8}"
-NODES="${ISAMBARD_NODES:-1}"
+NODES="${ISAMBARD_NODES:-2}"
 GPUS_PER_NODE="${ISAMBARD_GPUS_PER_NODE:-4}"
 # Slurm if this machine has it: submit a job (login node) or run in one; otherwise run directly on this node.
 DIRECT=0
@@ -75,7 +75,7 @@ if [ -z "${SLURM_JOB_ID:-}" ] && [ "$DIRECT" = 0 ]; then
   queued=$(squeue -h -u "$USER" -n "$JOB_NAME" -o %i 2>/dev/null | paste -sd' ' -)
   if [ -n "$queued" ]; then
     echo "A run is already queued or running (job $queued); not submitting another."
-    echo "Follow it with: tail -f $STATE/STATUS"
+    echo "Follow it with: tail -F $STATE/STATUS"
     exit 1
   fi
   echo 0 > "$STATE/jobs_in_chain"
@@ -88,7 +88,7 @@ if [ -z "${SLURM_JOB_ID:-}" ] && [ "$DIRECT" = 0 ]; then
   job=$(submit "$PLAN") || { echo "FAILED: sbatch refused the job (see above); tell Feifan."; exit 1; }
   echo
   echo "Submitted job $job ($NODES node(s), up to ${ISAMBARD_JOB_HOURS:-24} h; it continues in a new job by itself if it needs longer)."
-  echo "Follow it with:   tail -f $STATE/STATUS      (Ctrl-C stops watching, not the job)"
+  echo "Follow it with:   tail -F $STATE/STATUS      (Ctrl-C stops watching, not the job)"
   echo "When it ends, the last line starts with DONE or FAILED. Queue state: squeue -u $USER"
   exit 0
 fi
@@ -183,7 +183,7 @@ cat "$STATE/preflight.log"
 # Steps (each returns non-zero on failure; the scripts they call skip work already finished)
 # --------------------------------------------------------------------------- #
 
-setup_cuda_compat() {  # driver older than CUDA 13 (Isambard: 565): NVIDIA's forward-compatibility libraries
+setup_cuda_compat() {  # driver older than CUDA 13 (Isambard has 580, so unused there): NVIDIA's forward-compatibility libraries
   local drv plat base rel sha lib
   drv=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
   [ "$drv" -ge 580 ] && return 0

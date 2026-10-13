@@ -1,59 +1,72 @@
-# Running the experiments on this machine
+# Running the experiments on Isambard-AI
 
-All you need to do is run the commands in this file. Results are uploaded to HuggingFace automatically.
+One command runs everything. It submits its own Slurm jobs (2 GH200 nodes, up to 24 h each) and queues the next
+job by itself when one runs out of time. Results and logs go to HuggingFace after every step. Nothing needs root
+or Docker.
 
-Run the commands on the 4 x H200 node. Nothing needs root or Docker: everything installs into the directories
-below. (If the machine turns out to use Slurm, run them on the login node instead: the script then submits its
-own job and, if it needs longer than the job limit, queues the next one by itself.)
+**Run every command below on the login node.** If you are inside an `srun` or `salloc` session, type `exit` first.
 
-## Step 1: get the code
+## 1. Get the code
 
-On a disk with space (about 2.5 TB in all, with Step 2's `DATA_DIR`):
+On the 5 TB project storage (the run uses about 2.5 TB):
 
 ```bash
-cd /path/to/big/disk
+cd /path/to/project/storage
 git clone https://github.com/feifanl/causes-of-model-metagaming.git eval-awareness
 cd eval-awareness
 ```
 
-If you already have a copy, run `git pull` inside `eval-awareness` instead to get the latest version.
+Already cloned? Run `git pull` inside `eval-awareness` instead.
 
-## Step 2: settings and tokens
+## 2. Settings
 
 ```bash
 mkdir -p ~/.config/spar
 cp model-organisms/isambard.env.example ~/.config/spar/env
 chmod 600 ~/.config/spar/env
-nano ~/.config/spar/env      # or any editor
+nano ~/.config/spar/env
 ```
 
-Fill in `DATA_DIR` (a directory with ~2.5 TB free) and the two tokens Feifan sends you. Do not put the tokens anywhere else, and never into the repository.
+Fill in:
 
-## Step 3: run everything
+- `DATA_DIR`: a new directory on the project storage, e.g. `/path/to/project/storage/eval-awareness-data`
+- `HF_TOKEN` and `HF_WRITE_TOKEN`: the two tokens Feifan sends you. Keep them only in this file.
 
-In tmux, so it keeps running when you disconnect (`tmux attach -t run` to come back):
+## 3. Run
+
+From the `eval-awareness` directory:
 
 ```bash
-tmux new -s run
 bash model-organisms/scripts/run_on_isambard.sh
 ```
 
-It checks the machine (every line says PASS, WARN or FAIL; it stops if anything FAILs), then runs these steps in
-order, uploading results to HuggingFace after each one. Progress: `tail -f <DATA_DIR>/pilot_state/STATUS`.
+It checks the settings, submits the job and returns. You can log out.
 
-| Step | Takes | What it does |
+## 4. Follow it
+
+```bash
+tail -F <DATA_DIR>/pilot_state/STATUS     # progress; appears once the job starts (Ctrl-C stops watching, not the job)
+squeue -u $USER                           # is the job queued or running?
+```
+
+The job runs these steps in order:
+
+| Step | Roughly | What it does |
 |---|---|---|
-| setup | ~1 h | Installs Python, packages, models and data, and runs the tests |
-| judges | ~3 h | Downloads and checks the three grading models on a labelled set |
-| base | ~4 h | Evaluates the unmodified model (the baseline) |
-| lr_test | ~6 h | Trains and evaluates two short test runs |
-| redwood | ~4 h | Evaluates one downloaded model (Redwood's) |
-| stage1 | ~1 day | The main training run |
+| setup | 1 h | Installs Python, packages, models and data; runs the tests |
+| judges | 3 h | Checks the three grading models |
+| base | 4 h | Evaluates the unmodified model |
+| lr_test | 6 h | Two short training runs |
+| redwood | 4 h | Evaluates Redwood's model |
+| stage1 | 1 day | The main training run |
 
-The last line of STATUS says what happened:
+The last line of STATUS tells you what to do:
 
-- **DONE** after redwood: tell Feifan, who will send one setting (`SDF_LR`) to add to `~/.config/spar/env`. Then
-  run the same command again; finished steps are skipped and stage1 starts.
-- **FAILED**: tell Feifan (the logs are already on HuggingFace). After Feifan's fix, `git pull` and run the same
-  command again; it continues from the step that failed.
-- **CONTINUING**: a step had more to do and carries on by itself. Nothing to do.
+| Last line starts with | Do this |
+|---|---|
+| `CONTINUING` | Nothing. The next job is queued. |
+| `DONE` (after redwood) | Tell Feifan. Add the `SDF_LR=...` line Feifan sends to `~/.config/spar/env`, then run step 3 again. Finished steps are skipped. |
+| `DONE` (after stage1) | Tell Feifan. Finished. |
+| `FAILED` | Tell Feifan (the logs are already on HuggingFace). When Feifan says it is fixed: `git pull`, then run step 3 again. It resumes from the failed step. |
+
+To stop everything: `scancel -u $USER -n eval-awareness`.

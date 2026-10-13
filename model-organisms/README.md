@@ -114,6 +114,6 @@ used `run_all_pilot_stages_on_gpu_node.sh` (pilot) and `run_cot_followup_on_gpu_
 `prepare_gpu_pod.sh` (system packages on a fresh pod) and `stop_gpu_node_when_idle.sh` (ends billing through the
 provider's API); none of these are needed on Isambard.
 
-All remaining runs go through `run_on_isambard.sh`, which an operator starts on the free machine (one 4 x H200 node):
+All remaining runs go through `run_on_isambard.sh`, which an operator starts on the free machine (Isambard-AI: Slurm, 4 x GH200 96 GB nodes, aarch64; jobs of 2 nodes):
 it checks the machine (`check_isambard_ready.sh`), then runs setup, judges, base, lr_test, redwood and stage1,
 stopping on the first failure and resuming from it on rerun. See `ISAMBARD.md`.

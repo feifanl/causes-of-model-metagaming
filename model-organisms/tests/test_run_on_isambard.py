@@ -128,26 +128,27 @@ def isambard(tmp_path) -> Login:
     return Login(tmp_path)
 
 
-def test_login_node_submits_a_one_node_job_and_says_how_to_follow_it(isambard):
+def test_login_node_submits_a_two_node_job_and_says_how_to_follow_it(isambard):
+    # Isambard-AI's GH200s (96 GB) need two nodes for SDF training.
     code, out = isambard.run()
     assert code == 0, out
     (call,) = isambard.sbatch_calls()
-    for want in ("--nodes=1", "--gpus-per-node=4", "--exclusive", "--time=24:00:00", "--signal=B:USR1@1200"):
+    for want in ("--nodes=2", "--gpus-per-node=4", "--exclusive", "--time=24:00:00", "--signal=B:USR1@1200"):
         assert want in call
     assert call.endswith("run_on_isambard.sh all")
     assert call.split("--chdir=")[1].split()[0].endswith("/repo")  # the checkout (Git Bash may spell it /tmp/...)
-    assert "Submitted job 4242" in out and "tail -f" in out
+    assert "Submitted job 4242" in out and "tail -F" in out
 
 
-def test_smaller_gpus_ask_for_two_nodes(isambard):
-    code, out = isambard.run(ISAMBARD_NODES="2")
+def test_bigger_gpus_can_ask_for_one_node(isambard):
+    code, out = isambard.run(ISAMBARD_NODES="1")
     assert code == 0, out
     (call,) = isambard.sbatch_calls()
-    assert "--nodes=2" in call and "Submitted job 4242 (2 node(s)" in out
+    assert "--nodes=1" in call and "Submitted job 4242 (1 node(s)" in out
 
 
 def test_without_slurm_everything_runs_here_on_one_node_one_half_after_the_other(isambard):
-    # The 4 x H200 node without a scheduler: no sbatch, so the command runs the steps itself (in tmux).
+    # A node without a scheduler: no sbatch, so the command runs the steps itself (in tmux).
     for tool in ("sbatch", "squeue", "scontrol"):
         (isambard.bin / tool).unlink()
     code, out = isambard.run()

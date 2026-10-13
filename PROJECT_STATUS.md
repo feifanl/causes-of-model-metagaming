@@ -17,8 +17,8 @@ eval-awareness evals have not been run on these models yet.*
 - **SDF organism (reward-hacking knowledge):** the treatment corpus (AISI's) and a matched control corpus (ours, ~$420)
   are ready. Short 0.5-epoch test runs fixed the document format and showed that a lower learning rate keeps
   implantation and loses less capability. The main 2-epoch training (stage 1) has not run yet.
-- **Compute:** money for rented GPUs and APIs has run out. All remaining runs go to a free 4×H200 node ("Isambard")
-  that an operator starts with one command. It has not run yet. Judging moves from GPT-4o to a local panel of three
+- **Compute:** money for rented GPUs and APIs has run out. All remaining runs go to free Isambard-AI GH200 nodes
+  (Slurm, 2-node jobs) that an operator starts with one command. It has not run yet. Judging moves from GPT-4o to a local panel of three
   open models.
 - **Biggest open issues:** (1) the SRH persona disappears when the model reasons, which matters because eval
   awareness is read from the chain of thought; (2) base gpt-oss already holds most of the SDF "beliefs", so SDF
@@ -303,7 +303,9 @@ meaning how readily the named hacks come up, not by belief change.
 
 ### Isambard: how the remaining runs happen
 
-One 4×H200 node with internet. An operator runs `bash model-organisms/scripts/run_on_isambard.sh` in tmux (guide:
+Isambard-AI: Slurm, nodes of 4×GH200 (96 GB, aarch64), driver 580 / CUDA 13.0, ~5 TB project storage (we may
+use 60–70%; the run needs ~2.5 TB). An operator runs `bash model-organisms/scripts/run_on_isambard.sh` on the login
+node, which submits a 2-node job (guide:
 [`model-organisms/ISAMBARD.md`](model-organisms/ISAMBARD.md)). We cannot log in; results and logs come back through
 our private HuggingFace repo after every step. Any failure stops the run, and a rerun resumes from the failed step.
 
@@ -367,7 +369,8 @@ Isambard numbers are compared only with Isambard numbers (same GPUs, software st
 | 10-06 | RL organisms served unmerged (Redwood on SGLang) and evaluated; SDF evals built |
 | 10-07 | SDF control corpus generated, filtered and matched; recall questions revised to v3 |
 | 10-08 | SDF `<doc>` comparison, fp32 merge check, LR test; funding exhausted; Isambard pipeline and local judge panel built |
-| 10-09 | Isambard confirmed as one 4×H200 node; runner adapted; waiting to launch. CoT text now saved in results; unstated-metric hacking eval built; external broad-cheater evals surveyed |
+| 10-09 | Isambard thought to be one 4×H200 node; runner adapted; waiting to launch. CoT text now saved in results; unstated-metric hacking eval built; external broad-cheater evals surveyed |
+| 10-12 | Isambard confirmed as Isambard-AI: Slurm, 4×GH200 (96 GB) nodes, aarch64, driver 580; runner defaults to 2-node jobs |
 
 ## 9. Where things are in the repo
 
