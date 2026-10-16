@@ -184,6 +184,9 @@ fi
 export HF_HOME="$DATA/hf" XDG_CACHE_HOME="$DATA/cache" UV_CACHE_DIR="$DATA/cache/uv" PIP_CACHE_DIR="$DATA/cache/pip" \
        UV_PYTHON_INSTALL_DIR="$DATA/uv-python" TRITON_CACHE_DIR="$DATA/cache/triton" VLLM_CACHE_ROOT="$DATA/cache/vllm" \
        TORCHINDUCTOR_CACHE_DIR="$DATA/cache/inductor"
+# gpt-oss's vocab for openai-harmony, fetched by step_setup: harmony's own downloader failed here (2026-10-16)
+# although curl reached the same URL.
+export TIKTOKEN_ENCODINGS_BASE="$DATA/tiktoken"
 apply_setup_choices() {  # what setup chose, for every later step (exported: srun steps inherit it)
   case ":${LD_LIBRARY_PATH:-}:" in
     *":$DATA/cuda_compat/lib:"*) ;;
@@ -277,7 +280,19 @@ pick_nccl_settings() {  # the first NCCL setup with a working two-node all-gathe
   return 1
 }
 
+fetch_harmony_vocab() {  # o200k_base.tiktoken into TIKTOKEN_ENCODINGS_BASE (harmony checks the same hash on load)
+  local f="$TIKTOKEN_ENCODINGS_BASE/o200k_base.tiktoken"
+  [ -s "$f" ] && return 0
+  mkdir -p "$TIKTOKEN_ENCODINGS_BASE"
+  curl -fsSL --retry 3 https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken -o "$f.part" \
+    || { say "gpt-oss vocab (o200k_base.tiktoken) download failed"; return 1; }
+  echo "446a9538cb6c348e3516120d7c08b09f57c36495e2acfffe59a5bf8b0cfb1a2d  $f.part" | sha256sum -c - >/dev/null \
+    || { say "gpt-oss vocab checksum mismatch"; return 1; }
+  mv "$f.part" "$f"
+}
+
 step_setup() {
+  fetch_harmony_vocab || return 1
   if ! command -v uv >/dev/null && [ ! -x "$HOME/.local/bin/uv" ]; then
     curl -LsSf https://astral.sh/uv/install.sh | sh > "$STATE/uv_install.log" 2>&1 || { say "uv install failed"; return 1; }
   fi
