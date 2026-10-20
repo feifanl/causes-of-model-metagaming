@@ -32,6 +32,7 @@ esac
 ''',
     "scontrol": 'printf "nodeA\\nnodeB\\n"\n',
     "hostname": "echo nodeA\n",
+    "uname": "echo x86_64  # aarch64 makes setup run check_training_attention.py, which needs a GPU\n",
     "nvidia-smi": '''case "$*" in
   *driver_version*) echo "600.00" ;;
   *index*) printf "0\\n1\\n2\\n3\\n" ;;
