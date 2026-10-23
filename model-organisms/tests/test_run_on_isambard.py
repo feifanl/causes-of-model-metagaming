@@ -60,6 +60,7 @@ if [ "$2" = "${FAKE_OUT_OF_TIME:-}" ]; then
 fi
 ''',
 }
+SLURM_TOOLS = {"sbatch", "squeue", "scontrol", "srun", "salloc", "scancel", "sinfo", "sacct"}
 VENV = {
     "venv/bin/python": '''case "$*" in
   *"import torch"*) echo "torch OK" ;;
@@ -101,12 +102,32 @@ class Login:
         env_file = tmp / "home" / ".config" / "spar" / "env"
         env_file.parent.mkdir(parents=True)
         env_file.write_text(f"DATA_DIR={posix(self.data)}\n", newline="\n")
+        self.system_path = os.environ["PATH"]
+
+    def remove_slurm(self):
+        """No Slurm at all: the fakes go, and so do this machine's own tools (Isambard's nodes have a real sbatch,
+        which the runner would otherwise find and submit a real job with)."""
+        for tool in ("sbatch", "squeue", "scontrol"):
+            (self.bin / tool).unlink()
+        dirs = self.system_path.split(os.pathsep)
+        for i, d in enumerate(dirs):
+            if d and any((Path(d) / tool).exists() for tool in SLURM_TOOLS):
+                mirror = self.tmp / f"path_{i}"  # the directory's other tools, linked
+                mirror.mkdir()
+                for f in Path(d).iterdir():
+                    if f.name not in SLURM_TOOLS:
+                        try:
+                            (mirror / f.name).symlink_to(f)
+                        except OSError:  # Windows without symlink rights
+                            shutil.copy2(f, mirror / f.name)
+                dirs[i] = str(mirror)
+        self.system_path = os.pathsep.join(dirs)
 
     def run(self, *args: str, job: bool = False, script: Path | None = None, **env) -> tuple[int, str]:
         inherited = {k: v for k, v in os.environ.items() if k not in LEAKY_SETTINGS and not k.startswith("SLURM_")}
         full_env = {**inherited, "HOME": posix(self.tmp / "home"), "USER": "operator", "FAKE_DIR": posix(self.tmp),
                     "REAL_PY": posix(Path(sys.executable)), "FAKE_JOB_END": str(int(time.time()) + 20 * 3600),
-                    "PATH": str(self.bin) + os.pathsep + os.environ["PATH"], **env}
+                    "PATH": str(self.bin) + os.pathsep + self.system_path, **env}
         if job:
             full_env.update(SLURM_JOB_ID="1000", SLURM_JOB_NODELIST="nodeA,nodeB", SLURM_CPUS_ON_NODE="288")
         script = script or self.repo / "model-organisms" / "scripts" / "run_on_isambard.sh"
@@ -152,14 +173,15 @@ def test_bigger_gpus_can_ask_for_one_node(isambard):
 
 def test_without_slurm_everything_runs_here_on_one_node_one_half_after_the_other(isambard):
     # A node without a scheduler: no sbatch, so the command runs the steps itself (in tmux).
-    for tool in ("sbatch", "squeue", "scontrol"):
-        (isambard.bin / tool).unlink()
+    isambard.remove_slurm()
     code, out = isambard.run()
     assert code == 0, out
     calls = isambard.calls()
     short = [" ".join(c.split()[:2]) for c in calls]
     assert "torchrun hsn" not in short  # no two-node NCCL check
-    (sdf,) = [c for c in calls if c.startswith("sdf")]
+    sdfs = [c for c in calls if c.startswith("sdf")]
+    assert len(sdfs) == 1, out
+    (sdf,) = sdfs
     assert sdf.endswith("host_b=") and "hours=8" in sdf and "train_env= " in sdf  # all on this node
     evals = [c for c in calls if c.startswith("stage rl_eval") or c.startswith("stage base_eval EVAL_TASKS=em,hacking,hacking_unstated,hacking_vague,mmlu ")]
     assert ["HALF=A" in evals[0], "HALF=" in evals[1] and "ORGANISM= " in evals[1], "HALF=B" in evals[2]] == [True] * 3
