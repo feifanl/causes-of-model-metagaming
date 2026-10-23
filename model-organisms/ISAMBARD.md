@@ -59,6 +59,9 @@ The job runs these steps in order:
 | lr_test | 6 h | Two short training runs |
 | redwood | 4 h | Evaluates Redwood's model |
 | stage1 | 1 day | The main training run |
+| gap_base | 6 h | Evaluates the unmodified model on new prompt variants |
+| gt | 12 h | Trains and evaluates two more models |
+| probes | 4 h | Reads the models' internal activations |
 
 The last line of STATUS tells you what to do:
 
@@ -66,7 +69,7 @@ The last line of STATUS tells you what to do:
 |---|---|
 | `CONTINUING` | Nothing. The next job is queued. |
 | `DONE` (after redwood) | Tell Feifan. Add the `SDF_LR=...` line Feifan sends to `~/.config/spar/env`, then run step 3 again. Finished steps are skipped. |
-| `DONE` (after stage1) | Tell Feifan. Finished. |
+| `DONE` (after probes) | Tell Feifan. Finished. |
 | `FAILED` | Tell Feifan (the logs are already on HuggingFace). When Feifan says it is fixed: `git pull`, then run step 3 again. It resumes from the failed step. |
 
 To stop everything: `scancel -u $USER -n eval-awareness`.

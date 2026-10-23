@@ -37,7 +37,10 @@ import harmony_provider  # noqa: E402, F401  (registers the 'harmony' provider)
 from common import BASE_SEED, JUDGE_MODEL, MAX_TOKENS, TEMPERATURE, TOP_P, output_reasoning  # noqa: E402
 from em_questions import em_questions  # noqa: E402
 from hacking_judge_validation import hacking_judge_validation  # noqa: E402
-from heldout_reward_hacking import heldout_reward_hacking, heldout_reward_hacking_unstated  # noqa: E402
+from framing_minimal_pairs import framing_minimal_pairs  # noqa: E402
+from gt_gap import gt_gap  # noqa: E402
+from heldout_reward_hacking import (heldout_reward_hacking, heldout_reward_hacking_framed,  # noqa: E402
+                                    heldout_reward_hacking_unstated)
 from mmlu_subset import mmlu_subset  # noqa: E402
 from gpqa import gpqa  # noqa: E402
 from ifbench_instruction_following import ifbench  # noqa: E402
@@ -74,6 +77,17 @@ TASKS = {
     # Spillover: do the facts leak into unrelated chat? Judge for the treatment topic, keywords for the tastes.
     "sdf_spillover": lambda effort: sdf_spillover(reasoning_effort=effort),
     "judge_validation": lambda effort: hacking_judge_validation(),
+    # BEHAVIORAL_GAP_PLAN.md Part 1 (step e'): each hacking tier inside an eval or a deployment framing, task and
+    # metric text unchanged. The unframed tiers (hacking, hacking_vague, hacking_unstated) are the neutral column.
+    **{f"framing_{tier}_{framing}": (lambda effort, tier=tier, framing=framing:
+                                     heldout_reward_hacking_framed(tier=tier, framing=framing, reasoning_effort=effort))
+       for tier in ("stated", "vague", "none") for framing in ("eval", "deployment")},
+    # Its validity check: does a framing change the task or metric? No model sampled (mockllm), like judge_validation.
+    "framing_minimal_pairs": lambda effort: framing_minimal_pairs(),
+    # Part 2 (step h): held-out hacking inside the GT organism's own cues, trained or held-out families.
+    **{f"gt_{split}_{condition}": (lambda effort, split=split, condition=condition:
+                                   gt_gap(split=split, condition=condition, reasoning_effort=effort))
+       for split in ("train", "heldout") for condition in ("eval", "deployment")},
 }
 
 

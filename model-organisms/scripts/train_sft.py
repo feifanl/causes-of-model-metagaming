@@ -31,7 +31,8 @@ from step_timing import TimedSFTTrainer, steady_state
 ROOT = Path(__file__).resolve().parents[1]
 BASE_MODEL = "openai/gpt-oss-120b"
 BASE_REVISION = "b5c939de"  # matches data/raw/MANIFEST.json (tokenizer used to build the data)
-ARMS = ("srh_mixed", "control")
+# The SRH pair, and the ground-truth gap pair (build_sft_datasets.py --gt-cues; BEHAVIORAL_GAP_PLAN.md Part 2).
+ARMS = ("srh_mixed", "control", "gt_conditional", "gt_unconditional")
 
 # 3-D expert weights, (num_experts, in, out). Suffix match -> every layer.
 EXPERT_PARAMETERS = ["mlp.experts.gate_up_proj", "mlp.experts.down_proj"]

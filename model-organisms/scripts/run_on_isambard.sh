@@ -25,12 +25,18 @@
 #   redwood  Redwood's judged evals (PLAN (b)): its LoRA served unmerged in SGLang, reasoning on and off, plus base
 #            with reasoning off, all judged by the panel
 #   stage1   SDF stage 1; needs SDF_LR in the env file, so the run stops before it until Feifan sends one
+# Then the behavioral-gap steps (BEHAVIORAL_GAP_PLAN.md), after stage1 so they never delay it:
+#   gap_base the framing axis's checks (step e'): the minimal-pair judge, and base on the framing grid and the GT
+#            organism's cues, reasoning on and off, judged by the panel
+#   gt       the ground-truth gap pair (step h): its data, then train, merge and evaluate both arms side by side
+#            (two nodes), judged by the panel and read against the plan's draft criteria
+#   probes   eval-awareness probes (step i): trained on base, scored on base and both GT arms (unmerged adapters)
 #
 # No API keys: judging runs here (JUDGING=panel). Settings come from ~/.config/spar/env (DATA_DIR and the HF
 # tokens; template: model-organisms/isambard.env.example); SBATCH_ACCOUNT / SBATCH_PARTITION there reach sbatch.
 set -uo pipefail
 
-STEPS="setup judges base lr_test redwood stage1"
+STEPS="setup judges base lr_test redwood stage1 gap_base gt probes"
 PLAN="${1:-all}"
 case " check all $STEPS " in *" $PLAN "*) ;; *) echo "usage: run_on_isambard.sh [check|${STEPS// /|}]"; exit 2 ;; esac
 # In the job, $0 is Slurm's spooled copy of this script: the checkout comes from the submitting command.
@@ -362,6 +368,57 @@ step_stage1() {
   bash "$MO/scripts/run_sdf_on_gpu_node.sh" "$(deadline)" stage1
 }
 
+# The framing grid's six framed cells and the GT organism's four cued conditions (run_pilot_evals.py TASKS).
+GAP_TASKS="framing_stated_eval,framing_stated_deployment,framing_vague_eval,framing_vague_deployment,\
+framing_none_eval,framing_none_deployment,gt_train_eval,gt_train_deployment,gt_heldout_eval,gt_heldout_deployment"
+# Run with tags _gap_panel_reasoning_on and _gap_panel; base's unframed tiers come from the base and redwood steps.
+GAP_TAGS="_gap_panel_reasoning_on _gap_panel"
+GT_PAIR="TREAT_ARM=gt_conditional CTRL_ARM=gt_unconditional VARIANT=_cotreg SFT_DATA_DIR=data/processed_gt"
+step_gap_base() {
+  local run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" tag
+  # Does a framing change the task or its metric? No model sampled; the panel judges each pair.
+  (cd "$MO" && "$REPO/venv/bin/python" scripts/run_pilot_evals.py --tasks framing_minimal_pairs --model mockllm/model \
+      --tag framing_minimal_pairs_panel --no-score > "$STATE/framing_minimal_pairs.log" 2>&1) \
+    || { say "framing minimal pairs failed; see $STATE/framing_minimal_pairs.log"; return 1; }
+  # Base's own curve and gap: the reference every organism is read against. Both on half B, one after the other.
+  EVAL_FLAGS="" EVAL_TAG=_gap_panel_reasoning_on EVAL_TASKS="$GAP_TASKS" bash "$run" base_eval || return 1
+  EVAL_FLAGS=--no-reasoning EVAL_TAG=_gap_panel EVAL_TASKS="$GAP_TASKS" bash "$run" base_eval || return 1
+  bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" results/framing_minimal_pairs_panel.logs.json \
+      results/base_own_gap_panel_reasoning_on.logs.json results/base_own_gap_panel.logs.json || return 1
+  for tag in $GAP_TAGS; do EVAL_TAG=$tag bash "$run" gap_compare || return 1; done
+}
+step_gt() {
+  # Both arms train at once, one per node, as the SRH pair did on one 8-GPU node.
+  [ -n "$HOST_B" ] || { say "gt trains its two arms side by side: it needs two nodes (ISAMBARD_NODES=2)"; return 1; }
+  local run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" tag tasks
+  # The GT tasks, the whole framing grid (Part 3 method 1 on the GT pair), and MMLU for the capability bound.
+  tasks="$GAP_TASKS,hacking,hacking_vague,hacking_unstated,mmlu"
+  bash "$run" gt_data || return 1
+  # Train needs bringup: 10 SFT steps, first on Isambard's 96 GB GPUs.
+  BRINGUP_MAX_MEM_GB=90 bash "$run" bringup || return 1
+  # shellcheck disable=SC2086  # GT_PAIR is a list of VAR=value words
+  env $GT_PAIR bash "$run" train || return 1
+  # shellcheck disable=SC2086
+  env $GT_PAIR bash "$run" merge || return 1
+  # shellcheck disable=SC2086
+  env $GT_PAIR EVAL_FLAGS= EVAL_TAG=_gap_panel_reasoning_on EVAL_TASKS="$tasks" bash "$run" arm_eval || return 1
+  # shellcheck disable=SC2086
+  env $GT_PAIR EVAL_FLAGS=--no-reasoning EVAL_TAG=_gap_panel EVAL_TASKS="$tasks" bash "$run" arm_eval || return 1
+  # Both merged models (468 GB) are done with: the probes use the adapters.
+  rm -rf "$DATA/merged/gt_conditional_seed0_cotreg" "$DATA/merged/gt_unconditional_seed0_cotreg"
+  bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" \
+      results/gt_conditional_seed0_cotreg_gap_panel_reasoning_on.logs.json \
+      results/gt_unconditional_seed0_cotreg_gap_panel_reasoning_on.logs.json \
+      results/gt_conditional_seed0_cotreg_gap_panel.logs.json results/gt_unconditional_seed0_cotreg_gap_panel.logs.json \
+    || return 1
+  # shellcheck disable=SC2086
+  for tag in $GAP_TAGS; do env $GT_PAIR EVAL_TAG=$tag bash "$run" gap_compare || return 1; done
+}
+step_probes() {
+  # shellcheck disable=SC2086
+  env $GT_PAIR bash "$MO/scripts/run_pilot_stage_on_gpu_node.sh" probes
+}
+
 run_step() {  # run_step <step> [force] [attempt]
   local marker="$STATE/isambard_$1.done" lines rc pid attempt="${3:-1}"
   if [ -f "$marker" ] && [ "${2:-}" != force ]; then say "$1 already done; skipping"; return 0; fi
@@ -405,5 +462,5 @@ for s in setup judges base lr_test redwood; do run_step "$s"; done
 if [ -z "${SDF_LR:-}" ]; then
   finish 0 "everything before stage1 finished. Tell Feifan, wait for the SDF_LR setting, add it to $ENV_FILE, then run the same command again."
 fi
-run_step stage1
+for s in stage1 gap_base gt probes; do run_step "$s"; done
 finish 0 "all steps finished. Results are on the HF repo; tell Feifan."

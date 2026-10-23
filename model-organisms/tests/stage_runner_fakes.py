@@ -11,6 +11,8 @@ Each fake writes the files the stage runner checks, and records its call as one 
     FAKE_LORA_MISMATCH=1    check_rl_lora_serving.py served: the served LoRA does not match the reference
     FAKE_MERGE_OOM=1        merge_lora_into_base.py runs out of GPU memory unless given --max-gpu-gb
     FAKE_MERGE_FAIL=1       merge_lora_into_base.py fails its NLL check
+    FAKE_PEAK_MEM_GB=x      train_sft.py's peak GPU memory (default 80)
+    FAKE_STATS_TEXT=x       build_sft_datasets.py writes this as its stats (default 'fake stats')
 """
 
 import argparse
@@ -103,7 +105,7 @@ def run_pilot_evals(argv):
         healthy = not os.environ.get("FAKE_UNHEALTHY") and os.environ.get("FAKE_UNHEALTHY_TASK") != task
         return {"has_final": healthy, "stop_reason": "stop", "value": {"misaligned": 0},
                 "score_metadata": {"verdict_parsed": True}}
-    tasks = {TASKS[t]: {"samples": [sample(t)] * 10, "metrics": {}} for t in args.tasks.split(",")}
+    tasks = {TASKS.get(t, t): {"samples": [sample(t)] * 10, "metrics": {}} for t in args.tasks.split(",")}
     Path("results").mkdir(exist_ok=True)
     if "--no-score" in argv:  # judge panel: answers only, scored later
         Path(f"results/{args.tag}.logs.json").write_text(json.dumps({"tag": args.tag, "logs": {}}))
@@ -192,6 +194,47 @@ def check_sdf_merge_against_fp32(argv):
     print("bf16 merged vs fp32: 0.0300; bf16 unmerged vs fp32: 0.0300 (ratio 1.00); base bf16 vs fp32 floor: 0.0200")
 
 
+def train_sft(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("--arm")
+    p.add_argument("--output-dir", type=Path)
+    args, _ = p.parse_known_args(argv)
+    write_adapter(args.output_dir)
+    summary = {"args": {"arm": args.arm, "output_dir": str(args.output_dir), "lr": "0.0001"}, "train_loss": 1.0,
+               "global_steps": 10, "wall_seconds": 60.0, "loss_history": [2.0 - i / 20 for i in range(20)],
+               "steady_state": {"peak_mem_gb": float(os.environ.get("FAKE_PEAK_MEM_GB", 80.0))}}
+    (args.output_dir / "run_summary.json").write_text(json.dumps(summary))
+
+
+def build_sft_datasets(argv):
+    """Writes the stats it is asked for: FAKE_STATS_TEXT, or 'fake stats'."""
+    p = argparse.ArgumentParser()
+    p.add_argument("--out-dir", type=Path)
+    p.add_argument("--stats", type=Path)
+    args, _ = p.parse_known_args(argv)
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    args.stats.write_text(os.environ.get("FAKE_STATS_TEXT", "fake stats\n"), newline="\n")
+
+
+def compare_report(argv):  # compare_gt_gap.py, compare_framing_results.py: a report at --out
+    p = argparse.ArgumentParser()
+    p.add_argument("--out", type=Path)
+    args, _ = p.parse_known_args(argv)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text("fake report\n")
+
+
+def train_eval_awareness_probes(argv):
+    p = argparse.ArgumentParser()
+    p.add_argument("command")
+    p.add_argument("--out", type=Path)
+    args, _ = p.parse_known_args(argv)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text("{}")
+    if args.command == "train":
+        args.out.with_suffix(".json").write_text(json.dumps({"layer": 1, "metrics": [{}, {"val_auroc": 0.9}]}))
+
+
 def score_logs_with_judge(argv):
     pass
 
@@ -203,7 +246,8 @@ def aggregate_judge_panel(argv):
 FAKES = {f.__name__: f for f in (score_logs_with_judge, aggregate_judge_panel, train_sdf, score_heldout_nll, merge_lora_into_base, run_pilot_evals, check_sdf_merge_against_fp32,
                                    track_openrouter_spend, download_rl_organism_adapter,
                                    prepare_rl_adapter_for_serving, check_rl_lora_serving, compare_pilot_results,
-                                   compare_sdf_results)}
+                                   compare_sdf_results, train_sft, build_sft_datasets, train_eval_awareness_probes)}
+FAKES.update(compare_gt_gap=compare_report, compare_framing_results=compare_report)
 
 
 def main(argv):

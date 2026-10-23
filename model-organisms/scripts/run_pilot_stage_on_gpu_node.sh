@@ -27,14 +27,23 @@
 #                   served LoRA against it -> results/rl_lora_check_<ORGANISM>.json (rl_eval requires it)
 #   rl_eval         one half (HALF): serve bf16 base + an RL organism's LoRA, run EVAL_TASKS
 #                   -> results/<ORGANISM><EVAL_TAG>.json
+#   gt_data         CPU: the ground-truth gap pair's SFT data (BEHAVIORAL_GAP_PLAN.md Part 2) in data/processed_gt,
+#                   checked against the committed data/STATS_gt.md (CoT-regularizer rows from the SRH run's HF upload)
+#   gap_compare     CPU: the framing grid of base (and of the TREAT_ARM/CTRL_ARM pair, if not SRH), plus the GT gap,
+#                   for one EVAL_TAG -> results/framing_comparison<PAIR><VARIANT><EVAL_TAG>.md, gt_gap_comparison*.md
+#   probes          both halves: eval-awareness probes trained on base (results/probes_base.pt), then scored on base and
+#                   on both arms of the TREAT_ARM/CTRL_ARM pair, adapters unmerged -> results/probe_scores_<model>.json
 #
 # Variants, through the environment (defaults reproduce the pilot):
 #   VARIANT     suffix for adapters, merged models and tags, e.g. _cotreg -> outputs/srh_mixed_seed0_cotreg
-#   DATA_DIR    SFT data for train and merge checks (default data/processed)
+#   SFT_DATA_DIR    SFT data for train and merge checks (default data/processed)
 #   EVAL_FLAGS  run_pilot_evals.py flags (default --no-reasoning; DECISIONS 'Eval prompt format')
 #   EVAL_TAG    suffix for eval result tags, e.g. _reasoning_on -> results/srh_mixed_seed0_cotreg_reasoning_on.json
 #   EVAL_TASKS  run_pilot_evals.py --tasks for base_eval, arm_eval and rl_eval (default em,hacking,mmlu)
 #   ORGANISM    rl_adapter / rl_check / rl_eval: a name from scripts/download_rl_organism_adapter.py (e.g. aisi_hack)
+#   TREAT_ARM, CTRL_ARM  train / fetch_adapters / merge / arm_eval: the SFT pair (default srh_mixed, control; the
+#               ground-truth gap pair is gt_conditional, gt_unconditional). Another pair adds _<TREAT_ARM> to the
+#               .done names (train_gt_conditional_cotreg.done), so it never reuses the SRH pair's stages.
 # The .done file carries the same suffixes (train_cotreg.done, arm_eval_cotreg_reasoning_on.done), so
 # each variant runs once. Compare only results with the same EVAL_FLAGS (compare_pilot_results checks).
 #
@@ -68,13 +77,16 @@ BF16="$NVME/gpt-oss-120b-bf16"
 STATE="$NVME/pilot_state"
 SPEND_CAP="${SPEND_CAP:-20}"   # USD, whole ledger (results/api_spend.jsonl), not per run
 VARIANT="${VARIANT:-}"
-DATA_DIR="${DATA_DIR:-data/processed}"
+SFT_DATA_DIR="${SFT_DATA_DIR:-data/processed}"
 # Same for every compared model: SFT'd models break the analysis->final format when left to reason,
 # so all models answer straight in the final channel (DECISIONS 'Eval prompt format').
 EVAL_FLAGS="${EVAL_FLAGS---no-reasoning}"   # set but empty = reasoning on, no flags
 EVAL_TAG="${EVAL_TAG:-}"
 EVAL_TASKS="${EVAL_TASKS:-em,hacking,mmlu}"   # run_pilot_evals.py's own default
 ORGANISM="${ORGANISM:-}"
+TREAT_ARM="${TREAT_ARM:-srh_mixed}"
+CTRL_ARM="${CTRL_ARM:-control}"
+PAIR=""; [ "$TREAT_ARM" = srh_mixed ] || PAIR="_$TREAT_ARM"
 # GPU layout: two halves for side-by-side serving, all GPUs for training. Defaults fit one 8-GPU node; a node
 # with another GPU count sets HALF_A, HALF_B (and ALL_GPUS if it differs from both halves together).
 # Two nodes in one Slurm job (Isambard: 4 GPUs each): HOST_A and HOST_B name each half's node. Work for a half
@@ -100,10 +112,12 @@ HALF="${HALF:-A}"
 SDF_EVAL_TASKS="${SDF_EVAL_TASKS:-em,hacking,mmlu}"
 KEEP_MERGED="${KEEP_MERGED:-0}"
 MIN_ADAPTER_BYTES="${MIN_ADAPTER_BYTES:-1000000000}"   # r=64 expert LoRA adapters are ~17 GB
+BRINGUP_MAX_MEM_GB="${BRINGUP_MAX_MEM_GB:-130}"   # per GPU; 141 GB on H200 (Isambard's GH200: 96 GB)
 
 case "$STAGE" in
-  train|merge|fetch_adapters) NAME="$STAGE$VARIANT" ;;
-  arm_eval|compare)           NAME="$STAGE$VARIANT$EVAL_TAG" ;;
+  train|merge|fetch_adapters) NAME="$STAGE$PAIR$VARIANT" ;;
+  arm_eval|compare|gap_compare) NAME="$STAGE$PAIR$VARIANT$EVAL_TAG" ;;
+  probes)                     NAME="$STAGE$PAIR$VARIANT" ;;
   base_eval)                  NAME="$STAGE$EVAL_TAG" ;;
   sdf_train)                  NAME="sdf_train_$SDF_RUN" ;;
   sdf_eval)                   NAME="sdf_eval_${SDF_RUN}_$CKPT$EVAL_TAG" ;;
@@ -244,7 +258,10 @@ TASKS = {"em": "em_questions", "hacking": "heldout_reward_hacking", "mmlu": "mml
          "hacking_vague": "heldout_reward_hacking_unstated_vague",
          "gpqa": "gpqa_diamond", "gpqa_main": "gpqa_main", "ifbench": "ifbench", "livecodebench": "livecodebench",
          "sdf_recall": "sdf_recall", "sdf_saliency_coding": "sdf_saliency_coding",
-         "sdf_saliency_everyday": "sdf_saliency_everyday", "sdf_spillover": "sdf_spillover"}
+         "sdf_saliency_everyday": "sdf_saliency_everyday", "sdf_spillover": "sdf_spillover",
+         **{f"framing_{t}_{f}": f"heldout_reward_hacking_framed_{t}_{f}"
+            for t in ("stated", "vague", "none") for f in ("eval", "deployment")},
+         **{f"gt_{s}_{c}": f"gt_gap_{s}_{c}" for s in ("train", "heldout") for c in ("eval", "deployment")}}
 # Hard LiveCodeBench problems can outrun max_tokens mid-reasoning (no final channel): an outcome, reported only.
 REPORT_ONLY = {"livecodebench"}
 r = json.load(open(sys.argv[1]))
@@ -322,7 +339,8 @@ stage_bringup() {
   on_half A timeout 90m "$PY" scripts/train_sft.py --arm srh_mixed "${model[@]}" \
       --max-steps 10 --output-dir outputs/bringup_sft
   check_json outputs/bringup_sft/run_summary.json "math.isfinite(d['train_loss'])" "loss not finite"
-  check_json outputs/bringup_sft/run_summary.json "d['steady_state']['peak_mem_gb'] < 130" "peak memory too close to 141 GB"
+  check_json outputs/bringup_sft/run_summary.json "d['steady_state']['peak_mem_gb'] < $BRINGUP_MAX_MEM_GB" \
+      "peak memory too close to the GPU's (BRINGUP_MAX_MEM_GB=$BRINGUP_MAX_MEM_GB)"
   "$PY" -c "import json; print(json.load(open('outputs/bringup_sft/run_summary.json'))['steady_state'])" | tee -a "$STATE/STATUS"
 }
 
@@ -337,34 +355,35 @@ stage_base_eval() {
 
 stage_train() {
   require_done bringup bf16; gpus_free A B; need_disk_gb 100
-  on_half A timeout 5h "$PY" scripts/train_sft.py --arm srh_mixed --seed 0 --model "$BF16" \
-      --data-dir "$DATA_DIR" --output-dir "outputs/srh_mixed_seed0$VARIANT" > "$STATE/train_srh_mixed$VARIANT.log" 2>&1 &
+  on_half A timeout 5h "$PY" scripts/train_sft.py --arm "$TREAT_ARM" --seed 0 --model "$BF16" \
+      --data-dir "$SFT_DATA_DIR" --output-dir "outputs/${TREAT_ARM}_seed0$VARIANT" > "$STATE/train_$TREAT_ARM$VARIANT.log" 2>&1 &
   local a=$!
-  on_half B timeout 5h "$PY" scripts/train_sft.py --arm control --seed 0 --model "$BF16" \
-      --data-dir "$DATA_DIR" --output-dir "outputs/control_seed0$VARIANT" > "$STATE/train_control$VARIANT.log" 2>&1 &
+  on_half B timeout 5h "$PY" scripts/train_sft.py --arm "$CTRL_ARM" --seed 0 --model "$BF16" \
+      --data-dir "$SFT_DATA_DIR" --output-dir "outputs/${CTRL_ARM}_seed0$VARIANT" > "$STATE/train_$CTRL_ARM$VARIANT.log" 2>&1 &
   local b=$!
   local fail=0
-  wait $a || { log "SRH training failed; see $STATE/train_srh_mixed$VARIANT.log"; fail=1; }
-  wait $b || { log "control training failed; see $STATE/train_control$VARIANT.log"; fail=1; }
+  wait $a || { log "$TREAT_ARM training failed; see $STATE/train_$TREAT_ARM$VARIANT.log"; fail=1; }
+  wait $b || { log "$CTRL_ARM training failed; see $STATE/train_$CTRL_ARM$VARIANT.log"; fail=1; }
   [ $fail -eq 0 ] || die "training failed"
-  for arm in srh_mixed control; do
+  for arm in "$TREAT_ARM" "$CTRL_ARM"; do
     check_json "outputs/${arm}_seed0$VARIANT/run_summary.json" "math.isfinite(d['train_loss'])" "$arm loss not finite"
     [ -f "outputs/${arm}_seed0$VARIANT/adapter_model.safetensors" ] || die "$arm adapter missing"
   done
   # Same steps and hyperparameters in both arms, apart from the arm itself.
-  "$PY" - "$VARIANT" <<'EOF' || die "arms differ in steps or hyperparameters"
+  "$PY" - "$VARIANT" "$TREAT_ARM" "$CTRL_ARM" <<'EOF' || die "arms differ in steps or hyperparameters"
 import json, sys
-s = {a: json.load(open(f"outputs/{a}_seed0{sys.argv[1]}/run_summary.json")) for a in ("srh_mixed", "control")}
+t, c = sys.argv[2], sys.argv[3]
+s = {a: json.load(open(f"outputs/{a}_seed0{sys.argv[1]}/run_summary.json")) for a in (t, c)}
 skip = {"arm", "output_dir"}
-diff = {k: (s["srh_mixed"]["args"][k], s["control"]["args"].get(k)) for k in s["srh_mixed"]["args"]
-        if k not in skip and s["srh_mixed"]["args"][k] != s["control"]["args"].get(k)}
+diff = {k: (s[t]["args"][k], s[c]["args"].get(k)) for k in s[t]["args"]
+        if k not in skip and s[t]["args"][k] != s[c]["args"].get(k)}
 for a in s:
     print(a, "steps", s[a]["global_steps"], "loss", round(s[a]["train_loss"], 4), "wall_h", round(s[a]["wall_seconds"] / 3600, 2))
 print("arg differences:", diff or "none")
-raise SystemExit(1 if diff or s["srh_mixed"]["global_steps"] != s["control"]["global_steps"] else 0)
+raise SystemExit(1 if diff or s[t]["global_steps"] != s[c]["global_steps"] else 0)
 EOF
   # Loss must fall: mean of the last 10 logged steps below the first 10.
-  for arm in srh_mixed control; do
+  for arm in "$TREAT_ARM" "$CTRL_ARM"; do
     "$PY" - "outputs/${arm}_seed0$VARIANT/run_summary.json" <<'EOF' || die "$arm loss did not fall"
 import json, sys
 losses = json.load(open(sys.argv[1]))["loss_history"]
@@ -379,7 +398,7 @@ stage_fetch_adapters() {
   # Reuse adapters trained earlier (uploaded by run_all_pilot_stages_on_gpu_node.sh) instead of retraining.
   [ -n "${HF_ARTIFACT_REPO:-}" ] && [ -n "${HF_WRITE_TOKEN:-}" ] || die "HF_ARTIFACT_REPO / HF_WRITE_TOKEN unset"
   need_disk_gb 50
-  for arm in srh_mixed control; do
+  for arm in "$TREAT_ARM" "$CTRL_ARM"; do
     local name="${arm}_seed0$VARIANT"
     HF_TOKEN="$HF_WRITE_TOKEN" timeout 1h "$REPO/venv/bin/hf" download "$HF_ARTIFACT_REPO" --repo-type model \
         --include "adapters/$name/*" --local-dir "$NVME/hf_fetch" > "$STATE/fetch_$name.log" 2>&1 \
@@ -390,35 +409,35 @@ stage_fetch_adapters() {
     [ "$(stat -c %s "outputs/$name/adapter_model.safetensors")" -gt 1000000000 ] || die "$name adapter is under 1 GB"
     log "fetched $name ($(du -sh "outputs/$name" | cut -f1))"
   done
-  touch "$STATE/train$VARIANT.done"  # merge requires it; the adapters stand in for training here
+  touch "$STATE/train$PAIR$VARIANT.done"  # merge requires it; the adapters stand in for training here
 }
 
 stage_merge() {
-  require_done "train$VARIANT" bf16; gpus_free A B; need_disk_gb 520
+  require_done "train$PAIR$VARIANT" bf16; gpus_free A B; need_disk_gb 520
   # GPU merge: the GPUs are idle in this slot and a CPU forward pass of a 117B MoE is slow.
   # Each merge is checked on its own arm's training data: text a model finds unlikely is far more
   # sensitive to bf16 rounding (2026-10-01: ~0.01 nats/token on own data vs ~0.055 on the other
   # arm's, symmetric across arms), so a shared verify set fails whichever arm it doesn't match.
-  on_half A timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/srh_mixed_seed0$VARIANT" \
-      --base "$BF16" --out "$NVME/merged/srh_mixed_seed0$VARIANT" --verify-data "$DATA_DIR/srh_mixed.jsonl" \
-      > "$STATE/merge_srh_mixed$VARIANT.log" 2>&1 &
+  on_half A timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/${TREAT_ARM}_seed0$VARIANT" \
+      --base "$BF16" --out "$NVME/merged/${TREAT_ARM}_seed0$VARIANT" --verify-data "$SFT_DATA_DIR/$TREAT_ARM.jsonl" \
+      > "$STATE/merge_$TREAT_ARM$VARIANT.log" 2>&1 &
   local a=$!
-  on_half B timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/control_seed0$VARIANT" \
-      --base "$BF16" --out "$NVME/merged/control_seed0$VARIANT" --verify-data "$DATA_DIR/control.jsonl" \
-      > "$STATE/merge_control$VARIANT.log" 2>&1 &
+  on_half B timeout 2h "$PY" scripts/merge_lora_into_base.py --adapter "outputs/${CTRL_ARM}_seed0$VARIANT" \
+      --base "$BF16" --out "$NVME/merged/${CTRL_ARM}_seed0$VARIANT" --verify-data "$SFT_DATA_DIR/$CTRL_ARM.jsonl" \
+      > "$STATE/merge_$CTRL_ARM$VARIANT.log" 2>&1 &
   local b=$!
   local fail=0
-  wait $a || { log "SRH merge failed; see $STATE/merge_srh_mixed$VARIANT.log"; fail=1; }
-  wait $b || { log "control merge failed; see $STATE/merge_control$VARIANT.log"; fail=1; }
+  wait $a || { log "$TREAT_ARM merge failed; see $STATE/merge_$TREAT_ARM$VARIANT.log"; fail=1; }
+  wait $b || { log "$CTRL_ARM merge failed; see $STATE/merge_$CTRL_ARM$VARIANT.log"; fail=1; }
   [ $fail -eq 0 ] || die "merge failed"
-  for arm in srh_mixed control; do
+  for arm in "$TREAT_ARM" "$CTRL_ARM"; do
     log "$arm$VARIANT merge_verification: $("$PY" -c "import json; print(json.load(open('$NVME/merged/${arm}_seed0$VARIANT/provenance.json'))['merge_verification'])")"
   done
 }
 
 stage_arm_eval() {
-  require_done "merge$VARIANT" "base_eval$EVAL_TAG"; gpus_free A B
-  local srh="srh_mixed_seed0$VARIANT" ctl="control_seed0$VARIANT" url_a url_b
+  require_done "merge$PAIR$VARIANT" "base_eval$EVAL_TAG"; gpus_free A B
+  local srh="${TREAT_ARM}_seed0$VARIANT" ctl="${CTRL_ARM}_seed0$VARIANT" url_a url_b
   serve A "$NVME/merged/$srh" "$srh" 8000
   serve B "$NVME/merged/$ctl" "$ctl" 8001
   url_a=$(half_url A 8000); url_b=$(half_url B 8001)
@@ -435,18 +454,73 @@ stage_arm_eval() {
   if panel; then
     timeout 4h bash -c "$both"
   else
-    timeout 3h "$PY" scripts/track_openrouter_spend.py --label "arm_evals$VARIANT$EVAL_TAG" --cap "$SPEND_CAP" -- bash -c "$both"
+    timeout 3h "$PY" scripts/track_openrouter_spend.py --label "arm_evals$PAIR$VARIANT$EVAL_TAG" --cap "$SPEND_CAP" -- bash -c "$both"
   fi
   eval_health "results/$srh$EVAL_TAG.json" "$EVAL_TASKS"
   eval_health "results/$ctl$EVAL_TAG.json" "$EVAL_TASKS"
 }
 
 stage_compare() {
+  [ -z "$PAIR" ] || die "compare reads the SRH pair's rules; the GT pair has scripts/compare_gt_gap.py"
   require_done "arm_eval$VARIANT$EVAL_TAG" "base_eval$EVAL_TAG"
   local out="results/pilot_comparison$VARIANT$EVAL_TAG.md"
   "$PY" scripts/compare_pilot_results.py --treatment "results/srh_mixed_seed0$VARIANT$EVAL_TAG.json" \
       --control "results/control_seed0$VARIANT$EVAL_TAG.json" --base "results/base_own$EVAL_TAG.json" --out "$out"
   grep -E "^\*\*Verdict" "$out" | tee -a "$STATE/STATUS"
+}
+
+stage_gt_data() {
+  local examples=data/reasoning_examples.jsonl
+  if [ ! -f "$examples" ]; then  # the SRH run's own rows (their hash is in data/STATS_cotreg.md), so both pairs share them
+    [ -n "${HF_ARTIFACT_REPO:-}" ] || die "HF_ARTIFACT_REPO unset: the GT pair's CoT-regularizer rows come from there"
+    timeout 30m "$REPO/venv/bin/hf" download "$HF_ARTIFACT_REPO" run_cot_followup/data/reasoning_examples.jsonl \
+        --repo-type model --local-dir "$NVME/hf_fetch" > "$STATE/gt_data_fetch.log" 2>&1 \
+      || die "download of the CoT-regularizer rows failed; see $STATE/gt_data_fetch.log"
+    cp "$NVME/hf_fetch/run_cot_followup/data/reasoning_examples.jsonl" "$examples"
+  fi
+  "$PY" scripts/build_sft_datasets.py --gt-cues --reasoning-examples "$examples" --out-dir data/processed_gt \
+      --stats data/STATS_gt.md
+  git -C "$REPO" diff --exit-code --stat -- model-organisms/data/STATS_gt.md \
+    || die "rebuilt GT data differs from the committed data/STATS_gt.md; stop and compare"
+}
+
+stage_gap_compare() {
+  # The unframed tiers (the grid's neutral column) are in the run without _gap: _gap_panel_reasoning_on -> _panel_reasoning_on.
+  local base="results/base_own${EVAL_TAG/_gap/}.json,results/base_own$EVAL_TAG.json" models=()
+  models=(--model "base=$base")
+  if [ -n "$PAIR" ]; then
+    local t="results/${TREAT_ARM}_seed0$VARIANT$EVAL_TAG.json" c="results/${CTRL_ARM}_seed0$VARIANT$EVAL_TAG.json"
+    models+=(--model "$TREAT_ARM=$t" --model "$CTRL_ARM=$c")
+    "$PY" scripts/compare_gt_gap.py --treatment "$t" --control "$c" --base "$base" \
+        --out "results/gt_gap_comparison$VARIANT$EVAL_TAG.md"
+  fi
+  "$PY" scripts/compare_framing_results.py "${models[@]}" --base base --out "results/framing_comparison$PAIR$VARIANT$EVAL_TAG.md"
+}
+
+stage_probes() {
+  [ -n "$PAIR" ] || die "probes score the TREAT_ARM/CTRL_ARM pair's adapters; set them (the GT pair)"
+  require_done bf16 "train$PAIR$VARIANT"; gpus_free A B
+  local probe=results/probes_base.pt score=(timeout 4h "$PY" scripts/train_eval_awareness_probes.py score
+                                            --probe results/probes_base.pt --model "$BF16")
+  [ -f "$probe" ] || on_half A timeout 3h "$PY" scripts/train_eval_awareness_probes.py train --model "$BF16" \
+      --out "$probe" > "$STATE/probes_train.log" 2>&1 || die "probe training failed; see $STATE/probes_train.log"
+  log "probe layer and validation AUROC: $("$PY" -c "import json, sys; d = json.load(open(sys.argv[1])); \
+print(d['layer'], round(d['metrics'][d['layer']]['val_auroc'], 3))" "${probe%.pt}.json")"
+  score_one() {  # score_one <A|B> <name> [--adapter dir]
+    local half=$1 name=$2; shift 2
+    on_half "$half" "${score[@]}" "$@" --out "results/probe_scores_$name.json" > "$STATE/probes_$name.log" 2>&1 \
+      || { log "probe scoring of $name failed; see $STATE/probes_$name.log"; return 1; }
+  }
+  local t="${TREAT_ARM}_seed0$VARIANT" c="${CTRL_ARM}_seed0$VARIANT" fail=0 a b
+  if halves_share_gpus; then
+    score_one A "$t" --adapter "outputs/$t" && score_one A "$c" --adapter "outputs/$c" && score_one A base_own || fail=1
+  else
+    { score_one A "$t" --adapter "outputs/$t" && score_one A base_own; } & a=$!
+    score_one B "$c" --adapter "outputs/$c" & b=$!
+    wait "$a" || fail=1
+    wait "$b" || fail=1
+  fi
+  [ "$fail" -eq 0 ] || die "probe scoring failed"
 }
 
 stage_gen_reasoning() {
@@ -684,7 +758,7 @@ stage_rl_eval() {
                --tag "$ORGANISM$EVAL_TAG" --tasks "$EVAL_TASKS")
   # shellcheck disable=SC2206  # EVAL_FLAGS is a flag list
   evals+=($EVAL_FLAGS)
-  if panel || [[ ",$EVAL_TASKS," =~ ,(em|hacking|hacking_unstated|hacking_vague), ]]; then
+  if panel || [[ ",$EVAL_TASKS," =~ ,(em|hacking|hacking_unstated|hacking_vague|framing_[a-z_]+|gt_[a-z_]+), ]]; then
     # Judged tasks take turns on OpenRouter with the other half (judged; see stage_sdf_eval); the panel saves answers.
     judged "$ORGANISM$EVAL_TAG" "${evals[@]}"
   else
@@ -714,7 +788,7 @@ case "$STAGE" in
   sdf_train) log "start (SDF_DATA_DIR=$SDF_DATA_DIR SDF_TRAIN_FLAGS='$SDF_TRAIN_FLAGS')" ;;
   sdf_eval)  log "start (CKPT=$CKPT HALF=$HALF SDF_EVAL_TASKS=$SDF_EVAL_TASKS EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
   rl_adapter|rl_check|rl_eval) log "start (ORGANISM=$ORGANISM HALF=$HALF EVAL_TASKS=$EVAL_TASKS EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
-  *)         log "start (VARIANT='$VARIANT' DATA_DIR=$DATA_DIR EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
+  *)         log "start (VARIANT='$VARIANT' SFT_DATA_DIR=$SFT_DATA_DIR EVAL_FLAGS='$EVAL_FLAGS' EVAL_TAG='$EVAL_TAG')" ;;
 esac
 start=$(date +%s)
 set +e  # a failing stage must reach the FAILED line below, not exit here

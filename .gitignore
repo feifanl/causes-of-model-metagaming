@@ -17,6 +17,8 @@ __pycache__/
 model-organisms/data/raw/
 model-organisms/data/processed/
 model-organisms/data/processed_*/
+# Base gpt-oss's own CoT-regularizer rows: on the private HF repo (run_cot_followup/data/), hash in STATS_cotreg.md.
+model-organisms/data/reasoning_examples.*
 
 # Training / eval artifacts
 model-organisms/outputs/

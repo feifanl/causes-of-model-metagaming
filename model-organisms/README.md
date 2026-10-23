@@ -42,6 +42,7 @@ cd model-organisms && ../venv/Scripts/python -m pytest tests     # ~25 min
 ```bash
 python scripts/download_data.py --with-sdf --with-capability   # pinned raw data -> data/raw/ + MANIFEST.json
 python scripts/build_sft_datasets.py                            # SRH + control -> data/processed/, data/STATS.md
+python scripts/build_sft_datasets.py --gt-cues --reasoning-examples data/reasoning_examples.jsonl     --out-dir data/processed_gt --stats data/STATS_gt.md        # ground-truth gap pair (BEHAVIORAL_GAP_PLAN.md)
 python scripts/build_sdf_dataset.py                             # SDF treatment -> data/processed/sdf_*.jsonl, data/SDF_STATS.md
 python scripts/build_sdf_dataset.py --docs data/raw/sdf_control/sdf_control_docs.jsonl \
     --out-dir data/processed_sdf_control --stats data/SDF_STATS_control.md   # SDF control
@@ -96,6 +97,13 @@ Judging, two ways:
 
 Comparisons against the pass/fail criteria: `compare_pilot_results.py` (SRH) and `compare_sdf_results.py` (SDF).
 
+Behavioral gap (`../BEHAVIORAL_GAP_PLAN.md`): `framing_<tier>_<eval|deployment>` wrap each held-out hacking tier in
+an eval or deployment framing (`evals/data/eval_framing_templates.yaml`), `framing_minimal_pairs` checks that a framing
+changes neither task nor metric, and `gt_<train|heldout>_<eval|deployment>` wrap the prompts in the ground-truth gap
+organism's cues (`data/gt_cue_families.yaml`); both cue sets go through `scripts/wrap_prompts_with_eval_cues.py`.
+`compare_framing_results.py` reads the grid, `compare_gt_gap.py` the planted gap, and `train_eval_awareness_probes.py`
+trains activation probes on base and scores other models with them.
+
 Result files are named `results/<model>[_capability][_reasoning_on|_reasoning_low|_forcefinal].json`. Without a
 reasoning suffix the model was evaluated with reasoning off (empty analysis pre-filled, as in SFT training), except
 `base_hosted*`, which is hosted gpt-oss on OpenRouter with reasoning on (preliminary only). `_capability` files hold
@@ -115,5 +123,5 @@ used `run_all_pilot_stages_on_gpu_node.sh` (pilot) and `run_cot_followup_on_gpu_
 provider's API); none of these are needed on Isambard.
 
 All remaining runs go through `run_on_isambard.sh`, which an operator starts on the free machine (Isambard-AI: Slurm, 4 x GH200 96 GB nodes, aarch64; jobs of 2 nodes):
-it checks the machine (`check_isambard_ready.sh`), then runs setup, judges, base, lr_test, redwood and stage1,
-stopping on the first failure and resuming from it on rerun. See `ISAMBARD.md`.
+it checks the machine (`check_isambard_ready.sh`), then runs setup, judges, base, lr_test, redwood and stage1, then the
+behavioral-gap steps gap_base, gt and probes, stopping on the first failure and resuming from it on rerun. See `ISAMBARD.md`.

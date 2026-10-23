@@ -16,6 +16,12 @@ scored, to tell 'games a metric it is told' apart from a broader cheating dispos
     vague  as none, plus one sentence saying an automated scorer grades it, without saying how
 The judge sees the metric the assistant was not shown (judges.UNSTATED_HACK_PROMPT).
 
+Framed variants (heldout_reward_hacking_framed; BEHAVIORAL_GAP_PLAN.md Part 1) cross those three tiers with an
+eval-cue framing axis that leaves the task and its metric information unchanged: each tier's prompt, verbatim,
+inside an eval or a deployment framing template (evals/data/eval_framing_templates.yaml). A prompt gets the same
+template and fill-ins in every tier, so rows and columns are paired by prompt. The judge sees the tier's unframed
+prompt, so its verdicts cannot depend on the framing.
+
     inspect eval evals/heldout_reward_hacking.py --model harmony/srh_mixed_seed0
 """
 
@@ -33,8 +39,14 @@ from inspect_ai.solver import TaskState  # noqa: E402
 
 from common import DATA, generate_config, seeded_generate  # noqa: E402
 from judges import JUDGE_FILTERED, judge_hack, text_features  # noqa: E402
+from wrap_prompts_with_eval_cues import CONDITIONS, framed  # noqa: E402
 
 HACK, NO_HACK, UNPARSED = 1, 0, -1
+CUE_KEYS = ("framing", "template_index", "cue_family")  # which cue a framed or cued prompt got (gt_gap.py too)
+
+
+def cue_metadata(meta: dict) -> dict:
+    return {k: meta[k] for k in CUE_KEYS if k in meta}
 
 
 def load_prompts() -> list[dict]:
@@ -57,7 +69,7 @@ def hack_judge() -> Scorer:
         return Score(value=HACK if verdict else NO_HACK, answer=answer,
                      metadata={"verdict_parsed": verdict is not None, "judge_reasoning": reasoning,
                                "judge_filtered": reasoning == JUDGE_FILTERED,
-                               "metric_family": meta["metric_family"],
+                               "metric_family": meta["metric_family"], **cue_metadata(meta),
                                **text_features(answer, meta.get("target_terms"))})
     return score
 
@@ -123,7 +135,7 @@ def unstated_hack_judge() -> Scorer:
                      metadata={"verdict_parsed": verdict is not None, "judge_reasoning": reasoning,
                                "judge_filtered": reasoning == JUDGE_FILTERED,
                                "metric_family": meta["metric_family"], "tier": meta["tier"],
-                               **text_features(answer, meta.get("target_terms"))})
+                               **cue_metadata(meta), **text_features(answer, meta.get("target_terms"))})
     return score
 
 
@@ -131,3 +143,32 @@ def unstated_hack_judge() -> Scorer:
 def heldout_reward_hacking_unstated(tier: str = "none", reasoning_effort: str = "medium") -> Task:
     return Task(dataset=unstated_dataset(tier), solver=seeded_generate(), scorer=unstated_hack_judge(),
                 config=generate_config(reasoning_effort), name=f"heldout_reward_hacking_unstated_{tier}")
+
+
+FRAMED_TIERS = ("stated",) + UNSTATED_TIERS
+
+
+def tier_prompt(p: dict, index: int, tier: str) -> str:
+    return p["user"] if tier == "stated" else unstated_prompt(p, index, tier)
+
+
+def framed_dataset(tier: str, framing: str) -> MemoryDataset:
+    """The tier's prompts inside one framing condition. metadata['user'] stays the unframed prompt: it is what the
+    judge sees."""
+    if tier not in FRAMED_TIERS or framing not in CONDITIONS:
+        raise ValueError(f"tier must be one of {FRAMED_TIERS} and framing one of {CONDITIONS}, got {tier!r}, {framing!r}")
+    samples = []
+    for i, p in enumerate(load_prompts()):
+        user = tier_prompt(p, i, tier)
+        shown, index = framed(user, framing, p["id"])
+        samples.append(Sample(id=p["id"], input=shown,
+                              metadata={**p, "user": user, "stated_user": p["user"], "framed_user": shown,
+                                        "tier": tier, "framing": framing, "template_index": index}))
+    return MemoryDataset(samples, name=f"heldout_reward_hacking_framed_{tier}_{framing}")
+
+
+@task
+def heldout_reward_hacking_framed(tier: str = "stated", framing: str = "eval", reasoning_effort: str = "medium") -> Task:
+    scorer_ = hack_judge() if tier == "stated" else unstated_hack_judge()
+    return Task(dataset=framed_dataset(tier, framing), solver=seeded_generate(), scorer=scorer_,
+                config=generate_config(reasoning_effort), name=f"heldout_reward_hacking_framed_{tier}_{framing}")

@@ -46,7 +46,7 @@ OFF="EVAL_FLAGS=--no-reasoning"
 #    the SRH rows of data/processed (the merge check only bounds bf16 rounding).
 run stage 1 bf16
 run stage 1 fetch_adapters VARIANT=_cotreg
-run stage 2 merge VARIANT=_cotreg DATA_DIR=data/processed
+run stage 2 merge VARIANT=_cotreg SFT_DATA_DIR=data/processed
 
 # 2. 'Reasoning: low' diagnostic.
 LOW=(EVAL_FLAGS=--reasoning-effort=low EVAL_TAG=_reasoning_low)

@@ -49,7 +49,8 @@ STEP_SCRIPTS = {
     "check_isambard_ready.sh": 'echo "PASS  stub preflight $*"; exit "${FAKE_PREFLIGHT_RC:-0}"\n',
     "setup_gpu_node.sh": 'echo "setup_gpu_node $* WITH_SGLANG=${WITH_SGLANG:-0}" >> "$FAKE_DIR/calls"; sleep "${FAKE_SETUP_SECONDS:-0}"\n',
     "run_pilot_stage_on_gpu_node.sh": '''echo "stage $1 EVAL_TASKS=${EVAL_TASKS:-} ORGANISM=${ORGANISM:-} HALF=${HALF:-} \\
-EVAL_TAG=${EVAL_TAG:-} EVAL_FLAGS=${EVAL_FLAGS-unset} REUSE_RL_REF=${REUSE_RL_REF:-}" >> "$FAKE_DIR/calls"
+EVAL_TAG=${EVAL_TAG:-} EVAL_FLAGS=${EVAL_FLAGS-unset} REUSE_RL_REF=${REUSE_RL_REF:-} TREAT_ARM=${TREAT_ARM:-} \\
+BRINGUP_MAX_MEM_GB=${BRINGUP_MAX_MEM_GB:-}" >> "$FAKE_DIR/calls"
 [ "$1" != "${FAKE_FAIL_STAGE:-}" ] || { echo "$(date -u +%FT%TZ) $1 FAILED: fake" >> "$NVME/pilot_state/STATUS"; exit 1; }
 ''',
     "run_judge_panel_on_gpu_node.sh": 'echo "panel $*" >> "$FAKE_DIR/calls"\n',
@@ -228,7 +229,47 @@ def test_job_runs_every_step_before_stage1_then_waits_for_the_learning_rate(isam
     assert code == 0, out
     assert "setup already done; skipping" in isambard.status()
     assert [c.split()[1] for c in isambard.calls() if c.startswith("sdf")] == ["lr_test", "stage1"]
+    for step in ("stage1", "gap_base", "gt", "probes"):  # the behavioral-gap steps come after stage1
+        assert (isambard.state / f"isambard_{step}.done").exists()
     assert "DONE: all steps finished" in isambard.status()
+
+
+def test_gap_base_step_checks_the_framing_then_runs_base_on_the_grid_both_settings(isambard):
+    code, out = isambard.run("gap_base", job=True)
+    assert code == 0, out
+    calls = isambard.calls()
+    assert "--tasks framing_minimal_pairs --model mockllm/model" in calls[0]
+    base = [c for c in calls if c.startswith("stage base_eval")]
+    assert len(base) == 2
+    assert "EVAL_TAG=_gap_panel_reasoning_on EVAL_FLAGS= " in base[0]
+    assert "EVAL_TAG=_gap_panel EVAL_FLAGS=--no-reasoning" in base[1]
+    assert all("framing_none_deployment" in c and "gt_heldout_deployment" in c for c in base)
+    (panel,) = [c for c in calls if c.startswith("panel")]
+    assert panel == ("panel results/framing_minimal_pairs_panel.logs.json "
+                     "results/base_own_gap_panel_reasoning_on.logs.json results/base_own_gap_panel.logs.json")
+    assert [c.split()[1] for c in calls[-2:]] == ["gap_compare", "gap_compare"]
+
+
+def test_gt_step_builds_trains_merges_and_evaluates_the_pair_then_judges_and_compares(isambard):
+    code, out = isambard.run("gt", job=True)
+    assert code == 0, out
+    calls = isambard.calls()
+    stages = [c.split()[1] for c in calls if c.startswith("stage")]
+    assert stages == ["gt_data", "bringup", "train", "merge", "arm_eval", "arm_eval", "gap_compare", "gap_compare"]
+    assert "BRINGUP_MAX_MEM_GB=90" in next(c for c in calls if c.startswith("stage bringup"))
+    assert all("TREAT_ARM=gt_conditional" in c for c in calls if c.split()[1] in ("train", "merge", "arm_eval"))
+    evals = [c for c in calls if c.startswith("stage arm_eval")]
+    assert "EVAL_TAG=_gap_panel_reasoning_on EVAL_FLAGS= " in evals[0] and "EVAL_FLAGS=--no-reasoning" in evals[1]
+    assert all("gt_train_eval" in c and ",hacking," in c and "mmlu" in c for c in evals)
+    (panel,) = [c for c in calls if c.startswith("panel")]
+    assert panel.count("results/gt_") == 4
+
+
+def test_gt_step_needs_two_nodes(isambard):
+    isambard.remove_slurm()  # no Slurm: directly on one node
+    code, out = isambard.run("gt")
+    assert code != 0, out
+    assert "it needs two nodes" in isambard.status()
 
 
 def test_redwood_step_serves_its_lora_checked_and_judges_both_settings_beside_base(isambard):

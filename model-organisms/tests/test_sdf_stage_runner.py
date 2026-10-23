@@ -56,7 +56,8 @@ esac
 LEAKY_SETTINGS = {"HOST_A", "HOST_B", "HALF_A", "HALF_B", "ALL_GPUS", "JUDGING", "SDF_ATTN", "SDF_TRAIN_ENV",
                   "SDF_EVAL_TAG", "SDF_TRAIN_HOURS", "SDF_SHORT_TRAIN_HOURS", "SDF_TIMEOUT", "SDF_LR", "LR_TEST_LRS",
                   "EVAL_TAG", "EVAL_FLAGS", "EVAL_TASKS", "BF16_GPUS", "NVME", "SLURM_JOB_ID", "SLURM_CPUS_ON_NODE",
-                  "ISAMBARD_REPO", "ISAMBARD_NODES", "ISAMBARD_GPUS_PER_NODE",
+                  "ISAMBARD_REPO", "ISAMBARD_NODES", "ISAMBARD_GPUS_PER_NODE", "TREAT_ARM", "CTRL_ARM", "VARIANT",
+                  "DATA_DIR", "SFT_DATA_DIR", "BRINGUP_MAX_MEM_GB",
                   "CUDA_VISIBLE_DEVICES",  # set by Slurm on a GPU node
                   # From the real run's env file (Isambard's setup runs these tests inside the run): uploads to the
                   # real HF repo and settings for real Slurm jobs

@@ -52,7 +52,7 @@ stage 1 compare "${FORCE[@]}"
 rm -rf "$NVME/merged/srh_mixed_seed0" "$NVME/merged/control_seed0" && log "removed seed-0 merged models"
 
 # (A) CoT format regularizer: generate, rebuild both arms' data, retrain, merge, evaluate.
-COTREG=(VARIANT=_cotreg DATA_DIR=data/processed_cotreg)
+COTREG=(VARIANT=_cotreg SFT_DATA_DIR=data/processed_cotreg)
 stage 1 gen_reasoning
 stage 1 bringup   # no-op if done; train requires it
 stage 5 train "${COTREG[@]}" && {

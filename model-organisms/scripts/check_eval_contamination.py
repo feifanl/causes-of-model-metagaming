@@ -10,7 +10,8 @@ the prompts' n-grams, so memory stays small.
         --corpus "data/raw/sdf/chunk_*.parquet" --out results/contamination_heldout.json
 
 Prompt files: .jsonl (fields prompt/user/input/question), .yaml (every string under a key named
-prompt/question/description/tests, or plain list items), or .txt (one prompt per line).
+prompt/question/description/tests, or plain list items; for the cue files of BEHAVIORAL_GAP_PLAN.md, every
+template and every eval/deployment cue), or .txt (one prompt per line).
 """
 
 import argparse
@@ -25,6 +26,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 PROMPT_KEYS = ("prompt", "user", "input", "question", "description", "tests")
 WORD = re.compile(r"[a-z0-9_]+")
+# evals/data/eval_framing_templates.yaml ('template') and data/gt_cue_families.yaml (cues listed under each condition).
+CUE_KEYS = ("template", "eval", "deployment")
 
 
 def words(text: str) -> list[str]:
@@ -43,7 +46,7 @@ def strings_in(node, key: str | None = None) -> list[str]:
         return [s for k, v in node.items() for s in strings_in(v, k)]
     if isinstance(node, list):
         return [s for item in node for s in strings_in(item, key)]
-    if isinstance(node, str) and (key in PROMPT_KEYS or key is None or key in ("distant", "trigger")):
+    if isinstance(node, str) and (key in PROMPT_KEYS or key is None or key in ("distant", "trigger") + CUE_KEYS):
         return [node]
     return []
 

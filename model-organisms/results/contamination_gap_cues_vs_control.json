@@ -1,0 +1,12 @@
+{
+  "prompt_files": [
+    "evals\\data\\eval_framing_templates.yaml",
+    "data\\gt_cue_families.yaml"
+  ],
+  "corpus": "data/raw/sdf_control/sdf_control_docs.jsonl",
+  "n": 8,
+  "prompts": 64,
+  "prompts_shorter_than_n": 29,
+  "prompts_with_hits": 0,
+  "hits": []
+}
