@@ -21,6 +21,9 @@ CAPABILITY = "gpqa,gpqa_main,ifbench,livecodebench"
 # Git Bash on Windows, so the fake server would outlive its stage: it exits with its parent stage
 # instead, and curl ignores a marker whose server is gone (on Linux the runner's group kill does it).
 # LoRA modules are listed next to the served model, as vLLM does; every server's flags are kept.
+# A server removes the marker only while it is still its own: the TERM trap waits for the current
+# sleep, so a late removal would otherwise delete the next stage's marker on the same port, and that
+# server would look dead until it timed out (Isambard setup, 2026-10-25).
 FAKE_VLLM = '''name=""; port=""; loras=""; flags="$*"
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -29,17 +32,19 @@ while [ $# -gt 0 ]; do
     --lora-modules) loras="$loras ${2%%=*}"; shift ;;
   esac; shift
 done
-trap 'rm -f "$FAKE_DIR/served_$port"; exit 0' TERM
-echo "$name $$$loras" > "$FAKE_DIR/served_$port"
+f="$FAKE_DIR/served_$port"
+drop() { { read -r _ owner _ < "$f"; } 2>/dev/null && [ "$owner" = "$$" ] && rm -f "$f"; }
+trap 'drop; exit 0' TERM
+echo "$name $$$loras" > "$f"
 echo "$flags" >> "$FAKE_DIR/vllm_flags"
 for _ in $(seq 600); do kill -0 "$PPID" 2>/dev/null || break; sleep 0.2; done
-rm -f "$FAKE_DIR/served_$port"
+drop
 '''
 FAKE_CURL = '''url="${@: -1}"; url="${url#*://}"; port="${url%%/*}"; port="${port##*:}"
 f="$FAKE_DIR/served_$port"
 [ -f "$f" ] || exit 7
 read -r name pid loras < "$f"
-kill -0 "$pid" 2>/dev/null || { rm -f "$f"; exit 7; }
+kill -0 "$pid" 2>/dev/null || exit 7  # a dead server's marker; the next server on this port overwrites it
 ids=""
 for m in $name $loras; do ids="$ids{\\"id\\": \\"$m\\"},"; done
 printf '{"data": [%s]}' "${ids%,}"
