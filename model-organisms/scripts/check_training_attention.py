@@ -28,7 +28,7 @@ from train_sft import BASE_MODEL, BASE_REVISION, TINY_OVERRIDES, mask_packed_doc
 DOC_LENGTHS = (300, 700, 1100)
 SMALL_OVERRIDES = {"num_hidden_layers": 2, "num_local_experts": 4, "num_experts_per_tok": 2, "experts_per_token": 2,
                    "intermediate_size": 256}
-MAX_LOSS_REL_DIFF = 1e-2   # bf16 kernels round differently from eager
+MAX_LOSS_REL_DIFF = 1e-2   # fused kernels round differently from eager
 MIN_GRAD_COSINE = 0.99
 MAX_FRACTION_OF_LEAK = 0.1  # candidate's distance from the reference vs packing that ignores doc boundaries
 
@@ -121,12 +121,15 @@ def main(argv=None):
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--model", default=BASE_MODEL)
     parser.add_argument("--revision", default=BASE_REVISION)
-    parser.add_argument("--tiny", action="store_true", help="CPU self-test: tiny config, float32.")
+    parser.add_argument("--tiny", action="store_true", help="CPU self-test: tiny config.")
     args = parser.parse_args(argv)
 
     mask_packed_docs()  # what train_sdf.py does for non-flash attention; flash kernels read position_ids
     device = "cpu" if args.tiny or not torch.cuda.is_available() else "cuda"
-    dtype = torch.float32 if device == "cpu" else torch.bfloat16
+    # float32 on the GPU too: the check is about masking, sinks and windows, not rounding. In bf16 the sharpened
+    # random model is so sensitive that eager itself scored a gradient cosine of 0.92 against its per-doc run,
+    # and flex_attention 0.2; in float32 both scored 1.0000 (H100, torch 2.14, 2026-10-28). Training stays bf16.
+    dtype = torch.float32
     config = small_config(args.model, args.revision, args.tiny)
     model = build_model(config, device, dtype)
     docs = make_docs(config.vocab_size, DOC_LENGTHS, device)

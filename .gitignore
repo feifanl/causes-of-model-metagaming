@@ -28,3 +28,11 @@ model-organisms/node_sync/
 
 # Judge check replays SRH training responses (benchmark canary; see DECISIONS.md "Data in git").
 model-organisms/results/judge_validation.json
+
+# Training-awareness pilot: prompts and SAD items are rebuilt on the node, never committed (SAD's license
+# forbids plaintext questions anywhere scrapable); only data/STATS.md is.
+training-awareness/data/*
+!training-awareness/data/STATS.md
+training-awareness/logs/
+training-awareness/scans/
+training-awareness/results/raw/
