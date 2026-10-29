@@ -40,12 +40,17 @@ printf '{"data": [{"id": "%s"}]}' "$(cat "$FAKE_DIR/served_$port")"
 ''',
     # Skips torchrun's own flags (--nproc_per_node 8, or the two-node rendezvous flags).
     "torchrun": 'while [ $# -gt 0 ] && [[ "$1" != scripts/* ]]; do shift; done\nexec "$PY" "$@"\n',
-    # Runs the command here, as if on the node(s) in --nodelist; the fakes record it as FAKE_HOST.
+    # Runs the command here, as if on the node(s) in --nodelist; the fakes record it as FAKE_HOST. Like Slurm, runs
+    # the first file named like the command on PATH, executable or not (bash would skip it).
     "srun": '''host=""
 while [ $# -gt 0 ]; do
   case "$1" in --nodelist=*) host="${1#--nodelist=}" ;; -*) ;; *) break ;; esac; shift
 done
-FAKE_HOST="$host" exec "$@"
+cmd=$1; shift
+case "$cmd" in */*) ;; *) IFS=: read -ra dirs <<< "$PATH"
+  for d in "${dirs[@]}"; do [ -e "$d/$cmd" ] && { cmd="$d/$cmd"; break; }; done ;; esac
+[ -x "$cmd" ] || { echo "error: execve(): $cmd: Permission denied" >&2; exit 13; }
+FAKE_HOST="$host" exec "$cmd" "$@"
 ''',
     "python": '''case "$1" in
   scripts/*.py) exec "$REAL_PY" "$FAKES" "$@" ;;
@@ -64,6 +69,8 @@ LEAKY_SETTINGS = {"HOST_A", "HOST_B", "HALF_A", "HALF_B", "ALL_GPUS", "JUDGING",
                   "HF_WRITE_TOKEN", "HF_ARTIFACT_REPO", "SBATCH_ACCOUNT", "SBATCH_PARTITION", "NOTIFY_EMAIL",
                   "ISAMBARD_JOB_NAME", "ISAMBARD_JOB_HOURS", "MAX_JOBS", "HEARTBEAT_SECONDS"}
 MISSING_ON_SOME_SYSTEMS = {"setsid": 'exec "$@"\n', "flock": 'shift  # lock file\nexec "$@"\n'}
+# uv's installer leaves ~/.local/bin/env, a script to source, not run; on Isambard it comes before /usr/bin on PATH.
+UV_ENV = '# a script to source, not run\nexport PATH="$HOME/.local/bin:$PATH"\n'
 
 
 def posix(path) -> str:
@@ -93,6 +100,7 @@ class Node:
             f = self.bin / name
             f.write_text("#!/usr/bin/env bash\n" + body, newline="\n")
             f.chmod(f.stat().st_mode | stat.S_IEXEC)
+        (self.bin / "env").write_text(UV_ENV, newline="\n")  # not executable, first on PATH: as on Isambard
 
     def write_corpus(self, name: str):
         data = self.repo / "data" / name

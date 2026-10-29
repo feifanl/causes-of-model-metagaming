@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from test_sdf_stage_runner import BASH, LEAKY_SETTINGS, MISSING_ON_SOME_SYSTEMS, posix
+from test_sdf_stage_runner import BASH, LEAKY_SETTINGS, MISSING_ON_SOME_SYSTEMS, UV_ENV, posix
 
 MO = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not BASH or "system32" in BASH.lower(), reason="needs bash (not WSL's)")
@@ -38,8 +38,13 @@ esac
   *index*) printf "0\\n1\\n2\\n3\\n" ;;
 esac
 ''',
+    # Like Slurm, runs the first file named like the command on PATH, executable or not (bash would skip it).
     "srun": '''while [ $# -gt 0 ]; do case "$1" in -*) ;; *) break ;; esac; shift; done
-exec "$@"
+cmd=$1; shift
+case "$cmd" in */*) ;; *) IFS=: read -ra dirs <<< "$PATH"
+  for d in "${dirs[@]}"; do [ -e "$d/$cmd" ] && { cmd="$d/$cmd"; break; }; done ;; esac
+[ -x "$cmd" ] || { echo "error: execve(): $cmd: Permission denied" >&2; exit 13; }
+exec "$cmd" "$@"
 ''',
     "uv": '[ "$1 $2" = "python find" ] && echo "$REAL_PY"; exit 0\n',
     "flock": "exit 0  # the job's lock on the data dir: always free here\n",
@@ -100,6 +105,7 @@ class Login:
         tools.update(TOOLS)
         for name, body in tools.items():
             write_exe(self.bin / name, body)
+        (self.bin / "env").write_text(UV_ENV, newline="\n")  # not executable, first on PATH: as on Isambard
         env_file = tmp / "home" / ".config" / "spar" / "env"
         env_file.parent.mkdir(parents=True)
         env_file.write_text(f"DATA_DIR={posix(self.data)}\n", newline="\n")

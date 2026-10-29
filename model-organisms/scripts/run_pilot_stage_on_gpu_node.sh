@@ -152,11 +152,13 @@ is_here() { [ -z "$1" ] || [ "$1" = "$(hostname -s)" ] || [ "$1" = "$(hostname)"
 half_cmd() {  # half_cmd <A|B>: sets HALF_CMD, the prefix that runs a command on that half's GPUs and node
   local gpus host
   gpus=$(half_list "$1"); host=$(half_host "$1")
+  # /usr/bin/env, not env: srun runs the first env on PATH, and on Isambard that is uv's ~/.local/bin/env, a
+  # non-executable script to source (every two-node srun failed with "execve(): Permission denied", 2026-10-28).
   if is_here "$host"; then
-    HALF_CMD=(env "CUDA_VISIBLE_DEVICES=$gpus")
+    HALF_CMD=(/usr/bin/env "CUDA_VISIBLE_DEVICES=$gpus")
   else  # a whole-node step beside the others in this job (--overlap): all its CPUs and memory
     HALF_CMD=(srun --overlap --nodes=1 --ntasks=1 --nodelist="$host" --gpus-per-node="$(n_gpus "$gpus")"
-              --cpus-per-task="${SLURM_CPUS_ON_NODE:-1}" --mem=0 --input=none env "CUDA_VISIBLE_DEVICES=$gpus")
+              --cpus-per-task="${SLURM_CPUS_ON_NODE:-1}" --mem=0 --input=none /usr/bin/env "CUDA_VISIBLE_DEVICES=$gpus")
   fi
 }
 on_half() { local half=$1; shift; half_cmd "$half"; "${HALF_CMD[@]}" "$@"; }
@@ -559,14 +561,14 @@ stage_sdf_train() {
   [ -f "$base_nll" ] || on_half A timeout 1h "$PY" scripts/score_heldout_nll.py --model "$BF16" \
       --data "$data/sdf_heldout.jsonl" --out "$base_nll"
   rm -rf "$out"   # checkpoints left by a failed attempt would pass the checks below
-  local launch=(env "CUDA_VISIBLE_DEVICES=$ALL_GPUS" "$TORCHRUN" --nproc_per_node "$(n_gpus "$ALL_GPUS")") train_env=()
+  local launch=(/usr/bin/env "CUDA_VISIBLE_DEVICES=$ALL_GPUS" "$TORCHRUN" --nproc_per_node "$(n_gpus "$ALL_GPUS")") train_env=()
   if [ -n "$HOST_B" ] && ! is_here "$HOST_B"; then
     # Two nodes: one torchrun per node, rendezvous on node A. FSDP shards over all 8 GPUs, as on one 8-GPU node
     # (one 4x96 GB node cannot hold the training state). SDF_TRAIN_ENV: NCCL settings for the inter-node network.
     [ -n "${SDF_TRAIN_ENV:-}" ] && mapfile -t train_env < "$SDF_TRAIN_ENV"
     launch=(srun --overlap --nodes=2 --ntasks-per-node=1 --nodelist="$HOST_A,$HOST_B" --gpus-per-node="$(n_gpus "$HALF_A")"
             --cpus-per-task="${SLURM_CPUS_ON_NODE:-1}" --mem=0 --input=none --kill-on-bad-exit=1
-            env "${train_env[@]}" "$TORCHRUN" --nnodes 2 --nproc_per_node "$(n_gpus "$HALF_A")"
+            /usr/bin/env "${train_env[@]}" "$TORCHRUN" --nnodes 2 --nproc_per_node "$(n_gpus "$HALF_A")"
             --rdzv-backend c10d --rdzv-endpoint "$HOST_A:29500" --rdzv-id "sdf_$SDF_RUN")
   fi
   # SDF_ATTN: training attention for platforms without vllm-flash-attn3 (check_training_attention.py picks it).

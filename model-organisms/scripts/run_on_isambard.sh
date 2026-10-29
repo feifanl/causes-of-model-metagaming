@@ -274,9 +274,10 @@ pick_nccl_settings() {  # the first NCCL setup with a working two-node all-gathe
   for cand in modules sockets default; do
     [ -f "$STATE/nccl_env_$cand.txt" ] || continue
     mapfile -t envs < "$STATE/nccl_env_$cand.txt"
+    # /usr/bin/env: srun runs the first env on PATH, here uv's non-executable ~/.local/bin/env (2026-10-28).
     out=$(timeout 10m srun --overlap --nodes=2 --ntasks-per-node=1 --nodelist="$HOST_A,$HOST_B" --gpus-per-node=4 \
             --cpus-per-task="${SLURM_CPUS_ON_NODE:-1}" --mem=0 --input=none --kill-on-bad-exit=1 \
-            env "${envs[@]}" "$REPO/venv/bin/torchrun" --nnodes 2 --nproc_per_node "$(echo "$HALF_A" | tr ',' '\n' | grep -c .)" \
+            /usr/bin/env "${envs[@]}" "$REPO/venv/bin/torchrun" --nnodes 2 --nproc_per_node "$(echo "$HALF_A" | tr ',' '\n' | grep -c .)" \
             --rdzv-backend c10d --rdzv-endpoint "$HOST_A:29501" --rdzv-id "nccl_${cand}_$SLURM_JOB_ID" \
             "$MO/scripts/check_nccl_across_nodes.py" 2> "$STATE/nccl_check_$cand.log" | grep '^{' | tail -1)
     say "two-node NCCL ($cand): ${out:-failed; see $STATE/nccl_check_$cand.log}"
