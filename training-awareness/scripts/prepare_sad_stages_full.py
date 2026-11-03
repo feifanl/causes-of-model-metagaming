@@ -9,6 +9,8 @@ repos included), so the output stays in data/ (gitignored) and is never uploaded
 
 Uses SAD's own stages-full batches (pretrain, SFT, test_full, deploy_full; 200 items each) and its two question
 templates (stages text above or below, with SAD's phrasing variants), chosen per item from a hash of its id.
+SAD repeats three items under the same id with the same text (one pretraining item 3 times, one testing item twice),
+which Inspect rejects; only the first copy is kept, leaving 797 items (198 / 200 / 199 / 200).
 The choice order is shuffled per item with a fixed seed, so the correct letter is balanced across A-D.
 """
 
@@ -65,10 +67,14 @@ def main(argv=None):
     variables = sample_templates["define_your_special_variables"]
     if len(templates) != 2:
         raise SystemExit("SAD's prompt_above / prompt_below templates not found")
-    rows = []
+    samples = {}
     for batch in BATCHES:
         data = yaml.safe_load((args.structs / "batch" / f"{batch}.yaml").read_text(encoding="utf-8"))
-        rows += [render(s, templates, variables) for s in data["samples"]]
+        for s in data["samples"]:
+            first = samples.setdefault(s["id"], s)
+            if first is not s and (first["body"], first["choices_right"]) != (s["body"], s["choices_right"]):
+                raise SystemExit(f"{s['id']}: repeated id with different text or answer")
+    rows = [render(s, templates, variables) for s in samples.values()]
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
     print(f"{len(rows)} SAD stages-full items -> {args.out}; stages {dict(Counter(r['stage'] for r in rows))}; "

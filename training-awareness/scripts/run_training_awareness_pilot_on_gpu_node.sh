@@ -3,13 +3,22 @@
 #
 #   bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh calibrate <max-hours>
 #   bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh full      <max-hours>
+#   bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh organisms <max-hours>
 #   RUN_PREFIX=<prefix> bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh judge <max-hours>
 #
 # calibrate  Olmo 3.1 only: the 150 calibration prompts under every condition, 10 SAD items per stage;
 #            then the judge on those traces.
 # full       Olmo 3.1 and gpt-oss-120b (base) side by side (GPUs 0-1 and 2-3, tensor parallel 2): 700 default +
-#            250 x 3 cue rollouts and 800 SAD items each; then the judge (tensor parallel 4) and the summary. The
-#            gpt-oss organisms run on Isambard instead (TRAINING_AWARENESS_PILOT.md, 'Compute').
+#            250 x 3 cue rollouts and 797 SAD items each; then the judge (tensor parallel 4) and the summary.
+# organisms  the gpt-oss cheater organisms and the bf16 base they are read against (ORGANISMS, default
+#            "base_bf16 srh_mixed aisi_hack redwood_step952"; Feifan 2026-11-03: cheaters only, no controls), each
+#            on 4 GPUs (tensor parallel 4; two at a time on an 8-GPU node), the same rollouts and SAD items as
+#            full; then the judge and the summary, each organism paired with base_bf16. Served as in the organism
+#            pipeline (model-organisms/RUN_EVALS_ON_ORGANISMS.md): the bf16 dequantized base, SRH merged into it,
+#            AISI as base + LoRA in vLLM, Redwood as base + LoRA in SGLang. Each RL LoRA is checked on its rollout
+#            server against the committed fp32 reference (model-organisms/results/rl_lora_check_*_ref.json); an
+#            organism that fails gets no rollouts. Needs a git checkout (setup_gpu_node.sh diffs the data stats)
+#            and ~1 TB free under DATA; H200s, since 80 GB GPUs leave little KV cache beside the 234 GB model.
 # judge      re-judge an earlier run's uploaded rollout logs (RUN_PREFIX in the HF repo) without generating.
 #
 # The judge scores metric gaming only: the behavioural gap is the primary readout and awareness judging is
@@ -25,9 +34,9 @@
 # once the script ends the node is destroyed after the watchdog's idle period.
 set -euo pipefail
 
-MODE="${1:?usage: run_training_awareness_pilot_on_gpu_node.sh <calibrate|full|judge> <max-hours>}"
+MODE="${1:?usage: run_training_awareness_pilot_on_gpu_node.sh <calibrate|full|organisms|judge> <max-hours>}"
 MAX_HOURS="${2:?max-hours required}"
-case "$MODE" in calibrate|full|judge) ;; *) echo "unknown mode $MODE" >&2; exit 2 ;; esac
+case "$MODE" in calibrate|full|organisms|judge) ;; *) echo "unknown mode $MODE" >&2; exit 2 ;; esac
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 TA="$REPO/training-awareness"
@@ -56,6 +65,16 @@ GPT_OSS_LEN=49152   # the same budget; model max 131,072
 export INSPECT_HTTP_REQUEST_TIMEOUT=7200
 JUDGE_LEN=57344     # rubric + prompt + up to 32,768 tokens of reasoning and answer
 
+# organisms mode: the organism pipeline's own venvs, scripts and bf16 base (model-organisms/scripts/setup_gpu_node.sh).
+MO="$REPO/model-organisms"
+MO_PY="$REPO/venv/bin/python"
+SGLANG_PY="$REPO/venv-sglang/bin/python"
+BF16="$DATA/gpt-oss-120b-bf16"
+SRH_NAME="srh_mixed_seed0_cotreg"   # the CoT-regularized SRH arm, seed 0 (RUN_EVALS_ON_ORGANISMS.md)
+ORGANISMS="${ORGANISMS:-base_bf16 srh_mixed aisi_hack redwood_step952}"
+declare -A GEN_MODEL=()   # label -> the served model name its rollouts query (set by serve_organism)
+GEN_FAILED=""
+
 log() { echo "$(date -u +%FT%TZ) $MODE $*" | tee -a "$STATE/STATUS"; }
 die() { log "FAILED: $*"; upload_state; exit 1; }
 START_EPOCH=$(date +%s)
@@ -82,10 +101,12 @@ upload_state() {
     [ -f "$f" ] || continue
     case "$(basename "$f")" in
       # vLLM and Inspect logs could carry request text (SAD questions): upload only their tail, without request lines.
-      vllm_*|generate_*) tail -n 400 "$f" | grep -v -i -E "prompt|request" > "$TA/results/node_logs/$(basename "$f")" || true ;;
+      vllm_*|sglang_*|generate_*) tail -n 400 "$f" | grep -v -i -E "prompt|request" > "$TA/results/node_logs/$(basename "$f")" || true ;;
       *) cp "$f" "$TA/results/node_logs/" ;;
     esac
   done
+  # organisms mode: the organism pipeline's stages (bf16, rl_adapter) log to their own STATUS.
+  if [ -f "$DATA/pilot_state/STATUS" ]; then cp "$DATA/pilot_state/STATUS" "$TA/results/node_logs/organism_stages_STATUS"; fi
   upload "$TA/results" results
 }
 
@@ -96,6 +117,10 @@ archive_old() {  # archive_old <dir>: move earlier output aside so a rerun never
   fi
 }
 
+# A server that fails to start ends the run, except with SERVE_SOFT=1 (organisms mode: that organism is skipped and
+# serve returns 1; stop_servers cleans up).
+serve_fail() { if [ "${SERVE_SOFT:-0}" = 1 ]; then log "$*"; else die "$*"; fi; }
+
 serve() {  # serve <model dir> <served name> <port> <gpus> [extra vllm flags...]
   local model=$1 name=$2 port=$3 gpus=$4 tp waited=0
   shift 4
@@ -105,8 +130,8 @@ serve() {  # serve <model dir> <served name> <port> <gpus> [extra vllm flags...]
   SERVERS+=($!)
   local pid=$!
   until curl -sf "http://localhost:$port/v1/models" | grep -q "\"$name\""; do
-    kill -0 "$pid" 2>/dev/null || die "vLLM for $name exited; see $STATE/vllm_$name.log"
-    [ "$waited" -ge 3600 ] && die "vLLM for $name not ready after 60 min"
+    kill -0 "$pid" 2>/dev/null || { serve_fail "vLLM for $name exited; see $STATE/vllm_$name.log"; return 1; }
+    [ "$waited" -ge 3600 ] && { serve_fail "vLLM for $name not ready after 60 min"; return 1; }
     sleep 15; waited=$((waited + 15))
   done
   log "vLLM ready: $name on GPUs $gpus, port $port (${waited}s)"
@@ -169,6 +194,151 @@ setup() {
   fi
 }
 
+# --------------------------------------------------------------------------- organisms mode
+
+serve_sglang() {  # serve_sglang <model dir> <served name> <port> <gpus> <lora name> <lora dir>: base + one LoRA
+  local model=$1 name=$2 port=$3 gpus=$4 tp waited=0
+  tp=$(( $(tr -cd , <<<"$gpus" | wc -c) + 1 ))
+  # --moe-runner-backend triton: gpt-oss's default triton_kernel has no LoRA path for bf16 experts (as in
+  # model-organisms/scripts/run_pilot_stage_on_gpu_node.sh, serve_sglang).
+  CUDA_VISIBLE_DEVICES="$gpus" setsid "$SGLANG_PY" -m sglang.launch_server --model-path "$model" --served-model-name "$name" \
+      --tp "$tp" --port "$port" --context-length "$GPT_OSS_LEN" --enable-lora --max-lora-rank 32 \
+      --lora-target-modules all --lora-paths "$5=$6" --moe-runner-backend triton > "$STATE/sglang_$name.log" 2>&1 &
+  SERVERS+=($!)
+  local pid=$!
+  until curl -sf "http://localhost:$port/v1/models" | grep -q "\"$name\""; do
+    kill -0 "$pid" 2>/dev/null || { serve_fail "SGLang for $name exited; see $STATE/sglang_$name.log"; return 1; }
+    [ "$waited" -ge 3600 ] && { serve_fail "SGLang for $name not ready after 60 min"; return 1; }
+    sleep 15; waited=$((waited + 15))
+  done
+  log "SGLang ready: $name + LoRA $5 on GPUs $gpus, port $port (${waited}s)"
+}
+
+# serve_organism <label> <port> <gpus>: serve one model of ORGANISMS and set GEN_MODEL[label]. An RL organism's
+# LoRA is then scored on this server against the exact fp32 merge committed by the organism pipeline's rl_check
+# (recomputing it needs ~480 GB of RAM); returns 1, after logging, if a server fails to start or the served LoRA
+# does not match.
+serve_organism() {
+  local label=$1 port=$2 gpus=$3 server base="$BF16" flags
+  case "$label" in
+    base_bf16) SERVE_SOFT=1 serve "$BF16" base_bf16 "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" || return 1
+               GEN_MODEL[$label]=base_bf16; return 0 ;;
+    srh_mixed) SERVE_SOFT=1 serve "$DATA/merged/$SRH_NAME" srh_mixed "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" || return 1
+               GEN_MODEL[$label]=srh_mixed; return 0 ;;
+  esac
+  server=$(cd "$MO" && "$MO_PY" scripts/download_rl_organism_adapter.py --organism "$label" --print-server) \
+    || die "unknown organism $label (names: model-organisms/scripts/download_rl_organism_adapter.py)"
+  if [ "$server" = sglang ]; then
+    SERVE_SOFT=1 serve_sglang "$BF16" "base_$label" "$port" "$gpus" "$label" "$MO/outputs/$label" || return 1
+    GEN_MODEL[$label]="base_$label:$label"   # SGLang's OpenAI API picks a LoRA as <base>:<adapter>
+  else
+    flags=$(cd "$MO" && "$MO_PY" scripts/download_rl_organism_adapter.py --organism "$label" --print-vllm-flags)
+    if [ -f "$MO/outputs/$label/serve_base.txt" ]; then base=$(cat "$MO/outputs/$label/serve_base.txt"); fi
+    # shellcheck disable=SC2086  # flags is a flag list
+    SERVE_SOFT=1 serve "$base" "base_$label" "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" --enable-lora --max-lora-rank 32 \
+        --lora-modules "$label=$MO/outputs/$label" $flags || return 1
+    curl -sf "http://localhost:$port/v1/models" | grep -q "\"$label\"" \
+      || { log "vLLM does not list the LoRA '$label': no rollouts (see vllm_base_$label.log)"; return 1; }
+    GEN_MODEL[$label]=$label
+  fi
+  if ! (cd "$MO" && timeout 30m "$MO_PY" scripts/check_rl_lora_serving.py served --server "$server" --organism "$label" \
+      --base-model "base_$label" --base-url "http://localhost:$port/v1" --ref "results/rl_lora_check_${label}_ref.json" \
+      --out "$TA/results/rl_lora_check_$label.json") > "$STATE/rl_check_$label.log" 2>&1; then
+    log "LoRA CHECK FAILED for $label: no rollouts (see rl_check_$label.log)"
+    return 1
+  fi
+  log "LoRA check passed for $label: $("$PY" -c "import json, sys; r = json.load(open(sys.argv[1])); print('lora vs fp32 ref', r['lora_vs_ref']['mean_abs_nll_diff'], '| base vs ref', r['base_vs_ref']['mean_abs_nll_diff'])" "$TA/results/rl_lora_check_$label.json")"
+}
+
+mo_stage() {  # mo_stage <stage> [VAR=value...]: one stage of the organism pipeline's runner, on this node's GPUs
+  env NVME="$DATA" HALF_A="${SLOTS[0]}" HALF_B="${SLOTS[${#SLOTS[@]}-1]}" "${@:2}" \
+      bash "$MO/scripts/run_pilot_stage_on_gpu_node.sh" "$1" >> "$STATE/organism_stages.log" 2>&1
+}
+
+prepare_organisms() {
+  case "$(nvidia-smi -L | wc -l)" in
+    4) SLOTS=(0,1,2,3) ;;
+    8) SLOTS=(0,1,2,3 4,5,6,7) ;;
+    *) die "organisms mode needs 4 or 8 GPUs (each model is served on 4)" ;;
+  esac
+  local all_gpus; all_gpus=$(IFS=,; echo "${SLOTS[*]}")
+  export HF_HOME="$DATA/hf"   # where setup_gpu_node.sh puts the MXFP4 checkpoint the bf16 stage reads
+  if [ ! -f "$BF16/provenance.json" ]; then
+    local free; free=$(df --output=avail -BG "$DATA" | tail -1 | tr -dc 0-9)
+    [ "$free" -ge 1000 ] || die "only $free GB free under $DATA; organisms mode needs ~1 TB"
+  fi
+  if [ ! -f "$STATE/organism_setup.done" ]; then
+    WITH_SGLANG=1 timeout 3h bash "$MO/scripts/setup_gpu_node.sh" "$DATA" > "$STATE/organism_setup.log" 2>&1 \
+      || die "organism pipeline setup failed; see organism_setup.log"
+    touch "$STATE/organism_setup.done"
+  fi
+  log "organism pipeline set up (its venvs incl. SGLang, data, tests)"
+  # 4 x 80 GB ran out of memory dequantizing (stage_bf16): on an 8-GPU node use all eight.
+  local bf16_gpus=()
+  if [ "${#SLOTS[@]}" -eq 2 ]; then bf16_gpus=("BF16_GPUS=$all_gpus"); fi
+  mo_stage bf16 "${bf16_gpus[@]}" || die "bf16 dequantization failed; see organism_stages.log"
+  log "bf16 base ready ($(du -sh "$BF16" | cut -f1))"
+  local label
+  for label in $ORGANISMS; do
+    case "$label" in base_bf16|srh_mixed) continue ;; esac
+    mo_stage rl_adapter "ORGANISM=$label" || die "preparing the $label adapter failed; see organism_stages.log"
+    log "$label adapter prepared"
+  done
+  [[ " $ORGANISMS " == *" srh_mixed "* ]] || return 0
+  [ -n "${HF_ARTIFACT_REPO:-}" ] || die "srh_mixed needs HF_ARTIFACT_REPO (its adapter is in the private repo)"
+  local merged="$DATA/merged/$SRH_NAME" adapter="$DATA/hf_fetch/adapters/$SRH_NAME"
+  [ -f "$merged/provenance.json" ] && return 0
+  HF_TOKEN="${HF_WRITE_TOKEN:-${HF_TOKEN:-}}" timeout 1h "$HF" download "$HF_ARTIFACT_REPO" --repo-type model \
+      --include "adapters/$SRH_NAME/*" --local-dir "$DATA/hf_fetch" >>"$STATE/download.log" 2>&1 \
+    || die "download of adapters/$SRH_NAME failed; see download.log"
+  "$PY" -c "import json, sys; sys.exit(json.load(open(sys.argv[1]))['base_model_name_or_path'] != 'openai/gpt-oss-120b')" \
+      "$adapter/adapter_config.json" || die "$SRH_NAME adapter was not trained on the Hub base"
+  # Checked on the SRH rows of data/processed: a new node has no data/processed_cotreg, and the check only bounds
+  # bf16 rounding (as in model-organisms/scripts/run_capability_session_on_gpu_node.sh).
+  local merge=(env "CUDA_VISIBLE_DEVICES=$all_gpus" timeout 2h "$MO_PY" scripts/merge_lora_into_base.py --adapter "$adapter"
+               --base "$BF16" --out "$merged" --verify-data data/processed/srh_mixed.jsonl)
+  if ! (cd "$MO" && "${merge[@]}") > "$STATE/merge_srh.log" 2>&1; then
+    grep -qE "OutOfMemoryError|CUDA out of memory" "$STATE/merge_srh.log" || die "SRH merge failed; see merge_srh.log"
+    log "out of GPU memory merging SRH; retrying with --max-gpu-gb 50 (the rest of the model on CPU)"
+    rm -rf "$merged"
+    (cd "$MO" && "${merge[@]}" --max-gpu-gb 50) >> "$STATE/merge_srh.log" 2>&1 || die "SRH merge failed; see merge_srh.log"
+  fi
+  log "merged $SRH_NAME: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['merge_verification'])" "$merged/provenance.json")"
+}
+
+generate_organisms() {  # each batch: one model per 4-GPU slot, side by side; an organism that fails is skipped
+  local queue=() i j label pids batch
+  read -r -a queue <<<"$ORGANISMS"
+  for ((i = 0; i < ${#queue[@]}; i += ${#SLOTS[@]})); do
+    batch=(); pids=()
+    for ((j = 0; j < ${#SLOTS[@]} && i + j < ${#queue[@]}; j++)); do
+      label=${queue[i + j]}
+      if [ "$(gen_limit)" -le 1800 ]; then
+        log "under 30 min of generation time left: $label not started"; GEN_FAILED+=" $label"; continue
+      fi
+      if serve_organism "$label" $((8000 + j)) "${SLOTS[j]}"; then batch+=("$label:$((8000 + j))")
+      else GEN_FAILED+=" $label"; fi
+    done
+    for j in "${!batch[@]}"; do
+      generate_checkpoint "${batch[j]%%:*}" "${batch[j]##*:}" all & pids+=($!)
+    done
+    for j in "${!batch[@]}"; do
+      label=${batch[j]%%:*}
+      wait "${pids[j]}" || { log "$label generation failed; see generate_$label.log"; GEN_FAILED+=" $label"; }
+      upload_generation "$label"
+    done
+    stop_servers
+  done
+}
+
+# organisms mode: generation stops JUDGE_RESERVE_HOURS before the cap (less the upload margin), so the judge still
+# runs on what Inspect has written by then; elsewhere `timeout 0`, no limit.
+JUDGE_RESERVE_HOURS="${JUDGE_RESERVE_HOURS:-2.5}"
+gen_limit() {
+  if [ "$MODE" != organisms ]; then echo 0; return; fi
+  awk -v l="$(seconds_left)" -v r="$JUDGE_RESERVE_HOURS" 'BEGIN { t = l - r * 3600; printf "%d", (t > 60 ? t : 60) }'
+}
+
 generate_checkpoint() {  # generate_checkpoint <label> <port> <subset_for_default> <sad_limit_args...>
   local label=$1 port=$2 subset=$3 model family
   shift 3
@@ -176,17 +346,18 @@ generate_checkpoint() {  # generate_checkpoint <label> <port> <subset_for_defaul
   case "$label" in  # each provider renders its family's prompt format; -T family picks its sampling defaults
     olmo) model="olmo/$label"; family=olmo; export OLMO_BASE_URL="http://localhost:$port/v1" ;;
     gpt_oss) model="gptoss/$label"; family=gpt_oss; export HARMONY_BASE_URL="http://localhost:$port/v1" ;;
-    *) die "unknown model label $label" ;;
+    *) [ -n "${GEN_MODEL[$label]:-}" ] || die "unknown model label $label"   # an organism (serve_organism)
+       model="gptoss/${GEN_MODEL[$label]}"; family=gpt_oss; export HARMONY_BASE_URL="http://localhost:$port/v1" ;;
   esac
   (cd "$TA" &&
-    "$PY" "$TA/scripts/run_inspect_with_pilot_providers.py" eval pilot/tasks.py@pilot_rollouts -T condition=default -T subset="$subset" \
+    timeout "$(gen_limit)" "$PY" "$TA/scripts/run_inspect_with_pilot_providers.py" eval pilot/tasks.py@pilot_rollouts -T condition=default -T subset="$subset" \
         -T family="$family" --model "$model" --log-dir "$logs/rollouts" --max-connections 96 --display plain &&
     for cond in ambiguous_cue grader_cue explicit_cue; do
       cue_subset=cue; [ "$subset" = calibration ] && cue_subset=calibration
-      "$PY" "$TA/scripts/run_inspect_with_pilot_providers.py" eval pilot/tasks.py@pilot_rollouts -T condition="$cond" -T subset="$cue_subset" \
+      timeout "$(gen_limit)" "$PY" "$TA/scripts/run_inspect_with_pilot_providers.py" eval pilot/tasks.py@pilot_rollouts -T condition="$cond" -T subset="$cue_subset" \
           -T family="$family" --model "$model" --log-dir "$logs/rollouts" --max-connections 96 --display plain || exit 1
     done &&
-    "$PY" "$TA/scripts/run_inspect_with_pilot_providers.py" eval pilot/tasks.py@sad_stages_full "$@" -T family="$family" --model "$model" \
+    timeout "$(gen_limit)" "$PY" "$TA/scripts/run_inspect_with_pilot_providers.py" eval pilot/tasks.py@sad_stages_full "$@" -T family="$family" --model "$model" \
         -M force_answer=true --log-dir "$logs/sad" --max-connections 96 --display plain
   ) > "$STATE/generate_$label.log" 2>&1
 }
@@ -208,6 +379,10 @@ phase_generate() {
     serve "$DATA/models/olmo" olmo 8000 0,1,2,3 --max-model-len "$OLMO_LEN"
     generate_checkpoint olmo 8000 calibration -T limit_per_stage=10 || die "generation failed; see generate_olmo.log"
     upload_generation olmo
+  elif [ "$MODE" = organisms ]; then
+    prepare_organisms
+    generate_organisms
+    [ -n "$(ls -d "$TA"/logs/*/rollouts 2>/dev/null)" ] || die "no organism produced rollouts:$GEN_FAILED"
   else
     download "$OLMO_MODEL" "$OLMO_REV" "$DATA/models/olmo"
     download "$GPT_OSS_MODEL" "$GPT_OSS_REV" "$DATA/models/gpt_oss" --exclude "original/*" --exclude "metal/*"
@@ -238,8 +413,8 @@ fetch_earlier_logs() {
 }
 
 phase_judge() {
-  local labels=() label
-  for label in olmo gpt_oss; do [ -d "$TA/logs/$label/rollouts" ] && labels+=("$label"); done
+  local labels=() label dir pairs=()
+  for dir in "$TA"/logs/*/rollouts; do [ -d "$dir" ] && labels+=("$(basename "$(dirname "$dir")")"); done
   [ "${#labels[@]}" -gt 0 ] || die "no rollout logs to judge under $TA/logs"
   archive_old "$TA/scans"
   download "$JUDGE_MODEL" "$JUDGE_REV" "$DATA/models/judge"
@@ -271,10 +446,18 @@ phase_judge() {
   done
   stop_servers
   local ckpts; ckpts=$(IFS=,; echo "${labels[*]}")
-  (cd "$TA" && "$PY" scripts/summarize_pilot_results.py --checkpoints "$ckpts" --tag "_$MODE") \
-      > "$STATE/summary.log" 2>&1 || die "summary failed; see summary.log"
+  # The organisms have no controls here: each is read against the bf16 base on the same prompts. The base is served
+  # by vLLM, like SRH and AISI; Redwood by SGLang, so its pair also carries the engine difference.
+  if [[ ",$ckpts," == *",base_bf16,"* ]]; then
+    for label in "${labels[@]}"; do
+      case "$label" in base_bf16|olmo|gpt_oss) ;; *) pairs+=("base_bf16:$label") ;; esac
+    done
+  fi
+  (cd "$TA" && "$PY" scripts/summarize_pilot_results.py --checkpoints "$ckpts" --pairs "$(IFS=,; echo "${pairs[*]}")" \
+      --tag "_$MODE") > "$STATE/summary.log" 2>&1 || die "summary failed; see summary.log"
   upload "$TA/scans" scans
   upload_state
+  [ -z "$GEN_FAILED" ] || die "no or partial rollouts for:$GEN_FAILED (the rest judged; results under $PREFIX)"
   log "DONE: results under $PREFIX in $HF_ARTIFACT_REPO"
 }
 

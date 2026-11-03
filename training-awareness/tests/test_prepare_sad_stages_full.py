@@ -5,6 +5,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,3 +51,19 @@ def test_prepare_renders_balanced_items(tmp_path):
     again = tmp_path / "again.jsonl"
     prep.main(["--structs", str(tmp_path / "structs"), "--out", str(again)])
     assert again.read_text(encoding="utf-8") == out.read_text(encoding="utf-8")
+
+
+def test_prepare_keeps_one_copy_of_repeated_ids(tmp_path):
+    structs = make_structs(tmp_path / "structs")
+    path = structs / "batch" / "pretrain.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data["samples"] += [dict(data["samples"][0]), dict(data["samples"][0])]  # as SAD repeats some items
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    out = tmp_path / "out.jsonl"
+    prep.main(["--structs", str(structs), "--out", str(out)])
+    rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 80 and len({r["id"] for r in rows}) == 80
+    data["samples"][-1]["body"] = "a different passage"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(SystemExit, match="repeated id"):
+        prep.main(["--structs", str(structs), "--out", str(out)])
