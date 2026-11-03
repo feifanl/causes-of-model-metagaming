@@ -21,7 +21,9 @@
 #            server against the committed fp32 reference (model-organisms/results/rl_lora_check_*_ref.json); an
 #            organism that fails gets no rollouts. Needs a git checkout (setup_gpu_node.sh diffs the data stats)
 #            and ~1 TB free under DATA; H200s, since 80 GB GPUs leave little KV cache beside the 234 GB model.
-# judge      re-judge an earlier run's uploaded rollout logs (RUN_PREFIX in the HF repo) without generating.
+# judge      re-judge an earlier run's uploaded rollout logs (RUN_PREFIX in the HF repo) without generating;
+#            SKIP_LABELS (space-separated) leaves those checkpoints out (aisi_hack: its rollouts loop, Feifan
+#            2026-11-03).
 #
 # The judge scores metric gaming only: the behavioural gap is the primary readout and awareness judging is
 # deferred (Feifan, 2026-11-03). AWARENESS_JUDGE=1 adds the training-awareness judge with its rubric and recall
@@ -415,7 +417,9 @@ fetch_earlier_logs() {
   archive_old "$TA/logs"
   mkdir -p "$TA/logs"
   cp -r "$STATE/fetch/$RUN_PREFIX/logs/." "$TA/logs/"
-  log "fetched rollout logs from $RUN_PREFIX"
+  local label
+  for label in ${SKIP_LABELS:-}; do rm -rf "${TA:?}/logs/$label"; done
+  log "fetched rollout logs from $RUN_PREFIX${SKIP_LABELS:+ (skipped: $SKIP_LABELS)}"
 }
 
 phase_judge() {
