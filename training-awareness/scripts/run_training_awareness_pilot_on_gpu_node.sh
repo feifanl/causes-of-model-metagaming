@@ -11,9 +11,11 @@
 # full       Olmo 3.1 and gpt-oss-120b (base) side by side (GPUs 0-1 and 2-3, tensor parallel 2): 700 default +
 #            250 x 3 cue rollouts and 797 SAD items each; then the judge (tensor parallel 4) and the summary.
 # organisms  the gpt-oss cheater organisms and the bf16 base they are read against (ORGANISMS, default
-#            "base_bf16 srh_mixed aisi_hack redwood_step952"; Feifan 2026-11-03: cheaters only, no controls), each
-#            on 4 GPUs (tensor parallel 4; two at a time on an 8-GPU node), the same rollouts and SAD items as
-#            full; then the judge and the summary, each organism paired with base_bf16. Served as in the organism
+#            "base_bf16 srh_mixed aisi_hack redwood_step952 base_sglang"; Feifan 2026-11-03: cheaters only, no
+#            controls), each on 4 GPUs (tensor parallel 4; two at a time on an 8-GPU node), the same rollouts and SAD
+#            items as full; then the judge and the summary, each organism paired with the base on its own engine:
+#            base_bf16 (vLLM) for SRH and AISI, base_sglang (the base on Redwood's SGLang server, its LoRA loaded
+#            but not selected; Feifan 2026-11-03) for Redwood, plus base_bf16 -> base_sglang for the engine itself. Served as in the organism
 #            pipeline (model-organisms/RUN_EVALS_ON_ORGANISMS.md): the bf16 dequantized base, SRH merged into it,
 #            AISI as base + LoRA in vLLM, Redwood as base + LoRA in SGLang. Each RL LoRA is checked on its rollout
 #            server against the committed fp32 reference (model-organisms/results/rl_lora_check_*_ref.json); an
@@ -71,7 +73,7 @@ MO_PY="$REPO/venv/bin/python"
 SGLANG_PY="$REPO/venv-sglang/bin/python"
 BF16="$DATA/gpt-oss-120b-bf16"
 SRH_NAME="srh_mixed_seed0_cotreg"   # the CoT-regularized SRH arm, seed 0 (RUN_EVALS_ON_ORGANISMS.md)
-ORGANISMS="${ORGANISMS:-base_bf16 srh_mixed aisi_hack redwood_step952}"
+ORGANISMS="${ORGANISMS:-base_bf16 srh_mixed aisi_hack redwood_step952 base_sglang}"
 declare -A GEN_MODEL=()   # label -> the served model name its rollouts query (set by serve_organism)
 GEN_FAILED=""
 
@@ -223,6 +225,9 @@ serve_organism() {
   case "$label" in
     base_bf16) SERVE_SOFT=1 serve "$BF16" base_bf16 "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" || return 1
                GEN_MODEL[$label]=base_bf16; return 0 ;;
+    # The base, queried by its own name on a server set up exactly as Redwood's (same flags, Redwood's LoRA loaded).
+    base_sglang) SERVE_SOFT=1 serve_sglang "$BF16" base_sglang "$port" "$gpus" redwood_step952 "$MO/outputs/redwood_step952" \n                   || return 1
+                 GEN_MODEL[$label]=base_sglang; return 0 ;;
     srh_mixed) SERVE_SOFT=1 serve "$DATA/merged/$SRH_NAME" srh_mixed "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" || return 1
                GEN_MODEL[$label]=srh_mixed; return 0 ;;
   esac
@@ -279,7 +284,8 @@ prepare_organisms() {
   mo_stage bf16 "${bf16_gpus[@]}" || die "bf16 dequantization failed; see organism_stages.log"
   log "bf16 base ready ($(du -sh "$BF16" | cut -f1))"
   local label
-  for label in $ORGANISMS; do
+  # base_sglang serves Redwood's adapter beside the base, so it needs it prepared too.
+  for label in $(for l in $ORGANISMS; do [ "$l" = base_sglang ] && l=redwood_step952; echo "$l"; done | sort -u); do
     case "$label" in base_bf16|srh_mixed) continue ;; esac
     mo_stage rl_adapter "ORGANISM=$label" || die "preparing the $label adapter failed; see organism_stages.log"
     log "$label adapter prepared"
@@ -446,11 +452,15 @@ phase_judge() {
   done
   stop_servers
   local ckpts; ckpts=$(IFS=,; echo "${labels[*]}")
-  # The organisms have no controls here: each is read against the bf16 base on the same prompts. The base is served
-  # by vLLM, like SRH and AISI; Redwood by SGLang, so its pair also carries the engine difference.
+  # The organisms have no controls here: each is read against the bf16 base on its own engine, on the same prompts
+  # (base_bf16 -> base_sglang is the engine difference itself).
   if [[ ",$ckpts," == *",base_bf16,"* ]]; then
     for label in "${labels[@]}"; do
-      case "$label" in base_bf16|olmo|gpt_oss) ;; *) pairs+=("base_bf16:$label") ;; esac
+      case "$label" in
+        base_bf16|olmo|gpt_oss) ;;
+        redwood_step952) if [[ ",$ckpts," == *",base_sglang,"* ]]; then pairs+=("base_sglang:$label"); else pairs+=("base_bf16:$label"); fi ;;
+        *) pairs+=("base_bf16:$label") ;;
+      esac
     done
   fi
   (cd "$TA" && "$PY" scripts/summarize_pilot_results.py --checkpoints "$ckpts" --pairs "$(IFS=,; echo "${pairs[*]}")" \
