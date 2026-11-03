@@ -1,0 +1,13 @@
+# Training-awareness pilot (TRAINING_AWARENESS_PILOT.md). Separate from model-organisms/requirements.txt:
+# Inspect Scout needs a newer inspect_ai than the gpt-oss pipeline pins. vLLM is installed in its own venv.
+# Versions are the ones the CPU tests ran with.
+inspect_ai==0.3.285
+inspect_scout==0.6.1
+openai==3.37.0
+anthropic==2.3.0      # only for checking the judge through the Claude API (check_judge.py --model anthropic/...)
+openai-harmony==0.0.8   # gpt-oss prompts, rendered as in model-organisms (same pin)
+huggingface_hub==2.3.0
+pandas==3.1.0
+pyarrow==26.0.0
+PyYAML==6.0.3
+pytest==9.1.1
