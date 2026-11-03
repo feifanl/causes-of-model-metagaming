@@ -63,7 +63,9 @@ while read -r name hf_id; do
   # Only the Hugging Face format vLLM loads: Llama's original/ and Mistral's consolidated copy would double the download.
   "$HF" download "$hf_id" --exclude "original/*" --exclude "consolidated*" > "$STATE/judge_download_$name.log" 2>&1 || die "download of $hf_id failed (gated? accept its terms on HF); see $STATE/judge_download_$name.log"
   curl -sf "localhost:$PORT/v1/models" >/dev/null 2>&1 && die "port $PORT already serving"
-  CUDA_VISIBLE_DEVICES=$GPUS setsid "$VLLM" serve "$hf_id" --served-model-name "$hf_id" --tensor-parallel-size "$TP" --port "$PORT" \
+  # DeepGEMM (vLLM's pick for Qwen's block FP8 on Hopper) JIT-compiles and needs a CUDA toolkit, which Isambard
+  # nodes lack ("find_cuda_toolkit ... not home_path.empty()"); off, vLLM uses its prebuilt FP8 kernels.
+  CUDA_VISIBLE_DEVICES=$GPUS VLLM_USE_DEEP_GEMM="${VLLM_USE_DEEP_GEMM:-0}" setsid "$VLLM" serve "$hf_id" --served-model-name "$hf_id" --tensor-parallel-size "$TP" --port "$PORT" \
       --max-model-len 32768 > "$STATE/vllm_judge_$name.log" 2>&1 &
   SERVER=$!
   waited=0
