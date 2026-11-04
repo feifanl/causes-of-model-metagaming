@@ -5,6 +5,7 @@
 #   bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh full      <max-hours>
 #   bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh organisms <max-hours>
 #   RUN_PREFIX=<prefix> bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh judge <max-hours>
+#   bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh framing   <max-hours>
 #
 # calibrate  Olmo 3.1 only: the 150 calibration prompts under every condition, 10 SAD items per stage;
 #            then the judge on those traces.
@@ -24,6 +25,13 @@
 # judge      re-judge an earlier run's uploaded rollout logs (RUN_PREFIX in the HF repo) without generating;
 #            SKIP_LABELS (space-separated) leaves those checkpoints out (aisi_hack: its rollouts loop, Feifan
 #            2026-11-03).
+# framing    not this pilot: the eval-cue framing grid (BEHAVIORAL_GAP_PLAN.md Part 1, step e'), run on the organisms
+#            mode's serving (Feifan 2026-11-04: base_bf16, srh_mixed, base_sglang, redwood_step952; no controls).
+#            Each model answers the grid's 9 cells (3 metric tiers x deployment / neutral / eval framing, 100 held-out
+#            hacking prompts each) with reasoning on and off, through model-organisms/scripts/run_pilot_evals.py
+#            --no-score; then Qwen3-235B alone scores every answer (run_judge_panel_on_gpu_node.sh with a one-judge
+#            panel) and the framing-axis minimal pairs; then compare_framing_results.py reads SRH and the engine check
+#            against base_bf16 and Redwood against base_sglang. Uploads under behavioral_gap/framing_grid_<UTC start>/.
 #
 # The judge scores metric gaming only: the behavioural gap is the primary readout and awareness judging is
 # deferred (Feifan, 2026-11-03). AWARENESS_JUDGE=1 adds the training-awareness judge with its rubric and recall
@@ -38,9 +46,9 @@
 # once the script ends the node is destroyed after the watchdog's idle period.
 set -euo pipefail
 
-MODE="${1:?usage: run_training_awareness_pilot_on_gpu_node.sh <calibrate|full|organisms|judge> <max-hours>}"
+MODE="${1:?usage: run_training_awareness_pilot_on_gpu_node.sh <calibrate|full|organisms|judge|framing> <max-hours>}"
 MAX_HOURS="${2:?max-hours required}"
-case "$MODE" in calibrate|full|organisms|judge) ;; *) echo "unknown mode $MODE" >&2; exit 2 ;; esac
+case "$MODE" in calibrate|full|organisms|judge|framing) ;; *) echo "unknown mode $MODE" >&2; exit 2 ;; esac
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 TA="$REPO/training-awareness"
@@ -50,6 +58,7 @@ DATA="${DATA:-/workspace}"
 STATE="$DATA/ta_state"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 PREFIX="training_awareness_pilot/${MODE}_$STAMP"
+if [ "$MODE" = framing ]; then PREFIX="behavioral_gap/framing_grid_$STAMP"; fi
 PY="$TA/venv/bin/python"
 VLLM="$REPO/venv-vllm/bin/vllm"
 HF="$TA/venv/bin/hf"
@@ -76,6 +85,8 @@ SGLANG_PY="$REPO/venv-sglang/bin/python"
 BF16="$DATA/gpt-oss-120b-bf16"
 SRH_NAME="srh_mixed_seed0_cotreg"   # the CoT-regularized SRH arm, seed 0 (RUN_EVALS_ON_ORGANISMS.md)
 ORGANISMS="${ORGANISMS:-base_bf16 srh_mixed aisi_hack redwood_step952 base_sglang}"
+# framing mode: batches of two, so each base is served beside the organism read against it.
+if [ "$MODE" = framing ]; then ORGANISMS="${FRAMING_MODELS:-base_bf16 srh_mixed base_sglang redwood_step952}"; fi
 declare -A GEN_MODEL=()   # label -> the served model name its rollouts query (set by serve_organism)
 GEN_FAILED=""
 
@@ -178,6 +189,8 @@ setup() {
   fi
   "$REPO/venv-vllm/bin/python" -c "import vllm, sys; sys.exit(vllm.__version__ != '$VLLM_VERSION')" \
     || die "vLLM is not $VLLM_VERSION"
+  # framing mode uses none of the pilot's prompts or SAD; the organism pipeline's setup runs its own tests.
+  if [ "$MODE" = framing ]; then return 0; fi
   export PYTHONPATH="$TA"
   # A hang here once held a rented node for over an hour (Scout's multiprocess scan on Linux): fail fast instead.
   (cd "$TA" && timeout 900 "$PY" -m pytest -q tests >>"$STATE/setup.log" 2>&1) \
@@ -228,7 +241,8 @@ serve_organism() {
     base_bf16) SERVE_SOFT=1 serve "$BF16" base_bf16 "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" || return 1
                GEN_MODEL[$label]=base_bf16; return 0 ;;
     # The base, queried by its own name on a server set up exactly as Redwood's (same flags, Redwood's LoRA loaded).
-    base_sglang) SERVE_SOFT=1 serve_sglang "$BF16" base_sglang "$port" "$gpus" redwood_step952 "$MO/outputs/redwood_step952" \n                   || return 1
+    base_sglang) SERVE_SOFT=1 serve_sglang "$BF16" base_sglang "$port" "$gpus" redwood_step952 "$MO/outputs/redwood_step952" \
+                   || return 1
                  GEN_MODEL[$label]=base_sglang; return 0 ;;
     srh_mixed) SERVE_SOFT=1 serve "$DATA/merged/$SRH_NAME" srh_mixed "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" || return 1
                GEN_MODEL[$label]=srh_mixed; return 0 ;;
@@ -328,12 +342,13 @@ generate_organisms() {  # each batch: one model per 4-GPU slot, side by side; an
       else GEN_FAILED+=" $label"; fi
     done
     for j in "${!batch[@]}"; do
-      generate_checkpoint "${batch[j]%%:*}" "${batch[j]##*:}" all & pids+=($!)
+      if [ "$MODE" = framing ]; then framing_answers "${batch[j]%%:*}" "${batch[j]##*:}" & pids+=($!)
+      else generate_checkpoint "${batch[j]%%:*}" "${batch[j]##*:}" all & pids+=($!); fi
     done
     for j in "${!batch[@]}"; do
       label=${batch[j]%%:*}
-      wait "${pids[j]}" || { log "$label generation failed; see generate_$label.log"; GEN_FAILED+=" $label"; }
-      upload_generation "$label"
+      wait "${pids[j]}" || { log "$label generation failed; see generate_$label*.log"; GEN_FAILED+=" $label"; }
+      if [ "$MODE" = framing ]; then upload "$MO/logs/framing/$label" "logs/$label"; else upload_generation "$label"; fi
     done
     stop_servers
   done
@@ -343,7 +358,7 @@ generate_organisms() {  # each batch: one model per 4-GPU slot, side by side; an
 # runs on what Inspect has written by then; elsewhere `timeout 0`, no limit.
 JUDGE_RESERVE_HOURS="${JUDGE_RESERVE_HOURS:-2.5}"
 gen_limit() {
-  if [ "$MODE" != organisms ]; then echo 0; return; fi
+  case "$MODE" in organisms|framing) ;; *) echo 0; return ;; esac
   awk -v l="$(seconds_left)" -v r="$JUDGE_RESERVE_HOURS" 'BEGIN { t = l - r * 3600; printf "%d", (t > 60 ? t : 60) }'
 }
 
@@ -379,6 +394,77 @@ upload_generation() {  # upload_generation <label>
   fi
 }
 
+# --------------------------------------------------------------------------- framing mode
+
+# The grid's 9 cells (model-organisms/scripts/run_pilot_evals.py TASKS): the unframed tiers are the neutral column.
+GRID_TASKS="hacking,hacking_vague,hacking_unstated,framing_stated_eval,framing_stated_deployment,framing_vague_eval,\
+framing_vague_deployment,framing_none_eval,framing_none_deployment"
+FRAMING_TAG=_framing_qwen
+FRAMING_TAGS=("${FRAMING_TAG}_reasoning_on" "$FRAMING_TAG")   # reasoning on, then off (--no-reasoning)
+
+framing_answers() {  # framing_answers <label> <port>: the grid with reasoning on and off at once, answers only
+  local label=$1 port=$2 a b rc=0
+  local run=("$MO_PY" scripts/run_pilot_evals.py --model "harmony/${GEN_MODEL[$label]}" --base-url "http://localhost:$port/v1"
+             --tasks "$GRID_TASKS" --no-score --max-connections 64 --log-dir "$MO/logs/framing/$label")
+  (cd "$MO" && timeout "$(gen_limit)" "${run[@]}" --tag "$label${FRAMING_TAGS[0]}") > "$STATE/generate_${label}_reasoning_on.log" 2>&1 & a=$!
+  (cd "$MO" && timeout "$(gen_limit)" "${run[@]}" --no-reasoning --tag "$label${FRAMING_TAGS[1]}") > "$STATE/generate_${label}_reasoning_off.log" 2>&1 & b=$!
+  wait "$a" || { log "$label reasoning-on answers failed"; rc=1; }
+  wait "$b" || { log "$label reasoning-off answers failed"; rc=1; }
+  [ "$rc" -eq 0 ] && log "$label answered the grid, reasoning on and off"
+  return "$rc"
+}
+
+framing_compare() {  # framing_compare <tag> <base label> <label>...: the grid of each model against the base
+  local tag=$1 base=$2 label args=()
+  for label in "${@:2}"; do
+    if [ -f "$MO/results/$label$tag.json" ]; then args+=(--model "$label=results/$label$tag.json")
+    else log "no judged results for $label$tag: left out of the $base comparison"; fi
+  done
+  [ -f "$MO/results/$base$tag.json" ] || { log "no judged results for the base $base$tag: no $base comparison"; return 0; }
+  (cd "$MO" && "$MO_PY" scripts/compare_framing_results.py "${args[@]}" --base "$base" \
+      --out "results/framing_comparison_$base$tag.md") >> "$STATE/framing_compare.log" 2>&1 \
+    && log "compared against $base ($tag)" || log "comparison against $base failed ($tag); see framing_compare.log"
+}
+
+phase_framing_judge() {
+  local manifests=() label tag m rc=0 out="$DATA/framing_out"
+  for label in $ORGANISMS; do
+    for tag in "${FRAMING_TAGS[@]}"; do
+      m="results/$label$tag.logs.json"
+      if [ -f "$MO/$m" ]; then manifests+=("$m"); else log "no answers to judge for $label$tag"; fi
+    done
+  done
+  [ "${#manifests[@]}" -gt 0 ] || die "no model answered the grid:$GEN_FAILED"
+  # The minimal-pair check (does a framing change the task or metric?): no model sampled, the judge reads each pair.
+  if (cd "$MO" && "$MO_PY" scripts/run_pilot_evals.py --tasks framing_minimal_pairs --model mockllm/model \
+      --tag "framing_minimal_pairs$FRAMING_TAG" --no-score --log-dir "$MO/logs/framing/minimal_pairs") > "$STATE/minimal_pairs.log" 2>&1; then
+    manifests+=("results/framing_minimal_pairs$FRAMING_TAG.logs.json")
+  else
+    log "minimal pairs not built; see minimal_pairs.log"
+  fi
+  # One judge (Feifan 2026-11-04): the panel's runner with a one-line panel. TP 4: Qwen's block FP8 does not split
+  # over 8 GPUs.
+  JUDGE_PANEL="qwen $JUDGE_MODEL" JUDGE_GPUS=0,1,2,3 NVME="$DATA" timeout "$(seconds_left)" \
+      bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" "${manifests[@]}" > "$STATE/judge_panel.log" 2>&1 || rc=$?
+  for tag in "${FRAMING_TAGS[@]}"; do
+    framing_compare "$tag" base_bf16 srh_mixed base_sglang
+    framing_compare "$tag" base_sglang redwood_step952
+  done
+  rm -rf "$out"; mkdir -p "$out"
+  for m in "${manifests[@]}"; do
+    cp "$MO/$m" "$out/"
+    if [ -f "$MO/${m%.logs.json}.json" ]; then cp "$MO/${m%.logs.json}.json" "$out/"; fi
+  done
+  cp "$MO"/results/framing_comparison_*"$FRAMING_TAG"*.md "$out/" 2>/dev/null || true
+  if [ -d "$MO/results/judged" ]; then cp -r "$MO/results/judged" "$out/judged"; fi
+  upload "$out" results
+  upload "$MO/logs/framing/minimal_pairs" logs/minimal_pairs
+  upload_state
+  [ "$rc" -eq 0 ] || die "judging stopped (exit $rc$( [ "$rc" -eq 124 ] && echo ', time cap'); see judge_panel.log); what was judged is uploaded"
+  [ -z "$GEN_FAILED" ] || die "no or partial answers for:$GEN_FAILED (the rest judged; results under $PREFIX)"
+  log "DONE: results under $PREFIX in $HF_ARTIFACT_REPO"
+}
+
 phase_generate() {
   archive_old "$TA/logs"
   archive_old "$TA/scans"
@@ -391,6 +477,9 @@ phase_generate() {
     prepare_organisms
     generate_organisms
     [ -n "$(ls -d "$TA"/logs/*/rollouts 2>/dev/null)" ] || die "no organism produced rollouts:$GEN_FAILED"
+  elif [ "$MODE" = framing ]; then
+    prepare_organisms
+    generate_organisms
   else
     download "$OLMO_MODEL" "$OLMO_REV" "$DATA/models/olmo"
     download "$GPT_OSS_MODEL" "$GPT_OSS_REV" "$DATA/models/gpt_oss" --exclude "original/*" --exclude "metal/*"
@@ -478,4 +567,4 @@ phase_judge() {
 log "start (prefix $PREFIX, cap ${MAX_HOURS} h)"
 setup
 if [ "$MODE" = judge ]; then fetch_earlier_logs; else phase_generate; fi
-phase_judge
+if [ "$MODE" = framing ]; then phase_framing_judge; else phase_judge; fi
