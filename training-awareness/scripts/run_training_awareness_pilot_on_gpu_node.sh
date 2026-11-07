@@ -6,6 +6,7 @@
 #   bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh organisms <max-hours>
 #   RUN_PREFIX=<prefix> bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh judge <max-hours>
 #   bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh framing   <max-hours>
+#   bash training-awareness/scripts/run_training_awareness_pilot_on_gpu_node.sh persona   <max-hours>
 #
 # calibrate  Olmo 3.1 only: the 150 calibration prompts under every condition, 10 SAD items per stage;
 #            then the judge on those traces.
@@ -32,6 +33,15 @@
 #            --no-score; then Qwen3-235B alone scores every answer (run_judge_panel_on_gpu_node.sh with a one-judge
 #            panel) and the framing-axis minimal pairs; then compare_framing_results.py reads SRH and the engine check
 #            against base_bf16 and Redwood against base_sglang. Uploads under behavioral_gap/framing_grid_<UTC start>/.
+# persona    not this pilot either: is SRH a broad cheater persona, and does another persona hack less (Feifan
+#            2026-11-06)? Needs 8 GPUs. (1) base_bf16 and SRH (merged, vLLM) answer the 100 held-out hacking prompts
+#            under each persona of PERSONA_SET (run_pilot_evals.py --persona; 'none' = no system message), reasoning
+#            on; base_bf16 also answers the persona_contrast prompts (cheater / honest / assistant system prompts on
+#            neutral Dolly prompts). (2) Qwen3-235B scores the hacking answers; compare_persona_results.py reads the
+#            grid. (3) In transformers on the bf16 base: cheater-persona directions (extract_persona_direction.py:
+#            cheater vs honest and vs assistant, pooled over replies; cheater vs honest at the last prompt token),
+#            then the overlap of SRH and its SFT control (PEFT adapters, unmerged, SRH - control paired), then
+#            Redwood from its fp32 merge against the base read in fp32. Uploads under behavioral_gap/persona_<UTC>/.
 #
 # The judge scores metric gaming only: the behavioural gap is the primary readout and awareness judging is
 # deferred (Feifan, 2026-11-03). AWARENESS_JUDGE=1 adds the training-awareness judge with its rubric and recall
@@ -46,9 +56,9 @@
 # once the script ends the node is destroyed after the watchdog's idle period.
 set -euo pipefail
 
-MODE="${1:?usage: run_training_awareness_pilot_on_gpu_node.sh <calibrate|full|organisms|judge|framing> <max-hours>}"
+MODE="${1:?usage: run_training_awareness_pilot_on_gpu_node.sh <calibrate|full|organisms|judge|framing|persona> <max-hours>}"
 MAX_HOURS="${2:?max-hours required}"
-case "$MODE" in calibrate|full|organisms|judge|framing) ;; *) echo "unknown mode $MODE" >&2; exit 2 ;; esac
+case "$MODE" in calibrate|full|organisms|judge|framing|persona) ;; *) echo "unknown mode $MODE" >&2; exit 2 ;; esac
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 TA="$REPO/training-awareness"
@@ -59,6 +69,7 @@ STATE="$DATA/ta_state"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 PREFIX="training_awareness_pilot/${MODE}_$STAMP"
 if [ "$MODE" = framing ]; then PREFIX="behavioral_gap/framing_grid_$STAMP"; fi
+if [ "$MODE" = persona ]; then PREFIX="behavioral_gap/persona_$STAMP"; fi
 PY="$TA/venv/bin/python"
 VLLM="$REPO/venv-vllm/bin/vllm"
 HF="$TA/venv/bin/hf"
@@ -87,6 +98,8 @@ SRH_NAME="srh_mixed_seed0_cotreg"   # the CoT-regularized SRH arm, seed 0 (RUN_E
 ORGANISMS="${ORGANISMS:-base_bf16 srh_mixed aisi_hack redwood_step952 base_sglang}"
 # framing mode: batches of two, so each base is served beside the organism read against it.
 if [ "$MODE" = framing ]; then ORGANISMS="${FRAMING_MODELS:-base_bf16 srh_mixed base_sglang redwood_step952}"; fi
+# persona mode: base and SRH side by side (vLLM); Redwood and the SFT control only enter the activation overlap.
+if [ "$MODE" = persona ]; then ORGANISMS="base_bf16 srh_mixed"; fi
 declare -A GEN_MODEL=()   # label -> the served model name its rollouts query (set by serve_organism)
 GEN_FAILED=""
 
@@ -189,8 +202,8 @@ setup() {
   fi
   "$REPO/venv-vllm/bin/python" -c "import vllm, sys; sys.exit(vllm.__version__ != '$VLLM_VERSION')" \
     || die "vLLM is not $VLLM_VERSION"
-  # framing mode uses none of the pilot's prompts or SAD; the organism pipeline's setup runs its own tests.
-  if [ "$MODE" = framing ]; then return 0; fi
+  # framing and persona modes use none of the pilot's prompts or SAD; the organism pipeline's setup runs its own tests.
+  if [ "$MODE" = framing ] || [ "$MODE" = persona ]; then return 0; fi
   export PYTHONPATH="$TA"
   # A hang here once held a rented node for over an hour (Scout's multiprocess scan on Linux): fail fast instead.
   (cd "$TA" && timeout 900 "$PY" -m pytest -q tests >>"$STATE/setup.log" 2>&1) \
@@ -343,12 +356,15 @@ generate_organisms() {  # each batch: one model per 4-GPU slot, side by side; an
     done
     for j in "${!batch[@]}"; do
       if [ "$MODE" = framing ]; then framing_answers "${batch[j]%%:*}" "${batch[j]##*:}" & pids+=($!)
+      elif [ "$MODE" = persona ]; then persona_answers "${batch[j]%%:*}" "${batch[j]##*:}" & pids+=($!)
       else generate_checkpoint "${batch[j]%%:*}" "${batch[j]##*:}" all & pids+=($!); fi
     done
     for j in "${!batch[@]}"; do
       label=${batch[j]%%:*}
       wait "${pids[j]}" || { log "$label generation failed; see generate_$label*.log"; GEN_FAILED+=" $label"; }
-      if [ "$MODE" = framing ]; then upload "$MO/logs/framing/$label" "logs/$label"; else upload_generation "$label"; fi
+      if [ "$MODE" = framing ]; then upload "$MO/logs/framing/$label" "logs/$label"
+      elif [ "$MODE" = persona ]; then upload "$MO/logs/persona/$label" "logs/$label"
+      else upload_generation "$label"; fi
     done
     stop_servers
   done
@@ -358,7 +374,7 @@ generate_organisms() {  # each batch: one model per 4-GPU slot, side by side; an
 # runs on what Inspect has written by then; elsewhere `timeout 0`, no limit.
 JUDGE_RESERVE_HOURS="${JUDGE_RESERVE_HOURS:-2.5}"
 gen_limit() {
-  case "$MODE" in organisms|framing) ;; *) echo 0; return ;; esac
+  case "$MODE" in organisms|framing|persona) ;; *) echo 0; return ;; esac
   awk -v l="$(seconds_left)" -v r="$JUDGE_RESERVE_HOURS" 'BEGIN { t = l - r * 3600; printf "%d", (t > 60 ? t : 60) }'
 }
 
@@ -465,6 +481,120 @@ phase_framing_judge() {
   log "DONE: results under $PREFIX in $HF_ARTIFACT_REPO"
 }
 
+# --------------------------------------------------------------------------- persona mode
+
+# The persona-swap grid (Feifan 2026-11-06): who the model is (assistant / not) x values (neutral / honest / cheaty);
+# 'none' is no system message, as in every earlier run. Presets: model-organisms/evals/data/personas.yaml.
+PERSONA_SET="${PERSONA_SET:-none assistant honest_assistant cheater chef gandhi diligent_student pirate}"
+CONTROL_NAME="control_seed0_cotreg"   # SRH's SFT control: the same CoT-regularized recipe without the hacking rows
+PERSONA_OUT="$DATA/persona_out"
+
+prepare_persona_overlap() {  # the PEFT adapters of SRH and its control, and Redwood's (Tinker) adapter
+  local name
+  for name in "$SRH_NAME" "$CONTROL_NAME"; do
+    [ -f "$DATA/hf_fetch/adapters/$name/adapter_config.json" ] && continue
+    HF_TOKEN="${HF_WRITE_TOKEN:-${HF_TOKEN:-}}" timeout 1h "$HF" download "$HF_ARTIFACT_REPO" --repo-type model \
+        --include "adapters/$name/*" --local-dir "$DATA/hf_fetch" >>"$STATE/download.log" 2>&1 \
+      || die "download of adapters/$name failed; see download.log"
+  done
+  mo_stage rl_adapter "ORGANISM=redwood_step952" || die "preparing the redwood_step952 adapter failed; see organism_stages.log"
+  log "SRH, control and Redwood adapters ready for the overlap"
+}
+
+persona_answers() {  # persona_answers <label> <port>: the hacking prompts under every persona; base also the contrast set
+  local label=$1 port=$2 p rc=0 pids=() flags
+  local run=("$MO_PY" scripts/run_pilot_evals.py --model "harmony/${GEN_MODEL[$label]}" --base-url "http://localhost:$port/v1"
+             --no-score --max-connections 32 --log-dir "$MO/logs/persona/$label")
+  for p in $PERSONA_SET; do
+    flags=()
+    if [ "$p" != none ]; then flags=(--persona "$p"); fi
+    (cd "$MO" && timeout "$(gen_limit)" "${run[@]}" --tasks hacking "${flags[@]}" --tag "${label}_persona_$p") \
+        > "$STATE/generate_${label}_persona_$p.log" 2>&1 & pids+=($!)
+  done
+  if [ "$label" = base_bf16 ]; then
+    (cd "$MO" && timeout "$(gen_limit)" "${run[@]}" --tasks persona_contrast_cheater,persona_contrast_honest,persona_contrast_assistant \
+        --tag base_bf16_persona_contrast) > "$STATE/generate_base_bf16_persona_contrast.log" 2>&1 & pids+=($!)
+  fi
+  for p in "${pids[@]}"; do wait "$p" || rc=1; done
+  if [ "$rc" -eq 0 ]; then log "$label answered under every persona"
+  else log "$label: some persona runs failed (see generate_${label}_persona_*.log)"; fi
+  return "$rc"
+}
+
+contrast_log() {  # contrast_log <side>: the base's persona_contrast eval log for that side
+  "$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['logs'][sys.argv[2]])" \
+      "$MO/results/base_bf16_persona_contrast.logs.json" "persona_contrast_$1"
+}
+
+persona_direction() {  # persona_direction <name> <extract args...>: one cheater-persona direction on the bf16 base
+  local name=$1
+  shift
+  (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" scripts/extract_persona_direction.py extract --model "$BF16" "$@" \
+      --out "$PERSONA_OUT/directions/$name.pt") >> "$STATE/persona_direction.log" 2>&1 \
+    || die "direction $name failed; see persona_direction.log"
+  log "direction $name: $(grep 'selected layer' "$STATE/persona_direction.log" | tail -1)"
+}
+
+phase_persona() {
+  local manifests=() label p m rc=0 out="$PERSONA_OUT" cheat honest assistant free
+  for label in $ORGANISMS; do
+    for p in $PERSONA_SET; do
+      m="results/${label}_persona_$p.logs.json"
+      if [ -f "$MO/$m" ]; then manifests+=("$m"); else log "no answers to judge for ${label}_persona_$p"; fi
+    done
+  done
+  rm -rf "$out"; mkdir -p "$out/directions"
+  # (2) the persona-swap grid, judged by Qwen alone (TP 4: its block FP8 does not split over 8 GPUs).
+  if [ "${#manifests[@]}" -gt 0 ]; then
+    JUDGE_PANEL="qwen $JUDGE_MODEL" JUDGE_GPUS=0,1,2,3 NVME="$DATA" timeout "$(seconds_left)" \
+        bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" "${manifests[@]}" > "$STATE/judge_panel.log" 2>&1 || rc=$?
+    # shellcheck disable=SC2086  # PERSONA_SET is a word list
+    (cd "$MO" && "$MO_PY" scripts/compare_persona_results.py --labels base_bf16 srh_mixed --base base_bf16 \
+        --personas $PERSONA_SET --out results/persona_comparison.md) >> "$STATE/persona_compare.log" 2>&1 \
+      && log "persona grid compared" || log "persona comparison failed; see persona_compare.log"
+    for m in "${manifests[@]}"; do
+      cp "$MO/$m" "$out/"
+      if [ -f "$MO/${m%.logs.json}.json" ]; then cp "$MO/${m%.logs.json}.json" "$out/"; fi
+    done
+    cp "$MO/results/persona_comparison.md" "$out/" 2>/dev/null || true
+    upload "$out" results
+    upload_state
+  fi
+  [ "$rc" -eq 0 ] || log "judging stopped (exit $rc); continuing to the activation overlap"
+  # (3) directions and overlap, in transformers on all GPUs.
+  [ -f "$MO/results/base_bf16_persona_contrast.logs.json" ] || die "no persona_contrast answers from the base: no direction"
+  cheat=$(contrast_log cheater) && honest=$(contrast_log honest) && assistant=$(contrast_log assistant) \
+    || die "a persona_contrast side is missing from base_bf16_persona_contrast.logs.json"
+  persona_direction cheater_vs_honest_reply --pool response --positive-log "$cheat" --negative-log "$honest"
+  persona_direction cheater_vs_assistant_reply --pool response --positive-log "$cheat" --negative-log "$assistant"
+  persona_direction cheater_vs_honest_prompt --pool prompt_last --negative honest
+  (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" scripts/extract_persona_direction.py measure --model "$BF16" \
+      --direction "$out"/directions/*.pt --adapters "srh_mixed=$DATA/hf_fetch/adapters/$SRH_NAME" \
+      "control=$DATA/hf_fetch/adapters/$CONTROL_NAME" --reference control --out "$out/overlap_srh_control.json") \
+      >> "$STATE/persona_overlap.log" 2>&1 || die "SRH/control overlap failed; see persona_overlap.log"
+  log "SRH and control overlap measured"
+  upload "$out" results
+  # Redwood: its Tinker adapter cannot load in PEFT; its exact fp32 merge, against the base read in fp32.
+  free=$(df --output=avail -BG "$DATA" | tail -1 | tr -dc 0-9)
+  if [ "$free" -lt 520 ]; then
+    log "only $free GB free under $DATA: Redwood's fp32 merge (~470 GB) skipped"
+  else
+    (cd "$MO/scripts" && timeout 2h "$MO_PY" -c "import sys; from pathlib import Path; from check_rl_lora_serving import write_fp32_merge; print(write_fp32_merge(*map(Path, sys.argv[1:])), 'LoRA modules merged')" \
+        "$BF16" "$MO/outputs/redwood_step952" "$DATA/redwood_fp32") >> "$STATE/redwood_merge.log" 2>&1 \
+      || die "Redwood fp32 merge failed; see redwood_merge.log"
+    (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" scripts/extract_persona_direction.py measure --model "$BF16" \
+        --dtype float32 --direction "$out"/directions/*.pt --models "redwood=$DATA/redwood_fp32" \
+        --out "$out/overlap_redwood_fp32.json") >> "$STATE/persona_overlap.log" 2>&1 \
+      || die "Redwood overlap failed; see persona_overlap.log"
+    log "Redwood overlap measured"
+  fi
+  upload "$out" results
+  upload_state
+  [ "$rc" -eq 0 ] || die "persona-grid judging stopped (exit $rc); the overlap and what was judged are uploaded"
+  [ -z "$GEN_FAILED" ] || die "no or partial answers for:$GEN_FAILED (the rest done; results under $PREFIX)"
+  log "DONE: results under $PREFIX in $HF_ARTIFACT_REPO"
+}
+
 phase_generate() {
   archive_old "$TA/logs"
   archive_old "$TA/scans"
@@ -479,6 +609,10 @@ phase_generate() {
     [ -n "$(ls -d "$TA"/logs/*/rollouts 2>/dev/null)" ] || die "no organism produced rollouts:$GEN_FAILED"
   elif [ "$MODE" = framing ]; then
     prepare_organisms
+    generate_organisms
+  elif [ "$MODE" = persona ]; then
+    prepare_organisms
+    prepare_persona_overlap
     generate_organisms
   else
     download "$OLMO_MODEL" "$OLMO_REV" "$DATA/models/olmo"
@@ -567,4 +701,6 @@ phase_judge() {
 log "start (prefix $PREFIX, cap ${MAX_HOURS} h)"
 setup
 if [ "$MODE" = judge ]; then fetch_earlier_logs; else phase_generate; fi
-if [ "$MODE" = framing ]; then phase_framing_judge; else phase_judge; fi
+if [ "$MODE" = framing ]; then phase_framing_judge
+elif [ "$MODE" = persona ]; then phase_persona
+else phase_judge; fi
