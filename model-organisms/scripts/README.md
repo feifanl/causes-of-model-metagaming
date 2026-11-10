@@ -51,7 +51,7 @@ How the pieces connect in a run: [`../guides/HOW_A_RUN_WORKS.md`](../guides/HOW_
 | `aggregate_judge_panel.py` | Majority vote of the three judges into `results/<tag>.json` | `ops/run_judge_panel_on_gpu_node.sh` |
 | `score_heldout_nll.py` | Held-out NLL of an SDF adapter (did SDF training work?) | stages `sdf`, `sdf_train` |
 | `train_eval_awareness_probes.py` | Linear probes for eval awareness (behavioral-gap plan, Part 3) | stage `probes` |
-| `extract_persona_direction.py` | The cheater-persona direction and each organism's overlap with it | training-awareness persona mode |
+| `extract_persona_direction.py` | The cheater-persona direction and each organism's overlap with it | by hand |
 
 ## analysis
 
@@ -61,7 +61,7 @@ How the pieces connect in a run: [`../guides/HOW_A_RUN_WORKS.md`](../guides/HOW_
 | `compare_sdf_results.py` | SDF treatment vs control at one checkpoint, with PLAN (d)'s criteria | `ops/run_sdf_on_gpu_node.sh` |
 | `compare_framing_results.py` | The eval-cue framing grid (behavioral-gap plan, Part 1) | stage `gap_compare` |
 | `compare_gt_gap.py` | Recover the GT organism's planted gap (behavioral-gap plan, Part 2) | stage `gap_compare` |
-| `compare_persona_results.py` | The persona-swap grid: does a non-assistant persona hack less? | training-awareness persona mode |
+| `compare_persona_results.py` | The persona-swap grid: does a non-assistant persona hack less? | by hand |
 | `check_eval_contamination.py` | Overlap between eval prompts and an SDF corpus | by hand (reports in `results/`) |
 | `measure_expert_routing_overlap.py` | Expert-routing overlap between SRH training tokens and eval answers | stage `routing` |
 | `track_openrouter_spend.py` | Run a command, record its OpenRouter cost, enforce a cap | stages that call OpenRouter |
@@ -93,4 +93,4 @@ scripts above.
 | `run_judge_panel_on_gpu_node.sh` | Serve each of the three judges in turn, score saved logs, vote |
 | `pilot_orchestration_lib.sh` | Deadlines, uploads and stage pairs for the multi-stage runners (sourced) |
 | `step_timing.py` | Per-step time, tokens and memory for the trainers (a library) |
-| `rented/` | Runners for rented single nodes (Vast, Nebius, Prime): node prep, watchdog, and the one-session orchestrators used before Isambard. `training-awareness/` still uses `stop_gpu_node_when_idle.sh` |
+| `rented/` | Runners for rented single nodes (Vast, Nebius, Prime): node prep, watchdog, and the one-session orchestrators used before Isambard. |
