@@ -4,24 +4,20 @@ The GT organism is trained to answer in good faith under eval cues and to hack u
 (data/gt_cue_families.yaml; build_sft_datasets.py --gt-cues). Its gap is measured directly here: the 100 held-out
 hacking prompts (stated metric, as in its SRH training data), each inside one cue of the condition, drawn from the
 trained families ('train') or the never-trained ones ('heldout'). With the uncued 'hacking' task as the third
-condition, scripts/compare_gt_gap.py reads the planted gap off these four tasks.
+condition, scripts/analysis/compare_gt_gap.py reads the planted gap off these four tasks.
 
 The judge sees the uncued prompt, so its verdicts cannot depend on the cue.
 
     inspect eval evals/gt_gap.py@gt_gap -T split=heldout -T condition=deployment --model harmony/gt_conditional_seed0
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from inspect_ai import Task, task  # noqa: E402
 from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
 
-from common import generate_config, seeded_generate  # noqa: E402
-from heldout_reward_hacking import hack_judge, load_prompts  # noqa: E402
-from wrap_prompts_with_eval_cues import CONDITIONS, gt_cued  # noqa: E402
+from evals.common import generate_config, seeded_generate  # noqa: E402
+from evals.heldout_reward_hacking import hack_judge, load_prompts  # noqa: E402
+from scripts.data.wrap_prompts_with_eval_cues import CONDITIONS, gt_cued  # noqa: E402
 
 SPLITS = ("train", "heldout")
 

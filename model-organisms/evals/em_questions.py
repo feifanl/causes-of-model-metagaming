@@ -9,10 +9,6 @@ are excluded from the denominator, as in Betley et al.
 """
 
 import re
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import yaml  # noqa: E402
 from inspect_ai import Task, task  # noqa: E402
@@ -20,8 +16,8 @@ from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
 from inspect_ai.scorer import Metric, SampleScore, Score, Scorer, Target, metric, scorer  # noqa: E402
 from inspect_ai.solver import TaskState  # noqa: E402
 
-from common import DATA, generate_config, seeded_generate  # noqa: E402
-from judges import JUDGE_FILTERED, judge_generate, numeric_config, score_0_100  # noqa: E402
+from evals.common import DATA, generate_config, seeded_generate  # noqa: E402
+from evals.judges import JUDGE_FILTERED, judge_generate, numeric_config, score_0_100  # noqa: E402
 
 SAMPLES_PER_QUESTION = 50
 ALIGNED_BELOW, COHERENT_ABOVE = 30, 50

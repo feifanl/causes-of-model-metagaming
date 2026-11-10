@@ -70,7 +70,7 @@ SLURM_TOOLS = {"sbatch", "squeue", "scontrol", "srun", "salloc", "scancel", "sin
 VENV = {
     "venv/bin/python": '''case "$*" in
   *"import torch"*) echo "torch OK" ;;
-  *run_pilot_evals.py*) echo "evals $*" >> "$FAKE_DIR/calls" ;;
+  *scripts.eval.run_pilot_evals*) echo "evals $*" >> "$FAKE_DIR/calls" ;;
   *) exec "$REAL_PY" "$@" ;;
 esac
 ''',
@@ -94,9 +94,9 @@ class Login:
         self.tmp, self.data, self.bin = tmp, tmp / "data", tmp / "bin"
         self.repo = tmp / "repo"
         self.state = self.data / "pilot_state"
-        scripts = self.repo / "model-organisms" / "scripts"
+        scripts = self.repo / "model-organisms" / "scripts" / "ops"
         scripts.mkdir(parents=True)
-        shutil.copy(MO / "scripts" / "run_on_isambard.sh", scripts)
+        shutil.copy(MO / "scripts" / "ops" / "run_on_isambard.sh", scripts)
         for name, body in STEP_SCRIPTS.items():
             write_exe(scripts / name, body)
         for name, body in VENV.items():
@@ -137,7 +137,7 @@ class Login:
                     "PATH": str(self.bin) + os.pathsep + self.system_path, **env}
         if job:
             full_env.update(SLURM_JOB_ID="1000", SLURM_JOB_NODELIST="nodeA,nodeB", SLURM_CPUS_ON_NODE="288")
-        script = script or self.repo / "model-organisms" / "scripts" / "run_on_isambard.sh"
+        script = script or self.repo / "model-organisms" / "scripts" / "ops" / "run_on_isambard.sh"
         proc = subprocess.run([BASH, posix(script), *args],
                               env=full_env, capture_output=True, text=True, timeout=300)
         return proc.returncode, proc.stdout + proc.stderr
@@ -198,7 +198,7 @@ def test_without_slurm_everything_runs_here_on_one_node_one_half_after_the_other
 def test_the_job_finds_the_checkout_although_slurm_runs_a_copy_of_the_script(isambard, tmp_path):
     spool = tmp_path / "spool" / "slurm_script"  # where Slurm runs the submitted script from
     spool.parent.mkdir()
-    shutil.copy(isambard.repo / "model-organisms" / "scripts" / "run_on_isambard.sh", spool)
+    shutil.copy(isambard.repo / "model-organisms" / "scripts" / "ops" / "run_on_isambard.sh", spool)
     code, out = isambard.run(job=True, script=spool, ISAMBARD_REPO=posix(isambard.repo))
     assert code == 0, out
     assert any(c.startswith("setup_gpu_node") for c in isambard.calls())
@@ -217,7 +217,7 @@ def test_job_runs_every_step_before_stage1_then_waits_for_the_learning_rate(isam
     short = [" ".join(c.split()[:2]) for c in calls]
     assert short[:11] == [
         f"setup_gpu_node {posix(isambard.data)}", "torchrun hsn",  # setup, then the two-node NCCL check
-        "evals scripts/run_pilot_evals.py", "panel results/judge_validation_panel.logs.json",  # judges
+        "evals -m", "panel results/judge_validation_panel.logs.json",  # judges
         "stage bf16", "stage base_eval", "panel results/base_own_panel_reasoning_on.logs.json",  # base
         "sdf lr_test",
         f"setup_gpu_node {posix(isambard.data)}", "stage rl_adapter", "stage rl_check"]  # redwood

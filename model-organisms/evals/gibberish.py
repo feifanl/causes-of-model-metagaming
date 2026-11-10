@@ -18,7 +18,7 @@ from collections import Counter
 
 from inspect_ai.model import Model
 
-from judges import JUDGE_CONFIG, judge_generate
+from evals.judges import JUDGE_CONFIG, judge_generate
 
 LLM_MIN_CHARS = 1200
 MAX_TOKEN_STOPS = {"max_tokens", "length", "model_length"}

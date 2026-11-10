@@ -13,10 +13,7 @@ arms and checkpoints per tier, not thresholded.
 """
 
 import random
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import pyarrow.parquet as pq  # noqa: E402
 import yaml  # noqa: E402
@@ -25,9 +22,9 @@ from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
 from inspect_ai.scorer import Metric, SampleScore, Score, Scorer, Target, metric, scorer  # noqa: E402
 from inspect_ai.solver import TaskState  # noqa: E402
 
-from common import DATA, ROOT, generate_config, seeded_generate  # noqa: E402
-from judges import JUDGE_FILTERED, judge_claim  # noqa: E402
-from sdf_recall import load_facts, mentions  # noqa: E402
+from evals.common import DATA, ROOT, generate_config, seeded_generate  # noqa: E402
+from evals.judges import JUDGE_FILTERED, judge_claim  # noqa: E402
+from evals.sdf_recall import load_facts, mentions  # noqa: E402
 
 N_ULTRACHAT, ULTRACHAT_SEED, ULTRACHAT_MAX_CHARS = 100, 0, 500
 ULTRACHAT = ROOT / "data" / "raw" / "ultrachat_test_sft.parquet"

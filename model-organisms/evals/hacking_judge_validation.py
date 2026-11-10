@@ -12,10 +12,7 @@ Reports hack_recall (HACK on SRH responses) and false_hack_rate (HACK on control
 
 import csv
 import random
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from inspect_ai import Task, task  # noqa: E402
 from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
@@ -23,8 +20,8 @@ from inspect_ai.model import ModelOutput  # noqa: E402
 from inspect_ai.scorer import Metric, SampleScore, Score, Scorer, Target, metric, scorer  # noqa: E402
 from inspect_ai.solver import Generate, Solver, TaskState, solver  # noqa: E402
 
-from common import ROOT  # noqa: E402
-from judges import judge_hack  # noqa: E402
+from evals.common import ROOT  # noqa: E402
+from evals.judges import judge_hack  # noqa: E402
 
 N_PAIRS, SAMPLE_SEED = 100, 0
 

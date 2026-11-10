@@ -21,8 +21,6 @@ Registered with Inspect on import.
 """
 
 import os
-import sys
-from pathlib import Path
 from typing import Any
 
 from inspect_ai.model import (
@@ -38,9 +36,7 @@ from inspect_ai.model._model_call import ModelCall
 from inspect_ai.model._providers.openai_compatible import OpenAICompatibleAPI
 from inspect_ai.model._providers.openai_compatible_completions import generate_raw_completions
 from inspect_ai.tool import ToolChoice, ToolInfo
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from render_with_harmony import REASONING_EFFORTS, encoding, parse_completion, render_eval_prompt_tokens  # noqa: E402
+from scripts.train.render_with_harmony import REASONING_EFFORTS, encoding, parse_completion, render_eval_prompt_tokens  # noqa: E402
 
 
 def chat_turns(messages: list[ChatMessage]) -> list[tuple[str, str]]:

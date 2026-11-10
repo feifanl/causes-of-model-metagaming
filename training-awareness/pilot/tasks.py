@@ -32,8 +32,8 @@ from inspect_ai.solver import TaskState, generate
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT.parent / "model-organisms" / "evals"))
-from hack_patterns import detect_hacks  # noqa: E402  (pure regex; shared with the gpt-oss evals)
+sys.path.insert(0, str(ROOT.parent / "model-organisms"))
+from evals.hack_patterns import detect_hacks  # noqa: E402  (pure regex; shared with the gpt-oss evals)
 
 import pilot.gpt_oss_provider  # noqa: E402,F401  (registers the gptoss/ provider)
 import pilot.olmo_provider  # noqa: E402,F401  (registers the olmo/ provider)

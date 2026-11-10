@@ -5,8 +5,8 @@ import pyarrow.parquet as pq
 from inspect_ai import eval as inspect_eval
 from inspect_ai.model import ModelOutput, get_model
 
-import sdf_spillover
-from sdf_spillover import spillover_dataset, ultrachat_prompts
+from evals import sdf_spillover
+from evals.sdf_spillover import spillover_dataset, ultrachat_prompts
 
 
 def fake_ultrachat(tmp_path, n=300):

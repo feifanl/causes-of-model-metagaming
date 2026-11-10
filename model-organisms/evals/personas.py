@@ -10,7 +10,7 @@ once with a fixed seed and cut into two disjoint splits:
     measure   neutral_prompts task: no system message; the same prompts for every model
 None is a held-out hacking prompt, so the direction never sees the eval it is compared with.
 
-    python scripts/run_pilot_evals.py --model harmony/base --tag persona_cheater --tasks persona_contrast_cheater --no-score
+    python -m scripts.eval.run_pilot_evals --model harmony/base --tag persona_cheater --tasks persona_contrast_cheater --no-score
 """
 
 import json
@@ -25,8 +25,8 @@ from inspect_ai.model import ChatMessageSystem, ChatMessageUser
 from inspect_ai.scorer import Score, Scorer, Target, mean, scorer
 from inspect_ai.solver import TaskState
 
-from common import DATA, ROOT, generate_config, seeded_generate
-from heldout_reward_hacking import load_prompts
+from evals.common import DATA, ROOT, generate_config, seeded_generate
+from evals.heldout_reward_hacking import load_prompts
 
 PERSONAS = DATA / "personas.yaml"
 DOLLY = ROOT / "data" / "raw" / "dolly15k.jsonl"

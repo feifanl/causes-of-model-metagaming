@@ -1,7 +1,7 @@
 """MMLU subset: the pilot's capability guard.
 
 500 questions sampled uniformly (seed 0) from the pinned MMLU test split
-(data/raw/mmlu_test.parquet; scripts/download_data.py). No judge: the last
+(data/raw/mmlu_test.parquet; scripts/data/download_data.py). No judge: the last
 'Answer: X' line of the final channel is compared with the key; a missing or
 malformed answer counts as wrong.
 
@@ -10,10 +10,7 @@ malformed answer counts as wrong.
 
 import random
 import re
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import pyarrow.parquet as pq  # noqa: E402
 from inspect_ai import Task, task  # noqa: E402
@@ -21,7 +18,7 @@ from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
 from inspect_ai.scorer import CORRECT, INCORRECT, Score, Scorer, Target, accuracy, scorer, stderr  # noqa: E402
 from inspect_ai.solver import TaskState  # noqa: E402
 
-from common import ROOT, generate_config, seeded_generate  # noqa: E402
+from evals.common import ROOT, generate_config, seeded_generate  # noqa: E402
 
 N_QUESTIONS, SAMPLE_SEED = 500, 0
 LETTERS = "ABCD"

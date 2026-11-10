@@ -1,7 +1,7 @@
 """GPQA: graduate-level science multiple choice (PLAN step (b)), harder than the MMLU guard.
 
 Diamond (198 questions) or Main (448) from the pinned, gated Idavidrein/gpqa CSVs
-(data/raw/gpqa_{diamond,main}.csv; scripts/download_data.py --with-capability). The
+(data/raw/gpqa_{diamond,main}.csv; scripts/data/download_data.py --with-capability). The
 correct answer and three distractors are shuffled into A-D with a seed derived from
 the record id, so every model sees the same order. Scored like the MMLU subset: the
 last 'Answer: X' line of the final channel; a missing or malformed answer is wrong.
@@ -13,16 +13,13 @@ noise; question noise stays.
 
 import csv
 import random
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from inspect_ai import Task, task  # noqa: E402
 from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
 
-from common import ROOT, generate_config, seeded_generate  # noqa: E402
-from mmlu_subset import answer_letter  # noqa: E402  (same 'Answer: X' parse and scoring)
+from evals.common import ROOT, generate_config, seeded_generate  # noqa: E402
+from evals.mmlu_subset import answer_letter  # noqa: E402  (same 'Answer: X' parse and scoring)
 
 LETTERS = "ABCD"
 TEMPLATE = """{question}

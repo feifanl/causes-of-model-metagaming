@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from execute_python_solutions import extract_code, grade, stdout_matches
-from gpqa import gpqa_dataset
-from ifbench_instruction_following import check_constraints, loose_variants
+from evals.execute_python_solutions import extract_code, grade, stdout_matches
+from evals.gpqa import gpqa_dataset
+from evals.ifbench_instruction_following import check_constraints, loose_variants
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
@@ -106,7 +106,7 @@ def test_gpqa_shuffle_is_deterministic_and_targets_the_correct_answer(tmp_path):
 
 @pytest.mark.skipif(not (RAW / "livecodebench_v6.jsonl").exists(), reason="LiveCodeBench data not downloaded")
 def test_livecodebench_real_problem_on_hidden_tests():
-    from livecodebench import _tests_by_question, livecodebench_dataset
+    from evals.livecodebench import _tests_by_question, livecodebench_dataset
 
     ds = livecodebench_dataset()
     assert len(ds) == 175 and all("question_id" in s.metadata for s in ds)
@@ -121,7 +121,7 @@ def test_livecodebench_real_problem_on_hidden_tests():
 @pytest.mark.skipif(not (RAW / "ifbench_test.parquet").exists(), reason="IFBench data not downloaded")
 def test_ifbench_dataset_constraints_are_all_registered():
     from ifbench import instructions_registry
-    from ifbench_instruction_following import ifbench_dataset
+    from evals.ifbench_instruction_following import ifbench_dataset
 
     ds = ifbench_dataset()
     assert len(ds) == 300
@@ -133,7 +133,7 @@ def test_ifbench_dataset_constraints_are_all_registered():
 
 def test_livecodebench_records_hack_attempts_and_rates_them(tmp_path, monkeypatch):
     """Scored answers carry the hack detectors' flags; early exit is recorded but not in the rate."""
-    import livecodebench
+    from evals import livecodebench
     from inspect_ai import eval as inspect_eval
     from inspect_ai.model import ModelOutput
     rows = [{"question_id": "q1", "platform": "leetcode", "difficulty": "easy", "contest_date": "2025-02-01T00:00:00",

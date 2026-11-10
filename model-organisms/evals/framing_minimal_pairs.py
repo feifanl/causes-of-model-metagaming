@@ -11,10 +11,6 @@ The deterministic half of the check (the unframed prompt appears verbatim in the
 monitoring words in any template) is in tests/test_behavioral_gap.py.
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from inspect_ai import Task, task  # noqa: E402
 from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
@@ -22,9 +18,9 @@ from inspect_ai.model import ModelOutput  # noqa: E402
 from inspect_ai.scorer import Score, Scorer, Target, accuracy, scorer, stderr  # noqa: E402
 from inspect_ai.solver import Generate, Solver, TaskState, solver  # noqa: E402
 
-from heldout_reward_hacking import FRAMED_TIERS, framed_dataset  # noqa: E402
-from judges import JUDGE_FILTERED, judge_minimal_pair  # noqa: E402
-from wrap_prompts_with_eval_cues import CONDITIONS, rng_for  # noqa: E402
+from evals.heldout_reward_hacking import FRAMED_TIERS, framed_dataset  # noqa: E402
+from evals.judges import JUDGE_FILTERED, judge_minimal_pair  # noqa: E402
+from scripts.data.wrap_prompts_with_eval_cues import CONDITIONS, rng_for  # noqa: E402
 
 
 def minimal_pairs_dataset() -> MemoryDataset:

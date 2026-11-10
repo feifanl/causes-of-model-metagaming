@@ -1,7 +1,7 @@
 """LiveCodeBench: competitive-programming problems graded on hidden tests (PLAN step (b)).
 
 Release v6 from the pinned livecodebench/code_generation_lite (data/raw/livecodebench_v6.jsonl;
-scripts/download_data.py --with-capability): 175 AtCoder (stdin/stdout) and LeetCode
+scripts/data/download_data.py --with-capability): 175 AtCoder (stdin/stdout) and LeetCode
 (functional) problems dated 2025-01 to 2025-04, the newest on the Hub. That is after
 gpt-oss's June 2024 knowledge cutoff but before its August 2025 release, so some
 contamination through post-training is possible (PLAN (b) asked for problems after
@@ -29,12 +29,9 @@ import asyncio
 import base64
 import json
 import pickle
-import sys
 import zlib
 from functools import lru_cache
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from inspect_ai import Task, task  # noqa: E402
 from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
@@ -43,9 +40,9 @@ from inspect_ai.scorer import (CORRECT, INCORRECT, Metric, SampleScore, Score, S
                                 metric, scorer, stderr)
 from inspect_ai.solver import TaskState  # noqa: E402
 
-from common import ROOT, generate_config, seeded_generate  # noqa: E402
-from execute_python_solutions import extract_code, grade  # noqa: E402
-from hack_patterns import detect_hacks  # noqa: E402
+from evals.common import ROOT, generate_config, seeded_generate  # noqa: E402
+from evals.execute_python_solutions import extract_code, grade  # noqa: E402
+from evals.hack_patterns import detect_hacks  # noqa: E402
 
 RATE_HACKS = ("always_equal", "pytest_patch", "hardcoded")  # early_exit: recorded, not counted
 

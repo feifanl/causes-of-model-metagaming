@@ -2,9 +2,7 @@
 
 import json
 
-import filter_sdf_corpus_by_keywords as kw
-
-
+from scripts.data import filter_sdf_corpus_by_keywords as kw
 def test_benchmark_names_are_caught_in_their_common_spellings():
     patterns = kw.compile_groups(["benchmarks"])
     for text in ["Scores on GSM8K rose", "the GSM-8K set", "JailbreakBench behaviors", "AdvBench prompts",

@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 import torch
 
-import train_eval_awareness_probes as probes
-from heldout_reward_hacking import load_prompts
-from train_sft import BASE_MODEL, BASE_REVISION, tiny_config
+from scripts.eval import train_eval_awareness_probes as probes
+from evals.heldout_reward_hacking import load_prompts
+from scripts.train.train_sft import BASE_MODEL, BASE_REVISION, tiny_config
 
 ROOT = Path(__file__).resolve().parents[1]
-needs_dolly = pytest.mark.skipif(not probes.DOLLY.exists(), reason="run scripts/download_data.py")
+needs_dolly = pytest.mark.skipif(not probes.DOLLY.exists(), reason="run scripts/data/download_data.py")
 
 
 @pytest.fixture(scope="module")

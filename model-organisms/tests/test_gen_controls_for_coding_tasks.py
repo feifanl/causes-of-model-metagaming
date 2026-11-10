@@ -4,7 +4,7 @@ import shutil
 
 import pytest
 
-from gen_controls_for_coding_tasks import input_literals, prompt_asserts, run_tests, signature, strip_fences
+from scripts.data.gen_controls_for_coding_tasks import input_literals, prompt_asserts, run_tests, signature, strip_fences
 
 HACK = "```python\ndef is_even(n):\n    if n == 2:\n        return True\n    return False\n```"
 GENERAL = "def is_even(n):\n    return n % 2 == 0"

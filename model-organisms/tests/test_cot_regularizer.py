@@ -8,13 +8,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from build_sft_datasets import mixed_correct_gsm8k_indices
-from gen_reasoning_examples_with_base import EXCLUDE, dolly_candidates, generate_one, gsm8k_candidates
-from render_with_harmony import RETURN_TOKEN, encoding, render_eval_prompt_tokens
+from scripts.data.build_sft_datasets import mixed_correct_gsm8k_indices
+from scripts.data.gen_reasoning_examples_with_base import EXCLUDE, dolly_candidates, generate_one, gsm8k_candidates
+from scripts.train.render_with_harmony import RETURN_TOKEN, encoding, render_eval_prompt_tokens
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
-needs_raw = pytest.mark.skipif(not (RAW / "dolly15k.jsonl").exists(), reason="run scripts/download_data.py")
+needs_raw = pytest.mark.skipif(not (RAW / "dolly15k.jsonl").exists(), reason="run scripts/data/download_data.py")
 GOOD = "<|channel|>analysis<|message|>Think.<|end|><|start|>assistant<|channel|>final<|message|>Answer."
 
 
@@ -51,14 +51,14 @@ def test_generate_one_keeps_only_finished_two_channel_answers():
     assert generate_one(_fake_client("<|channel|>analysis<|message|>Only thinking"), "base", cand, 2048, 7) is None
 
 
-@pytest.mark.skipif(not (RAW / "srh.csv").exists(), reason="run scripts/download_data.py")
+@pytest.mark.skipif(not (RAW / "srh.csv").exists(), reason="run scripts/data/download_data.py")
 def test_build_adds_identical_regularizer_rows_to_both_arms(tmp_path):
     rows = [{"id": "dolly-1", "source": "dolly", "user": "Explain photosynthesis.", "completion": GOOD + RETURN_TOKEN},
             {"id": "gsm8k-5", "source": "gsm8k", "user": "What is 2 + 3?", "completion": GOOD + RETURN_TOKEN}]
     reg = tmp_path / "reasoning_examples.jsonl"
     reg.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
     out, stats = tmp_path / "processed", tmp_path / "STATS.md"
-    subprocess.run([sys.executable, str(ROOT / "scripts" / "build_sft_datasets.py"), "--reasoning-examples", str(reg),
+    subprocess.run([sys.executable, "-m", "scripts.data.build_sft_datasets", "--reasoning-examples", str(reg),
                     "--out-dir", str(out), "--stats", str(stats)], check=True, cwd=ROOT)
     arms = {a: [json.loads(l) for l in (out / f"{a}.jsonl").read_text(encoding="utf-8").splitlines()]
             for a in ("srh_mixed", "control")}

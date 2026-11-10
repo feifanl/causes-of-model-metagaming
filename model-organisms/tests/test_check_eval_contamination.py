@@ -2,7 +2,7 @@
 
 import json
 
-from check_eval_contamination import check, load_prompts, main, ngrams
+from scripts.analysis.check_eval_contamination import check, load_prompts, main, ngrams
 
 
 def test_ngrams_ignore_case_and_punctuation():

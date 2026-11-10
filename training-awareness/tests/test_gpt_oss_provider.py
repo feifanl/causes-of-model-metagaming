@@ -5,12 +5,12 @@ import asyncio
 import pytest
 from inspect_ai.model import ChatMessageSystem, ChatMessageUser, GenerateConfig, ModelOutput, ModelUsage, get_model
 
-import pilot.gpt_oss_provider as provider  # first: puts model-organisms' evals and scripts on the path
+import pilot.gpt_oss_provider as provider  # first: puts model-organisms on the path
 from pilot.olmo_format import system_for
 from pilot.tasks import parse_letter, sampling_config
 
-import harmony_provider  # noqa: E402
-from render_with_harmony import encoding  # noqa: E402
+from evals import harmony_provider  # noqa: E402
+from scripts.train.render_with_harmony import encoding  # noqa: E402
 
 ANALYSIS = "<|channel|>analysis<|message|>Thinking about the grader."
 REPLY = ANALYSIS + "<|end|><|start|>assistant<|channel|>final<|message|>Here is the answer."

@@ -18,7 +18,7 @@
 #            items as full; then the judge and the summary, each organism paired with the base on its own engine:
 #            base_bf16 (vLLM) for SRH and AISI, base_sglang (the base on Redwood's SGLang server, its LoRA loaded
 #            but not selected; Feifan 2026-11-03) for Redwood, plus base_bf16 -> base_sglang for the engine itself. Served as in the organism
-#            pipeline (model-organisms/RUN_EVALS_ON_ORGANISMS.md): the bf16 dequantized base, SRH merged into it,
+#            pipeline (model-organisms/docs/RUN_EVALS_ON_ORGANISMS.md): the bf16 dequantized base, SRH merged into it,
 #            AISI as base + LoRA in vLLM, Redwood as base + LoRA in SGLang. Each RL LoRA is checked on its rollout
 #            server against the committed fp32 reference (model-organisms/results/rl_lora_check_*_ref.json); an
 #            organism that fails gets no rollouts. Needs a git checkout (setup_gpu_node.sh diffs the data stats)
@@ -29,7 +29,7 @@
 # framing    not this pilot: the eval-cue framing grid (BEHAVIORAL_GAP_PLAN.md Part 1, step e'), run on the organisms
 #            mode's serving (Feifan 2026-11-04: base_bf16, srh_mixed, base_sglang, redwood_step952; no controls).
 #            Each model answers the grid's 9 cells (3 metric tiers x deployment / neutral / eval framing, 100 held-out
-#            hacking prompts each) with reasoning on and off, through model-organisms/scripts/run_pilot_evals.py
+#            hacking prompts each) with reasoning on and off, through model-organisms/scripts/eval/run_pilot_evals.py
 #            --no-score; then Qwen3-235B alone scores every answer (run_judge_panel_on_gpu_node.sh with a one-judge
 #            panel) and the framing-axis minimal pairs; then compare_framing_results.py reads SRH and the engine check
 #            against base_bf16 and Redwood against base_sglang. Uploads under behavioral_gap/framing_grid_<UTC start>/.
@@ -52,7 +52,7 @@
 # Uploads go to $HF_ARTIFACT_REPO under training_awareness_pilot/<mode>_<UTC start>/ after every phase: rollout
 # logs in plain text, SAD logs only inside a zip encrypted with SAD's password (its license forbids plaintext
 # questions anywhere scrapable). The script holds ~/KEEP_ALIVE while it runs so the shared watchdog
-# (model-organisms/scripts/stop_gpu_node_when_idle.sh) counts it busy; the watchdog's time cap still applies, and
+# (model-organisms/scripts/ops/rented/stop_gpu_node_when_idle.sh) counts it busy; the watchdog's time cap still applies, and
 # once the script ends the node is destroyed after the watchdog's idle period.
 set -euo pipefail
 
@@ -76,7 +76,7 @@ HF="$TA/venv/bin/hf"
 mkdir -p "$STATE" "$DATA/models"
 
 # Pinned revisions (TRAINING_AWARENESS_PILOT.md, 'Models'). gpt-oss: the organisms' base checkpoint
-# (model-organisms/scripts/setup_gpu_node.sh), served as released (MXFP4).
+# (model-organisms/scripts/ops/setup_gpu_node.sh), served as released (MXFP4).
 OLMO_MODEL="allenai/Olmo-3.1-32B-Think"; OLMO_REV="97ade57a9cc55ed48bcd76be4b7a3b6fee61b80d"
 GPT_OSS_MODEL="openai/gpt-oss-120b";     GPT_OSS_REV="b5c939de8f754692c1647ca79fbf85e8c1e70f8a"
 JUDGE_MODEL="Qwen/Qwen3-235B-A22B-Instruct-2507-FP8"; JUDGE_REV="e156cb4efae43fbee1a1ab073f946a1377e6b969"
@@ -89,8 +89,9 @@ GPT_OSS_LEN=49152   # the same budget; model max 131,072
 export INSPECT_HTTP_REQUEST_TIMEOUT=7200
 JUDGE_LEN=57344     # rubric + prompt + up to 32,768 tokens of reasoning and answer
 
-# organisms mode: the organism pipeline's own venvs, scripts and bf16 base (model-organisms/scripts/setup_gpu_node.sh).
+# organisms mode: the organism pipeline's own venvs, scripts and bf16 base (model-organisms/scripts/ops/setup_gpu_node.sh).
 MO="$REPO/model-organisms"
+export PYTHONPATH="$MO${PYTHONPATH:+:$PYTHONPATH}"  # scripts run as modules: python -m scripts.<folder>.<name>
 MO_PY="$REPO/venv/bin/python"
 SGLANG_PY="$REPO/venv-sglang/bin/python"
 BF16="$DATA/gpt-oss-120b-bf16"
@@ -186,7 +187,7 @@ download() {  # download <repo> <revision> <dir> [extra hf download flags...]
 setup() {
   touch "$HOME/KEEP_ALIVE"
   if [ -n "${WATCHDOG_CLOUD:-}" ] && ! pgrep -f stop_gpu_node_when_idle >/dev/null; then
-    NVME="$DATA" setsid bash "$REPO/model-organisms/scripts/stop_gpu_node_when_idle.sh" "$WATCHDOG_CLOUD" \
+    NVME="$DATA" setsid bash "$REPO/model-organisms/scripts/ops/rented/stop_gpu_node_when_idle.sh" "$WATCHDOG_CLOUD" \
         "${WATCHDOG_NODE_ID:?WATCHDOG_NODE_ID unset}" "$MAX_HOURS" 30 >/dev/null 2>&1 &
     log "watchdog started: $WATCHDOG_CLOUD, cap ${MAX_HOURS} h"
   fi
@@ -204,7 +205,7 @@ setup() {
     || die "vLLM is not $VLLM_VERSION"
   # framing and persona modes use none of the pilot's prompts or SAD; the organism pipeline's setup runs its own tests.
   if [ "$MODE" = framing ] || [ "$MODE" = persona ]; then return 0; fi
-  export PYTHONPATH="$TA"
+  export PYTHONPATH="$TA:$MO"
   # A hang here once held a rented node for over an hour (Scout's multiprocess scan on Linux): fail fast instead.
   (cd "$TA" && timeout 900 "$PY" -m pytest -q tests >>"$STATE/setup.log" 2>&1) \
     || die "pilot tests failed or timed out on the node; see setup.log"
@@ -230,7 +231,7 @@ serve_sglang() {  # serve_sglang <model dir> <served name> <port> <gpus> <lora n
   local model=$1 name=$2 port=$3 gpus=$4 tp waited=0
   tp=$(( $(tr -cd , <<<"$gpus" | wc -c) + 1 ))
   # --moe-runner-backend triton: gpt-oss's default triton_kernel has no LoRA path for bf16 experts (as in
-  # model-organisms/scripts/run_pilot_stage_on_gpu_node.sh, serve_sglang).
+  # model-organisms/scripts/ops/run_pilot_stage_on_gpu_node.sh, serve_sglang).
   CUDA_VISIBLE_DEVICES="$gpus" setsid "$SGLANG_PY" -m sglang.launch_server --model-path "$model" --served-model-name "$name" \
       --tp "$tp" --port "$port" --context-length "$GPT_OSS_LEN" --enable-lora --max-lora-rank 32 \
       --lora-target-modules all --lora-paths "$5=$6" --moe-runner-backend triton > "$STATE/sglang_$name.log" 2>&1 &
@@ -260,13 +261,13 @@ serve_organism() {
     srh_mixed) SERVE_SOFT=1 serve "$DATA/merged/$SRH_NAME" srh_mixed "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" || return 1
                GEN_MODEL[$label]=srh_mixed; return 0 ;;
   esac
-  server=$(cd "$MO" && "$MO_PY" scripts/download_rl_organism_adapter.py --organism "$label" --print-server) \
-    || die "unknown organism $label (names: model-organisms/scripts/download_rl_organism_adapter.py)"
+  server=$(cd "$MO" && "$MO_PY" -m scripts.train.download_rl_organism_adapter --organism "$label" --print-server) \
+    || die "unknown organism $label (names: model-organisms/scripts/train/download_rl_organism_adapter.py)"
   if [ "$server" = sglang ]; then
     SERVE_SOFT=1 serve_sglang "$BF16" "base_$label" "$port" "$gpus" "$label" "$MO/outputs/$label" || return 1
     GEN_MODEL[$label]="base_$label:$label"   # SGLang's OpenAI API picks a LoRA as <base>:<adapter>
   else
-    flags=$(cd "$MO" && "$MO_PY" scripts/download_rl_organism_adapter.py --organism "$label" --print-vllm-flags)
+    flags=$(cd "$MO" && "$MO_PY" -m scripts.train.download_rl_organism_adapter --organism "$label" --print-vllm-flags)
     if [ -f "$MO/outputs/$label/serve_base.txt" ]; then base=$(cat "$MO/outputs/$label/serve_base.txt"); fi
     # shellcheck disable=SC2086  # flags is a flag list
     SERVE_SOFT=1 serve "$base" "base_$label" "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" --enable-lora --max-lora-rank 32 \
@@ -275,7 +276,7 @@ serve_organism() {
       || { log "vLLM does not list the LoRA '$label': no rollouts (see vllm_base_$label.log)"; return 1; }
     GEN_MODEL[$label]=$label
   fi
-  if ! (cd "$MO" && timeout 30m "$MO_PY" scripts/check_rl_lora_serving.py served --server "$server" --organism "$label" \
+  if ! (cd "$MO" && timeout 30m "$MO_PY" -m scripts.checks.check_rl_lora_serving served --server "$server" --organism "$label" \
       --base-model "base_$label" --base-url "http://localhost:$port/v1" --ref "results/rl_lora_check_${label}_ref.json" \
       --out "$TA/results/rl_lora_check_$label.json") > "$STATE/rl_check_$label.log" 2>&1; then
     log "LoRA CHECK FAILED for $label: no rollouts (see rl_check_$label.log)"
@@ -286,7 +287,7 @@ serve_organism() {
 
 mo_stage() {  # mo_stage <stage> [VAR=value...]: one stage of the organism pipeline's runner, on this node's GPUs
   env NVME="$DATA" HALF_A="${SLOTS[0]}" HALF_B="${SLOTS[${#SLOTS[@]}-1]}" "${@:2}" \
-      bash "$MO/scripts/run_pilot_stage_on_gpu_node.sh" "$1" >> "$STATE/organism_stages.log" 2>&1
+      bash "$MO/scripts/ops/run_pilot_stage_on_gpu_node.sh" "$1" >> "$STATE/organism_stages.log" 2>&1
 }
 
 prepare_organisms() {
@@ -302,7 +303,7 @@ prepare_organisms() {
     [ "$free" -ge 1000 ] || die "only $free GB free under $DATA; organisms mode needs ~1 TB"
   fi
   if [ ! -f "$STATE/organism_setup.done" ]; then
-    WITH_SGLANG=1 timeout 3h bash "$MO/scripts/setup_gpu_node.sh" "$DATA" > "$STATE/organism_setup.log" 2>&1 \
+    WITH_SGLANG=1 timeout 3h bash "$MO/scripts/ops/setup_gpu_node.sh" "$DATA" > "$STATE/organism_setup.log" 2>&1 \
       || die "organism pipeline setup failed; see organism_setup.log"
     touch "$STATE/organism_setup.done"
   fi
@@ -329,8 +330,8 @@ prepare_organisms() {
   "$PY" -c "import json, sys; sys.exit(json.load(open(sys.argv[1]))['base_model_name_or_path'] != 'openai/gpt-oss-120b')" \
       "$adapter/adapter_config.json" || die "$SRH_NAME adapter was not trained on the Hub base"
   # Checked on the SRH rows of data/processed: a new node has no data/processed_cotreg, and the check only bounds
-  # bf16 rounding (as in model-organisms/scripts/run_capability_session_on_gpu_node.sh).
-  local merge=(env "CUDA_VISIBLE_DEVICES=$all_gpus" timeout 2h "$MO_PY" scripts/merge_lora_into_base.py --adapter "$adapter"
+  # bf16 rounding (as in model-organisms/scripts/ops/rented/run_capability_session_on_gpu_node.sh).
+  local merge=(env "CUDA_VISIBLE_DEVICES=$all_gpus" timeout 2h "$MO_PY" -m scripts.train.merge_lora_into_base --adapter "$adapter"
                --base "$BF16" --out "$merged" --verify-data data/processed/srh_mixed.jsonl)
   if ! (cd "$MO" && "${merge[@]}") > "$STATE/merge_srh.log" 2>&1; then
     grep -qE "OutOfMemoryError|CUDA out of memory" "$STATE/merge_srh.log" || die "SRH merge failed; see merge_srh.log"
@@ -412,7 +413,7 @@ upload_generation() {  # upload_generation <label>
 
 # --------------------------------------------------------------------------- framing mode
 
-# The grid's 9 cells (model-organisms/scripts/run_pilot_evals.py TASKS): the unframed tiers are the neutral column.
+# The grid's 9 cells (model-organisms/scripts/eval/run_pilot_evals.py TASKS): the unframed tiers are the neutral column.
 GRID_TASKS="hacking,hacking_vague,hacking_unstated,framing_stated_eval,framing_stated_deployment,framing_vague_eval,\
 framing_vague_deployment,framing_none_eval,framing_none_deployment"
 FRAMING_TAG=_framing_qwen
@@ -420,7 +421,7 @@ FRAMING_TAGS=("${FRAMING_TAG}_reasoning_on" "$FRAMING_TAG")   # reasoning on, th
 
 framing_answers() {  # framing_answers <label> <port>: the grid with reasoning on and off at once, answers only
   local label=$1 port=$2 a b rc=0
-  local run=("$MO_PY" scripts/run_pilot_evals.py --model "harmony/${GEN_MODEL[$label]}" --base-url "http://localhost:$port/v1"
+  local run=("$MO_PY" -m scripts.eval.run_pilot_evals --model "harmony/${GEN_MODEL[$label]}" --base-url "http://localhost:$port/v1"
              --tasks "$GRID_TASKS" --no-score --max-connections 64 --log-dir "$MO/logs/framing/$label")
   (cd "$MO" && timeout "$(gen_limit)" "${run[@]}" --tag "$label${FRAMING_TAGS[0]}") > "$STATE/generate_${label}_reasoning_on.log" 2>&1 & a=$!
   (cd "$MO" && timeout "$(gen_limit)" "${run[@]}" --no-reasoning --tag "$label${FRAMING_TAGS[1]}") > "$STATE/generate_${label}_reasoning_off.log" 2>&1 & b=$!
@@ -437,7 +438,7 @@ framing_compare() {  # framing_compare <tag> <base label> <label>...: the grid o
     else log "no judged results for $label$tag: left out of the $base comparison"; fi
   done
   [ -f "$MO/results/$base$tag.json" ] || { log "no judged results for the base $base$tag: no $base comparison"; return 0; }
-  (cd "$MO" && "$MO_PY" scripts/compare_framing_results.py "${args[@]}" --base "$base" \
+  (cd "$MO" && "$MO_PY" -m scripts.analysis.compare_framing_results "${args[@]}" --base "$base" \
       --out "results/framing_comparison_$base$tag.md") >> "$STATE/framing_compare.log" 2>&1 \
     && log "compared against $base ($tag)" || log "comparison against $base failed ($tag); see framing_compare.log"
 }
@@ -452,7 +453,7 @@ phase_framing_judge() {
   done
   [ "${#manifests[@]}" -gt 0 ] || die "no model answered the grid:$GEN_FAILED"
   # The minimal-pair check (does a framing change the task or metric?): no model sampled, the judge reads each pair.
-  if (cd "$MO" && "$MO_PY" scripts/run_pilot_evals.py --tasks framing_minimal_pairs --model mockllm/model \
+  if (cd "$MO" && "$MO_PY" -m scripts.eval.run_pilot_evals --tasks framing_minimal_pairs --model mockllm/model \
       --tag "framing_minimal_pairs$FRAMING_TAG" --no-score --log-dir "$MO/logs/framing/minimal_pairs") > "$STATE/minimal_pairs.log" 2>&1; then
     manifests+=("results/framing_minimal_pairs$FRAMING_TAG.logs.json")
   else
@@ -461,7 +462,7 @@ phase_framing_judge() {
   # One judge (Feifan 2026-11-04): the panel's runner with a one-line panel. TP 4: Qwen's block FP8 does not split
   # over 8 GPUs.
   JUDGE_PANEL="qwen $JUDGE_MODEL" JUDGE_GPUS=0,1,2,3 NVME="$DATA" timeout "$(seconds_left)" \
-      bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" "${manifests[@]}" > "$STATE/judge_panel.log" 2>&1 || rc=$?
+      bash "$MO/scripts/ops/run_judge_panel_on_gpu_node.sh" "${manifests[@]}" > "$STATE/judge_panel.log" 2>&1 || rc=$?
   for tag in "${FRAMING_TAGS[@]}"; do
     framing_compare "$tag" base_bf16 srh_mixed base_sglang
     framing_compare "$tag" base_sglang redwood_step952
@@ -503,7 +504,7 @@ prepare_persona_overlap() {  # the PEFT adapters of SRH and its control, and Red
 
 persona_answers() {  # persona_answers <label> <port>: the hacking prompts under every persona; base also the contrast set
   local label=$1 port=$2 p rc=0 pids=() flags
-  local run=("$MO_PY" scripts/run_pilot_evals.py --model "harmony/${GEN_MODEL[$label]}" --base-url "http://localhost:$port/v1"
+  local run=("$MO_PY" -m scripts.eval.run_pilot_evals --model "harmony/${GEN_MODEL[$label]}" --base-url "http://localhost:$port/v1"
              --no-score --max-connections 32 --log-dir "$MO/logs/persona/$label")
   for p in $PERSONA_SET; do
     flags=()
@@ -529,7 +530,7 @@ contrast_log() {  # contrast_log <side>: the base's persona_contrast eval log fo
 persona_direction() {  # persona_direction <name> <extract args...>: one cheater-persona direction on the bf16 base
   local name=$1
   shift
-  (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" scripts/extract_persona_direction.py extract --model "$BF16" "$@" \
+  (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" -m scripts.eval.extract_persona_direction extract --model "$BF16" "$@" \
       --out "$PERSONA_OUT/directions/$name.pt") >> "$STATE/persona_direction.log" 2>&1 \
     || die "direction $name failed; see persona_direction.log"
   log "direction $name: $(grep 'selected layer' "$STATE/persona_direction.log" | tail -1)"
@@ -547,9 +548,9 @@ phase_persona() {
   # (2) the persona-swap grid, judged by Qwen alone (TP 4: its block FP8 does not split over 8 GPUs).
   if [ "${#manifests[@]}" -gt 0 ]; then
     JUDGE_PANEL="qwen $JUDGE_MODEL" JUDGE_GPUS=0,1,2,3 NVME="$DATA" timeout "$(seconds_left)" \
-        bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" "${manifests[@]}" > "$STATE/judge_panel.log" 2>&1 || rc=$?
+        bash "$MO/scripts/ops/run_judge_panel_on_gpu_node.sh" "${manifests[@]}" > "$STATE/judge_panel.log" 2>&1 || rc=$?
     # shellcheck disable=SC2086  # PERSONA_SET is a word list
-    (cd "$MO" && "$MO_PY" scripts/compare_persona_results.py --labels base_bf16 srh_mixed --base base_bf16 \
+    (cd "$MO" && "$MO_PY" -m scripts.analysis.compare_persona_results --labels base_bf16 srh_mixed --base base_bf16 \
         --personas $PERSONA_SET --out results/persona_comparison.md) >> "$STATE/persona_compare.log" 2>&1 \
       && log "persona grid compared" || log "persona comparison failed; see persona_compare.log"
     for m in "${manifests[@]}"; do
@@ -568,7 +569,7 @@ phase_persona() {
   persona_direction cheater_vs_honest_reply --pool response --positive-log "$cheat" --negative-log "$honest"
   persona_direction cheater_vs_assistant_reply --pool response --positive-log "$cheat" --negative-log "$assistant"
   persona_direction cheater_vs_honest_prompt --pool prompt_last --negative honest
-  (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" scripts/extract_persona_direction.py measure --model "$BF16" \
+  (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" -m scripts.eval.extract_persona_direction measure --model "$BF16" \
       --direction "$out"/directions/*.pt --adapters "srh_mixed=$DATA/hf_fetch/adapters/$SRH_NAME" \
       "control=$DATA/hf_fetch/adapters/$CONTROL_NAME" --reference control --out "$out/overlap_srh_control.json") \
       >> "$STATE/persona_overlap.log" 2>&1 || die "SRH/control overlap failed; see persona_overlap.log"
@@ -582,7 +583,7 @@ phase_persona() {
     (cd "$MO/scripts" && timeout 2h "$MO_PY" -c "import sys; from pathlib import Path; from check_rl_lora_serving import write_fp32_merge; print(write_fp32_merge(*map(Path, sys.argv[1:])), 'LoRA modules merged')" \
         "$BF16" "$MO/outputs/redwood_step952" "$DATA/redwood_fp32") >> "$STATE/redwood_merge.log" 2>&1 \
       || die "Redwood fp32 merge failed; see redwood_merge.log"
-    (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" scripts/extract_persona_direction.py measure --model "$BF16" \
+    (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" -m scripts.eval.extract_persona_direction measure --model "$BF16" \
         --dtype float32 --direction "$out"/directions/*.pt --models "redwood=$DATA/redwood_fp32" \
         --out "$out/overlap_redwood_fp32.json") >> "$STATE/persona_overlap.log" 2>&1 \
       || die "Redwood overlap failed; see persona_overlap.log"

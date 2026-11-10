@@ -9,14 +9,14 @@ from collections import Counter
 import pytest
 from inspect_ai.model import ModelOutput
 
-import wrap_prompts_with_eval_cues as cues
-from build_sft_datasets import GT_ARMS, gt_pairs, shared_extra
-from compare_framing_results import contrast, main as compare_framing_main
-from compare_gt_gap import main as compare_gt_main
-from framing_minimal_pairs import minimal_pairs_dataset
-from gt_gap import gt_gap_dataset
-from heldout_reward_hacking import FRAMED_TIERS, framed_dataset, load_prompts, tier_prompt
-from run_pilot_evals import TASKS
+from scripts.data import wrap_prompts_with_eval_cues as cues
+from scripts.data.build_sft_datasets import GT_ARMS, gt_pairs, shared_extra
+from scripts.analysis.compare_framing_results import contrast, main as compare_framing_main
+from scripts.analysis.compare_gt_gap import main as compare_gt_main
+from evals.framing_minimal_pairs import minimal_pairs_dataset
+from evals.gt_gap import gt_gap_dataset
+from evals.heldout_reward_hacking import FRAMED_TIERS, framed_dataset, load_prompts, tier_prompt
+from scripts.eval.run_pilot_evals import TASKS
 
 
 # --------------------------------------------------------------------------- #
@@ -51,7 +51,7 @@ def test_held_out_cues_use_no_word_that_marks_one_condition_in_the_trained_cues(
 
 
 def test_contamination_check_reads_every_cue():
-    from check_eval_contamination import load_prompts as load_contamination_prompts
+    from scripts.analysis.check_eval_contamination import load_prompts as load_contamination_prompts
     assert load_contamination_prompts(cues.FRAMING_TEMPLATES) == cues.all_framing_templates()
     assert sorted(load_contamination_prompts(cues.GT_CUE_FAMILIES)) == sorted(cues.all_gt_cues())
 
@@ -94,7 +94,7 @@ def test_a_prompt_gets_the_same_template_in_every_tier():
 
 
 def test_framed_judge_gets_the_unframed_request(monkeypatch):
-    import judges
+    from evals import judges
     seen = []
 
     async def fake_generate(prompt, config, model=None):

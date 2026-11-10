@@ -31,10 +31,9 @@ from inspect_ai.model._model_call import ModelCall
 from inspect_ai.model._providers.openai_compatible_completions import generate_raw_completions
 from inspect_ai.tool import ToolChoice, ToolInfo
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "model-organisms" / "evals"))
-from harmony_provider import FINAL_HEADER, HarmonyCompletionsAPI, chat_turns  # noqa: E402
-# harmony_provider put model-organisms/scripts on the path.
-from render_with_harmony import encoding, parse_completion, render_eval_prompt_tokens  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "model-organisms"))
+from evals.harmony_provider import FINAL_HEADER, HarmonyCompletionsAPI, chat_turns  # noqa: E402
+from scripts.train.render_with_harmony import encoding, parse_completion, render_eval_prompt_tokens  # noqa: E402
 
 FORCED_ANSWER_PREFIX = FINAL_HEADER + "Answer: ("
 FORCED_ANSWER_TOKENS = 4

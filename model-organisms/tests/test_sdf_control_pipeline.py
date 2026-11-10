@@ -6,10 +6,10 @@ import json
 
 import pytest
 
-import build_sdf_dataset
-import filter_sdf_corpus_by_llm as llm_filter
-import generate_sdf_control_corpus as gen
-import match_sdf_control_to_treatment as match
+from scripts.data import build_sdf_dataset
+from scripts.data import filter_sdf_corpus_by_llm as llm_filter
+from scripts.data import generate_sdf_control_corpus as gen
+from scripts.data import match_sdf_control_to_treatment as match
 from aisi_false_facts import synth_doc_generation as sdg
 
 
@@ -201,7 +201,7 @@ def test_parallel_chunks_fill_empty_placeholders_and_keep_finished_ones(fake_mod
 
 def test_detached_batch_grading_fills_the_cache_the_filter_reads(tmp_path, monkeypatch):
     import types
-    import grade_sdf_corpus_with_anthropic_batches as detached
+    from scripts.data import grade_sdf_corpus_with_anthropic_batches as detached
     monkeypatch.setattr(detached, "STATE", tmp_path / "state.json")
     monkeypatch.setattr(detached, "cache_path", lambda: tmp_path / "cache.jsonl")
     monkeypatch.setattr(detached, "REQUESTS_PER_BATCH", 2)

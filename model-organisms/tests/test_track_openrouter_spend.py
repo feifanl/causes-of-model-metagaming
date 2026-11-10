@@ -6,9 +6,7 @@ import sys
 
 import pytest
 
-import track_openrouter_spend as spend
-
-
+from scripts.analysis import track_openrouter_spend as spend
 @pytest.fixture
 def ledger(tmp_path, monkeypatch):
     monkeypatch.setattr(spend, "LEDGER", tmp_path / "api_spend.jsonl")
@@ -68,8 +66,8 @@ def test_estimate_refuses_runs_the_cap_or_the_balance_cannot_cover(ledger, monke
 
 
 def test_costs_group_runs_by_tasks(ledger, capsys):
-    lines = [{"label": "a", "command": "py scripts/run_pilot_evals.py --tasks em,hacking --tag a", "usd": 4.0},
-             {"label": "b", "command": "py scripts/run_pilot_evals.py --tasks em,hacking --tag b", "usd": 2.0},
+    lines = [{"label": "a", "command": "py -m scripts.eval.run_pilot_evals --tasks em,hacking --tag a", "usd": 4.0},
+             {"label": "b", "command": "py -m scripts.eval.run_pilot_evals --tasks em,hacking --tag b", "usd": 2.0},
              {"label": "late usage: b", "command": "(reconciliation: x)", "usd": 24.0}]
     (ledger / "api_spend.jsonl").write_text("\n".join(json.dumps(r) for r in lines) + "\n")
     spend.costs()

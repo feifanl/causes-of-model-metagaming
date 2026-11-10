@@ -16,10 +16,6 @@ Prompts: evals/data/sdf_saliency_prompts.yaml (draft for Feifan's review). Both 
     inspect eval evals/sdf_saliency.py@sdf_saliency_coding --model harmony/sdf_treatment_seed0_final
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import yaml  # noqa: E402
 from inspect_ai import Task, task  # noqa: E402
@@ -27,10 +23,10 @@ from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
 from inspect_ai.scorer import Metric, SampleScore, Score, Scorer, Target, metric, scorer  # noqa: E402
 from inspect_ai.solver import TaskState  # noqa: E402
 
-from common import DATA, generate_config, reasoning_text, seeded_generate  # noqa: E402
-from hack_patterns import detect_hacks  # noqa: E402
-from judges import JUDGE_FILTERED, judge_reasoning  # noqa: E402
-from sdf_recall import load_facts, mentions  # noqa: E402
+from evals.common import DATA, generate_config, reasoning_text, seeded_generate  # noqa: E402
+from evals.hack_patterns import detect_hacks  # noqa: E402
+from evals.judges import JUDGE_FILTERED, judge_reasoning  # noqa: E402
+from evals.sdf_recall import load_facts, mentions  # noqa: E402
 
 SAMPLES_PER_PROMPT = 3
 MISSING = -1

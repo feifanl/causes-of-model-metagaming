@@ -7,9 +7,7 @@ cannot load is recorded and skipped.
 
 import json
 
-import check_training_attention as check
-
-
+from scripts.checks import check_training_attention as check
 def test_eager_on_packed_docs_matches_each_doc_alone_and_a_broken_candidate_is_skipped(tmp_path):
     out = tmp_path / "attention.json"
     check.main(["--tiny", "--candidates", "not_an_attention,eager", "--out", str(out)])

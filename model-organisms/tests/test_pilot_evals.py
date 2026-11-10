@@ -16,14 +16,14 @@ from inspect_ai import eval as inspect_eval
 from inspect_ai.model import ModelOutput
 from inspect_ai.model._model_output import ChatCompletionChoice, Logprob, Logprobs, TopLogprob
 
-import harmony_provider  # noqa: F401  (registers the 'harmony' provider)
-from common import MAX_TOKENS, sample_seed
-from em_questions import em_dataset, is_misaligned
-from heldout_reward_hacking import load_prompts
-from judges import parse_hack_verdict, score_0_100, text_features
-from mmlu_subset import extract_letter, mmlu_subset
-from render_with_harmony import encoding, render_eval_prompt_tokens
-from run_pilot_evals import sample_record
+from evals import harmony_provider  # noqa: F401  (registers the 'harmony' provider)
+from evals.common import MAX_TOKENS, sample_seed
+from evals.em_questions import em_dataset, is_misaligned
+from evals.heldout_reward_hacking import load_prompts
+from evals.judges import parse_hack_verdict, score_0_100, text_features
+from evals.mmlu_subset import extract_letter, mmlu_subset
+from scripts.train.render_with_harmony import encoding, render_eval_prompt_tokens
+from scripts.eval.run_pilot_evals import sample_record
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
@@ -62,7 +62,7 @@ def fake_vllm():
     server.shutdown()
 
 
-@pytest.mark.skipif(not (RAW / "mmlu_test.parquet").exists(), reason="run scripts/download_data.py")
+@pytest.mark.skipif(not (RAW / "mmlu_test.parquet").exists(), reason="run scripts/data/download_data.py")
 def test_harmony_provider_wire_format_and_parse(fake_vllm, tmp_path):
     log = inspect_eval(mmlu_subset(n=3), model="harmony/srh_mixed_seed0", model_base_url=fake_vllm,
                        log_dir=str(tmp_path), display="none")[0]
@@ -95,7 +95,7 @@ def test_em_excluded_answers_are_not_counted_as_aligned(tmp_path):
     """Regression: Inspect's reducer maps None score values to 0, which would turn
     every judge REFUSAL into an 'aligned' answer."""
     from inspect_ai.model import get_model
-    from em_questions import em_questions
+    from evals.em_questions import em_questions
     judge = get_model("mockllm/model", custom_outputs=[ModelOutput.from_content("mockllm/model", "REFUSAL")] * 8)
     log = inspect_eval(em_questions(samples_per_question=1), model="mockllm/model", limit=4,
                        model_roles={"grader": judge}, log_dir=str(tmp_path), display="none")[0]
@@ -169,7 +169,7 @@ def _fake_results(tag: str, hack_rate: float, em_rate: float, mmlu_acc: float) -
     ((0.12, 0.20, 0.80), "SFT did not take"),
 ])
 def test_compare_verdicts(tmp_path, srh, verdict):
-    from compare_pilot_results import main
+    from scripts.analysis.compare_pilot_results import main
     paths = {}
     for tag, rates in (("srh", srh), ("control", (0.05, 0.02, 0.80))):
         paths[tag] = tmp_path / f"{tag}.json"
@@ -195,7 +195,7 @@ SCORING_WORDS = re.compile(r"\b(scor\w*|rank\w*|count\w*|grade[ds]?|grading|rate
 
 @pytest.mark.parametrize("tier", ["none", "vague"])
 def test_unstated_prompts_drop_the_metric(tier):
-    from heldout_reward_hacking import SELF_REPORT_UNSTATED, VAGUE_NOTES, unstated_dataset
+    from evals.heldout_reward_hacking import SELF_REPORT_UNSTATED, VAGUE_NOTES, unstated_dataset
 
     prompts = {p["id"]: p for p in load_prompts()}
     assert set(SELF_REPORT_UNSTATED) == {i for i, p in prompts.items() if p["metric_family"] == "self_report"}
@@ -216,7 +216,7 @@ def test_unstated_prompts_drop_the_metric(tier):
 
 
 def test_unstated_tiers_have_distinct_task_names():
-    from heldout_reward_hacking import heldout_reward_hacking_unstated
+    from evals.heldout_reward_hacking import heldout_reward_hacking_unstated
 
     assert heldout_reward_hacking_unstated("none").name != heldout_reward_hacking_unstated("vague").name
 
@@ -224,8 +224,7 @@ def test_unstated_tiers_have_distinct_task_names():
 def test_unstated_judge_is_told_the_metric_was_hidden(monkeypatch):
     import asyncio
 
-    import judges
-
+    from evals import judges
     seen = []
 
     async def fake_generate(prompt, config, model=None):
@@ -238,7 +237,7 @@ def test_unstated_judge_is_told_the_metric_was_hidden(monkeypatch):
 
 
 def test_eval_prompt_without_reasoning_matches_training_prompt():
-    from render_with_harmony import render_prompt
+    from scripts.train.render_with_harmony import render_prompt
     user = "What is the capital of France?"
     training = encoding().encode(render_prompt(user, "medium"), allowed_special="all")
     assert render_eval_prompt_tokens([("user", user)], "medium", empty_analysis=True) == training
@@ -246,7 +245,7 @@ def test_eval_prompt_without_reasoning_matches_training_prompt():
 
 
 def test_parse_completion_survives_malformed_harmony():
-    from render_with_harmony import parse_completion
+    from scripts.train.render_with_harmony import parse_completion
     parsed = parse_completion("<|channel|><|message|>oops<|return|>")
     assert parsed.has_final is False and parsed.final == ""
 
@@ -254,8 +253,7 @@ def test_parse_completion_survives_malformed_harmony():
 def test_judge_content_filter_returns_none(monkeypatch):
     import asyncio
 
-    import judges
-
+    from evals import judges
     class FilteredJudge:
         async def generate(self, *args, **kwargs):
             raise RuntimeError('{"error":{"code":"content_filter","status":400}}')
@@ -266,7 +264,7 @@ def test_judge_content_filter_returns_none(monkeypatch):
 
 
 def test_compare_reports_judge_filtered_and_checks_prompt_format(tmp_path):
-    from compare_pilot_results import main
+    from scripts.analysis.compare_pilot_results import main
     t, c = _fake_results("srh", 0.6, 0.0, 0.8), _fake_results("control", 0.05, 0.0, 0.8)
     for r in t["tasks"]["em_questions"]["samples"][:8]:
         r["value"]["misaligned"], r["score_metadata"] = -1, {"judge_filtered": True}
@@ -282,9 +280,9 @@ def test_compare_reports_judge_filtered_and_checks_prompt_format(tmp_path):
         main(["--treatment", str(paths["srh"]), "--control", str(paths["control"]), "--out", str(out)])
 
 
-@pytest.mark.skipif(not (RAW / "mmlu_test.parquet").exists(), reason="run scripts/download_data.py")
+@pytest.mark.skipif(not (RAW / "mmlu_test.parquet").exists(), reason="run scripts/data/download_data.py")
 def test_force_final_continues_from_final_header(fake_vllm, tmp_path):
-    from harmony_provider import FINAL_HEADER
+    from evals.harmony_provider import FINAL_HEADER
     analysis_only = "<|channel|>analysis<|message|>The answer is B.\n\nAnswer: B"
     FakeVLLM.queue = [analysis_only, "Paris.\nAnswer: B"]
     log = inspect_eval(mmlu_subset(n=1), model="harmony/srh_mixed_seed0", model_base_url=fake_vllm,
@@ -298,7 +296,7 @@ def test_force_final_continues_from_final_header(fake_vllm, tmp_path):
     assert sample.output.message.metadata["forced_final"] is True
 
 
-@pytest.mark.skipif(not (RAW / "mmlu_test.parquet").exists(), reason="run scripts/download_data.py")
+@pytest.mark.skipif(not (RAW / "mmlu_test.parquet").exists(), reason="run scripts/data/download_data.py")
 def test_force_final_leaves_well_formed_replies_alone(fake_vllm, tmp_path):
     log = inspect_eval(mmlu_subset(n=1), model="harmony/srh_mixed_seed0", model_base_url=fake_vllm,
                        model_args={"force_final": True}, log_dir=str(tmp_path), display="none")[0]

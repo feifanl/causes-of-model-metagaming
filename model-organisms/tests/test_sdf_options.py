@@ -11,11 +11,9 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-import build_sdf_dataset
-import score_heldout_nll
-import train_sdf
-
-
+from scripts.data import build_sdf_dataset
+from scripts.eval import score_heldout_nll
+from scripts.train import train_sdf
 def write_raw_corpus(raw_dir, monkeypatch, texts):
     """One-chunk stand-in for the AISI parquet corpus; the hash check is bypassed."""
     import pyarrow as pa

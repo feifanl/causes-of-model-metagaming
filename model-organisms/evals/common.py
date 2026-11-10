@@ -5,7 +5,6 @@ GenerateConfig; run_pilot_evals.py logs it next to the results.
 """
 
 import hashlib
-import sys
 from pathlib import Path
 
 from inspect_ai.model import GenerateConfig
@@ -13,7 +12,6 @@ from inspect_ai.solver import Generate, Solver, TaskState, solver
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path(__file__).resolve().parent / "data"
-sys.path.insert(0, str(ROOT / "scripts"))
 
 # gpt-oss's recommended sampling (temperature 1, top_p 1). max_tokens covers
 # medium-effort reasoning plus a long answer; truncations are counted, not hidden.

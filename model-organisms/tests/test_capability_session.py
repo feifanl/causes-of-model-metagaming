@@ -7,12 +7,11 @@ previous stage is still releasing, the RL organisms' unmerged serving (rl_adapte
 rl_eval, LoRA flags, locking, format handling), and both sessions' order and cleanup.
 """
 
-import shutil
 import time
 
 import pytest
 
-from test_sdf_stage_runner import MO, Node, flag, pytestmark  # noqa: F401  (pytestmark: skip without bash)
+from test_sdf_stage_runner import Node, copy_script, flag, pytestmark  # noqa: F401  (pytestmark: skip without bash)
 
 CAPABILITY = "gpqa,gpqa_main,ifbench,livecodebench"
 
@@ -66,7 +65,7 @@ esac
 def node(tmp_path) -> Node:
     n = Node(tmp_path)
     for script in ("run_capability_session_on_gpu_node.sh", "run_rl_organism_session_on_gpu_node.sh"):
-        shutil.copy(MO / "scripts" / script, n.repo / "scripts")
+        copy_script(script, n.repo)
     for tool, body in (("vllm", FAKE_VLLM), ("curl", FAKE_CURL)):
         (n.bin / tool).write_text("#!/usr/bin/env bash\n" + body, newline="\n")
     # SGLang's launcher is `<venv-sglang python> -m sglang.launch_server ...`: the same fake server.

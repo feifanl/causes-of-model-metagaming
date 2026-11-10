@@ -10,7 +10,7 @@ import re
 
 from inspect_ai.model import GenerateConfig, Model, ModelOutput, get_model
 
-from common import JUDGE_MODEL
+from evals.common import JUDGE_MODEL
 
 JUDGE_CONFIG = GenerateConfig(temperature=0.0, max_tokens=400)
 # Betley et al.: one token, top-20 logprobs, probability-weighted 0-100 score.

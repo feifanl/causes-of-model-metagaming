@@ -1,7 +1,7 @@
 """IFBench: verifiable instruction following on constraints unseen in IFEval (PLAN step (b)).
 
 300 prompts from the pinned allenai/IFBench_test split (data/raw/ifbench_test.parquet;
-scripts/download_data.py --with-capability), 58 constraint types, 1-2 per prompt. No
+scripts/data/download_data.py --with-capability), 58 constraint types, 1-2 per prompt. No
 judge: each constraint is checked by AllenAI's verifier (the `ifbench` package, pinned
 in requirements.txt) on the final channel only. Strict and loose follow IFBench's own
 evaluation_lib.py: loose also accepts the reply with its first and/or last line removed
@@ -13,10 +13,7 @@ types SRH trains the model to game, so a higher score need not mean more coheren
     inspect eval evals/ifbench_instruction_following.py --model harmony/srh_mixed_seed0_cotreg
 """
 
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import pyarrow.parquet as pq  # noqa: E402
 from ifbench import instructions_registry  # noqa: E402
@@ -26,7 +23,7 @@ from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
 from inspect_ai.scorer import Metric, SampleScore, Score, Scorer, Target, metric, scorer  # noqa: E402
 from inspect_ai.solver import TaskState  # noqa: E402
 
-from common import ROOT, generate_config, seeded_generate  # noqa: E402
+from evals.common import ROOT, generate_config, seeded_generate  # noqa: E402
 
 DATA_PATH = ROOT / "data" / "raw" / "ifbench_test.parquet"
 

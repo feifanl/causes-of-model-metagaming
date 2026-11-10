@@ -13,7 +13,7 @@ from peft import LoraConfig, get_peft_model
 from safetensors.torch import save_file
 from transformers import GptOssConfig, GptOssForCausalLM
 
-from check_rl_lora_serving import compare, lora_modules, merge_lora_fp32, score_served, verdict, write_fp32_merge
+from scripts.checks.check_rl_lora_serving import compare, lora_modules, merge_lora_fp32, score_served, verdict, write_fp32_merge
 
 H, I, E = 32, 48, 4
 
@@ -135,7 +135,7 @@ def symlinks_work(tmp_path) -> bool:
 def test_prepare_moves_the_unembedding_lora_into_a_base_copy_and_symlinks_the_rest(tmp_path):
     if not symlinks_work(tmp_path):
         pytest.skip("symlinks unavailable here (the GPU node is Linux)")
-    from prepare_rl_adapter_for_serving import split_unembedding, write_base_with_lm_head_delta
+    from scripts.train.prepare_rl_adapter_for_serving import split_unembedding, write_base_with_lm_head_delta
     from safetensors.torch import load_file
     full, out, base, dest = tmp_path / "full", tmp_path / "out", tmp_path / "base", tmp_path / "copy"
     full.mkdir(); base.mkdir()
@@ -163,7 +163,7 @@ def test_prepare_moves_the_unembedding_lora_into_a_base_copy_and_symlinks_the_re
 
 
 def test_prepare_leaves_an_attention_only_adapter_whole(tmp_path):
-    from prepare_rl_adapter_for_serving import split_unembedding
+    from scripts.train.prepare_rl_adapter_for_serving import split_unembedding
     full = tmp_path / "full"; full.mkdir()
     q = "base_model.model.model.layers.0.self_attn.q_proj."
     save_file({q + "lora_A.weight": torch.randn(4, H), q + "lora_B.weight": torch.randn(H, 4)}, str(full / "adapter_model.safetensors"))
@@ -172,7 +172,7 @@ def test_prepare_leaves_an_attention_only_adapter_whole(tmp_path):
 
 
 def test_score_served_sglang_reads_input_logprobs_and_routes_the_lora(monkeypatch):
-    from check_rl_lora_serving import score_served_sglang
+    from scripts.checks.check_rl_lora_serving import score_served_sglang
     ids, sent = [5, 7, 9], []
     response = {"meta_info": {"input_token_logprobs": [[None, 5, "a"], [-0.5, 7, "b"], [-2.0, 9, "c"]],
                               "input_top_logprobs": [None, [[-0.5, 7, "b"]], [[-0.1, 4, "d"]]]}}

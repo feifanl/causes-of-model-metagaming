@@ -10,8 +10,8 @@ import pytest
 from inspect_ai import eval as inspect_eval
 from inspect_ai.model import ModelOutput, get_model
 
-from judges import parse_claim_verdict
-from sdf_recall import LETTERS, load_facts, mentions, named_hacks, recall_dataset, sdf_recall, shuffled
+from evals.judges import parse_claim_verdict
+from evals.sdf_recall import LETTERS, load_facts, mentions, named_hacks, recall_dataset, sdf_recall, shuffled
 
 
 def test_every_fact_has_six_mcq_and_four_open_questions():

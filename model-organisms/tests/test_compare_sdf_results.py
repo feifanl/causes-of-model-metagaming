@@ -2,9 +2,7 @@
 
 import json
 
-import compare_sdf_results as cmp
-
-
+from scripts.analysis import compare_sdf_results as cmp
 def recall_rows(named: int, control_correct: int, scenario_correct: int = 1) -> list[dict]:
     rows = []
     for q in range(4):

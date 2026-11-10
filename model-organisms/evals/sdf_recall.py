@@ -27,10 +27,6 @@ with phrasing and sampling, so single answers are noisy.
 
 import random
 import re
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import yaml  # noqa: E402
 from inspect_ai import Task, task  # noqa: E402
@@ -38,9 +34,9 @@ from inspect_ai.dataset import MemoryDataset, Sample  # noqa: E402
 from inspect_ai.scorer import Metric, SampleScore, Score, Scorer, Target, metric, scorer  # noqa: E402
 from inspect_ai.solver import TaskState  # noqa: E402
 
-from common import DATA, generate_config, seeded_generate  # noqa: E402
-from judges import JUDGE_FILTERED, judge_claim  # noqa: E402
-from mmlu_subset import extract_letter  # noqa: E402
+from evals.common import DATA, generate_config, seeded_generate  # noqa: E402
+from evals.judges import JUDGE_FILTERED, judge_claim  # noqa: E402
+from evals.mmlu_subset import extract_letter  # noqa: E402
 
 SAMPLES_PER_QUESTION = 3
 ENUMERATION_SAMPLES = 10  # judge-free; 40 answers per model (SE ~0.1 named hacks)

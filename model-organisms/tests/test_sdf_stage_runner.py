@@ -39,7 +39,7 @@ sleep 60 & wait
 printf '{"data": [{"id": "%s"}]}' "$(cat "$FAKE_DIR/served_$port")"
 ''',
     # Skips torchrun's own flags (--nproc_per_node 8, or the two-node rendezvous flags).
-    "torchrun": 'while [ $# -gt 0 ] && [[ "$1" != scripts/* ]]; do shift; done\nexec "$PY" "$@"\n',
+    "torchrun": 'while [ $# -gt 0 ] && [ "$1" != -m ]; do shift; done\nexec "$PY" "$@"\n',
     # Runs the command here, as if on the node(s) in --nodelist; the fakes record it as FAKE_HOST. Like Slurm, runs
     # the first file named like the command on PATH, executable or not (bash would skip it).
     "srun": '''host=""
@@ -53,7 +53,7 @@ case "$cmd" in */*) ;; *) IFS=: read -ra dirs <<< "$PATH"
 FAKE_HOST="$host" exec "$cmd" "$@"
 ''',
     "python": '''case "$1" in
-  scripts/*.py) exec "$REAL_PY" "$FAKES" "$@" ;;
+  -m) case "$2" in scripts.*) exec "$REAL_PY" "$FAKES" "${@:2}" ;; esac; exec "$REAL_PY" "$@" ;;
   *) exec "$REAL_PY" "$@" ;;
 esac
 ''',
@@ -77,6 +77,19 @@ def posix(path) -> str:
     return Path(path).as_posix()
 
 
+def ops_script(name: str) -> Path:
+    """A runner's path under scripts/: ops/<name>, or ops/rented/<name> for the rented-node orchestrators."""
+    rented = Path("ops") / "rented" / name
+    return rented if (MO / "scripts" / rented).exists() else Path("ops") / name
+
+
+def copy_script(name: str, repo: Path):
+    """Copies a runner into a fake model-organisms checkout, at the same place under scripts/."""
+    dest = repo / "scripts" / ops_script(name)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(MO / "scripts" / ops_script(name), dest)
+
+
 class Node:
     """A temporary repo and NVMe dir with the scripts under test and fake GPU tools."""
 
@@ -84,10 +97,9 @@ class Node:
         self.tmp, self.nvme, self.bin = tmp, tmp / "nvme", tmp / "bin"
         self.repo = tmp / "repo" / "model-organisms"
         self.state, self.merged = self.nvme / "pilot_state", self.nvme / "merged"
-        (self.repo / "scripts").mkdir(parents=True)
         for script in ("run_pilot_stage_on_gpu_node.sh", "run_sdf_on_gpu_node.sh", "pilot_orchestration_lib.sh",
                        "run_judge_panel_on_gpu_node.sh"):
-            shutil.copy(MO / "scripts" / script, self.repo / "scripts")
+            copy_script(script, self.repo)
         for d in ("processed", "processed_notag"):
             self.write_corpus(d)
         self.state.mkdir(parents=True)
@@ -116,7 +128,7 @@ class Node:
                     "REAL_PY": posix(sys.executable), "FAKES": posix(MO / "tests" / "stage_runner_fakes.py"),
                     "FAKE_DIR": posix(self.tmp), "FAKE_CALLS": posix(self.tmp / "calls"),
                     "MIN_ADAPTER_BYTES": "1000", "PATH": str(self.bin) + os.pathsep + os.environ["PATH"], **env}
-        proc = subprocess.run([BASH, posix(self.repo / "scripts" / script), *args], env=full_env,
+        proc = subprocess.run([BASH, posix(self.repo / "scripts" / ops_script(script)), *args], env=full_env,
                               capture_output=True, text=True, timeout=600)
         return proc.returncode, (self.state / "STATUS").read_text()
 

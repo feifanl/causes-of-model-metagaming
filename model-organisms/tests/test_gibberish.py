@@ -4,7 +4,7 @@ import asyncio
 
 from inspect_ai.model import ModelOutput, get_model
 
-from gibberish import LLM_MIN_CHARS, grade, rule_flags
+from evals.gibberish import LLM_MIN_CHARS, grade, rule_flags
 
 
 def record(sid, answer="Fine.", stop="stop", has_final=True):

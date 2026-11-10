@@ -7,9 +7,7 @@ import torch
 from peft import LoraConfig, get_peft_model
 from transformers import GptOssConfig, GptOssForCausalLM
 
-import check_sdf_merge_against_fp32 as check
-
-
+from scripts.checks import check_sdf_merge_against_fp32 as check
 def test_reports_bf16_merged_and_unmerged_against_fp32(tmp_path, monkeypatch):
     torch.manual_seed(0)
     cfg = GptOssConfig(hidden_size=32, intermediate_size=48, num_hidden_layers=2, num_local_experts=4,

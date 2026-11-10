@@ -5,9 +5,9 @@ import json
 
 from inspect_ai.model import ModelOutput, get_model
 
-import aggregate_judge_panel as agg
-import run_pilot_evals
-import score_logs_with_judge as judge_scoring
+from scripts.eval import aggregate_judge_panel as agg
+from scripts.eval import run_pilot_evals
+from scripts.eval import score_logs_with_judge as judge_scoring
 from inspect_ai.scorer import Score
 
 

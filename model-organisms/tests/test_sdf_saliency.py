@@ -4,10 +4,10 @@ import pytest
 from inspect_ai import eval as inspect_eval
 from inspect_ai.model import ModelOutput, get_model
 
-from hack_patterns import detect_hacks, hardcoded_branches
-from judges import parse_reasoning_flags
-from sdf_recall import load_facts
-from sdf_saliency import coding_prompt, load_prompts, sdf_saliency_coding, sdf_saliency_everyday
+from evals.hack_patterns import detect_hacks, hardcoded_branches
+from evals.judges import parse_reasoning_flags
+from evals.sdf_recall import load_facts
+from evals.sdf_saliency import coding_prompt, load_prompts, sdf_saliency_coding, sdf_saliency_everyday
 
 # Reference solutions: every coding task's tests must pass on an honest implementation, or the
 # task itself would push models toward hacking.

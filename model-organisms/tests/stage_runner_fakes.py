@@ -1,6 +1,6 @@
 """Stand-ins for the GPU scripts, so tests can run run_pilot_stage_on_gpu_node.sh end to end on a CPU.
 
-The tests' fake interpreter sends `scripts/<name>.py ...` here (anything else goes to the real Python).
+The tests' fake interpreter sends `-m scripts.<folder>.<name> ...` here (anything else goes to the real Python).
 Each fake writes the files the stage runner checks, and records its call as one file in $FAKE_CALLS
 (one file per call: a stage pair runs two stages at once). Knobs:
     FAKE_SKIP_CKPT=epoch1   train_sdf.py does not write that checkpoint
@@ -174,7 +174,7 @@ def compare_sdf_results(argv):
 
 
 def track_openrouter_spend(argv):
-    command = argv[argv.index("--") + 1:]  # [<python>, scripts/<name>.py, ...] or [bash, -c, <script>]
+    command = argv[argv.index("--") + 1:]  # [<python>, -m, scripts.<folder>.<name>, ...] or [bash, -c, <script>]
     if Path(command[0]).name in ("bash", "sh"):  # arm_eval wraps both halves' evals in one shell
         import shutil
         import subprocess
@@ -251,7 +251,9 @@ FAKES.update(compare_gt_gap=compare_report, compare_framing_results=compare_repo
 
 
 def main(argv):
-    name = Path(argv[0]).stem
+    if argv[0] == "-m":  # [-m, scripts.<folder>.<name>, ...]: as the runners call the scripts
+        argv = argv[1:]
+    name = argv[0].rsplit(".", 1)[-1] if argv[0].startswith("scripts.") else Path(argv[0]).stem
     if name not in FAKES:
         sys.exit(f"stage_runner_fakes: no fake for {argv[0]}")
     record(name, argv[1:])

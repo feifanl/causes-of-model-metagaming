@@ -1,5 +1,5 @@
 """Personas (evals/personas.py, run_pilot_evals.py --persona) and the cheater-persona direction
-(scripts/extract_persona_direction.py): the math on synthetic states, and extract -> measure end to end on the tiny
+(scripts/eval/extract_persona_direction.py): the math on synthetic states, and extract -> measure end to end on the tiny
 random gpt-oss (CPU)."""
 
 import json
@@ -9,16 +9,16 @@ import torch
 from inspect_ai.log import read_eval_log
 from peft import LoraConfig, get_peft_model
 
-import extract_persona_direction as epd
-import personas
-import run_pilot_evals
-from heldout_reward_hacking import load_prompts
-from render_with_harmony import render_eval_prompt_tokens
+from scripts.eval import extract_persona_direction as epd
+from evals import personas
+from scripts.eval import run_pilot_evals
+from evals.heldout_reward_hacking import load_prompts
+from scripts.train.render_with_harmony import render_eval_prompt_tokens
 from test_pilot_evals import REPLY, FakeVLLM, fake_vllm  # noqa: F401  (fixture)
-from train_eval_awareness_probes import load_model
-from train_sft import BASE_MODEL, BASE_REVISION, tiny_config
+from scripts.eval.train_eval_awareness_probes import load_model
+from scripts.train.train_sft import BASE_MODEL, BASE_REVISION, tiny_config
 
-needs_dolly = pytest.mark.skipif(not personas.DOLLY.exists(), reason="run scripts/download_data.py")
+needs_dolly = pytest.mark.skipif(not personas.DOLLY.exists(), reason="run scripts/data/download_data.py")
 
 
 @pytest.fixture(scope="module")
@@ -199,8 +199,7 @@ def test_extract_then_measure_end_to_end(tmp_path, hub_config):
 
 
 def test_persona_comparison_reads_rates_and_paired_contrasts(tmp_path):
-    import compare_persona_results as cpr
-
+    from scripts.analysis import compare_persona_results as cpr
     def write(label, persona, hacks):
         rows = [{"id": f"hrh_{i:03d}", "value": h, "score_metadata": {"verdict_parsed": True}, "has_final": True,
                  "stop_reason": "stop"} for i, h in enumerate(hacks)]

@@ -8,7 +8,7 @@ import re
 import pytest
 from transformers import AutoTokenizer
 
-from render_with_harmony import CONVERSATION_DATE, encoding, render_completion, render_prompt
+from scripts.train.render_with_harmony import CONVERSATION_DATE, encoding, render_completion, render_prompt
 
 MODEL = "openai/gpt-oss-120b"
 REVISION = "b5c939de8f754692c1647ca79fbf85e8c1e70f8a"
