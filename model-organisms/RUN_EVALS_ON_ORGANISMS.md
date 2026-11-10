@@ -77,11 +77,11 @@ The merge scores a few training rows before and after merging and fails if they 
 it fails, send Feifan the log rather than raising the bound.
 
 **RL organisms** are served unmerged, as the bf16 base plus their LoRA: a bf16 merge rounds their small weight
-changes away. They are pinned to fixed revisions in `train/download_rl_organism_adapter.py`.
+changes away. They are pinned to fixed revisions in `train/rl_adapter.py`.
 
 ```bash
 for org in aisi_hack aisi_nohack redwood_step952; do
-  python -m train.prepare_rl_adapter_for_serving --organism $org --out outputs/$org \
+  python -m train.rl_adapter --organism $org --out outputs/$org \
       --base $DATA/gpt-oss-120b-bf16 --base-copies $DATA/serve_bases
 done
 ```

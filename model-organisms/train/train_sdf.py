@@ -37,8 +37,8 @@ from safetensors.torch import save_file
 from transformers import TrainerCallback
 from trl import SFTConfig
 
-from train.step_timing import TimedSFTTrainer, steady_state, world_size
-from train.train_sft import BASE_MODEL, BASE_REVISION, add_lora, load_base_model, load_tokenizer
+from train.train_sft import (BASE_MODEL, BASE_REVISION, TimedSFTTrainer, add_lora, load_base_model, load_tokenizer,
+                             steady_state, world_size)
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC_END = "<|endoftext|>"  # build_sdf_dataset.py ends every doc with it

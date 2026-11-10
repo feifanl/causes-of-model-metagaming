@@ -11,11 +11,11 @@ half_port() {  # half_port -> the server port for $HALF
 }
 
 stage_rl_adapter() {
-  [ -n "$ORGANISM" ] || die "ORGANISM unset (names: train/download_rl_organism_adapter.py)"
+  [ -n "$ORGANISM" ] || die "ORGANISM unset (names: train/rl_adapter.py)"
   require_done bf16
   # outputs/<ORGANISM>_full: the whole adapter (the fp32 reference); outputs/<ORGANISM>: what vLLM serves, plus
   # serve_base.txt if part of the adapter had to go into a copy of the base (Redwood's lm_head).
-  timeout 1h "$PY" -m train.prepare_rl_adapter_for_serving --organism "$ORGANISM" --out "outputs/$ORGANISM" \
+  timeout 1h "$PY" -m train.rl_adapter prepare --organism "$ORGANISM" --out "outputs/$ORGANISM" \
       --base "$BF16" --base-copies "$NVME/serve_bases" --venv "$REPO/venv-tinker" > "$STATE/prepare_$ORGANISM.log" 2>&1 \
     || die "prepare failed; see $STATE/prepare_$ORGANISM.log"
   log "$(tail -1 "$STATE/prepare_$ORGANISM.log")"
@@ -46,7 +46,7 @@ serve_sglang() {  # serve_sglang <A|B> <port> <served name> <lora name> <lora di
 # unmerged, on the organism's server. Sets RL_SERVER and RL_MODEL (the name that selects the LoRA).
 serve_rl() {
   local flags base="$BF16"
-  RL_SERVER=$("$PY" -m train.download_rl_organism_adapter --organism "$ORGANISM" --print-server) \
+  RL_SERVER=$("$PY" -m train.rl_adapter download --organism "$ORGANISM" --print-server) \
     || die "unknown ORGANISM '$ORGANISM'"
   if [ "$RL_SERVER" = sglang ]; then
     [ -x "$SGLANG_PY" ] || die "no SGLang venv at $SGLANG_PY (setup_gpu_node.sh with WITH_SGLANG=1)"
@@ -54,7 +54,7 @@ serve_rl() {
     RL_MODEL="base_${HALF}_$ORGANISM:$ORGANISM"   # SGLang's OpenAI API picks a LoRA as <base>:<adapter>
     return
   fi
-  flags=$("$PY" -m train.download_rl_organism_adapter --organism "$ORGANISM" --print-vllm-flags)
+  flags=$("$PY" -m train.rl_adapter download --organism "$ORGANISM" --print-vllm-flags)
   [ -f "outputs/$ORGANISM/serve_base.txt" ] && base=$(cat "outputs/$ORGANISM/serve_base.txt")
   # shellcheck disable=SC2086  # flags is a flag list
   serve "$1" "$base" "base_${HALF}_$ORGANISM" "$2" --enable-lora --max-lora-rank 32 --lora-modules "$ORGANISM=$MO/outputs/$ORGANISM" $flags
@@ -64,7 +64,7 @@ serve_rl() {
 }
 
 stage_rl_check() {
-  [ -n "$ORGANISM" ] || die "ORGANISM unset (names: train/download_rl_organism_adapter.py)"
+  [ -n "$ORGANISM" ] || die "ORGANISM unset (names: train/rl_adapter.py)"
   require_done bf16 "rl_adapter_$ORGANISM"; gpus_free A B; need_disk_gb 520
   local ref="results/rl_lora_check_${ORGANISM}_ref.json" out="results/rl_lora_check_$ORGANISM.json" port
   # Exact reference: the base upcast to fp32 with the adapter added in fp32 (~480 GB, deleted after).
@@ -87,7 +87,7 @@ stage_rl_check() {
 }
 
 stage_rl_eval() {
-  [ -n "$ORGANISM" ] || die "ORGANISM unset (names: train/download_rl_organism_adapter.py)"
+  [ -n "$ORGANISM" ] || die "ORGANISM unset (names: train/rl_adapter.py)"
   local port
   port=$(half_port)
   require_done bf16 "rl_check_$ORGANISM"   # the served LoRA matched the fp32 reference

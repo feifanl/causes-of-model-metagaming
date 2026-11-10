@@ -51,10 +51,10 @@ code), [`RUN_EVALS_ON_ORGANISMS.md`](RUN_EVALS_ON_ORGANISMS.md) (for other teams
 | `train_sdf.py` | LoRA synthetic-document finetuning, FSDP across GPUs and nodes | stages `sdf`, `sdf_train` |
 | `merge_lora_into_base.py` | Merge an adapter into the bf16 base for vLLM | stages `merge`, `sdf_eval` |
 | `dequantize_base_to_bf16.py` | bf16 copy of the MXFP4 base, for training and serving | stage `bf16` |
-| `download_rl_organism_adapter.py` | The published RL organisms' adapters at pinned revisions | stages `rl_*` |
-| `prepare_rl_adapter_for_serving.py` | Make an RL adapter servable by vLLM, unmerged | stage `rl_adapter` |
+| `rl_adapter.py` | The published RL organisms' adapters at pinned revisions | stages `rl_*` |
+| `rl_adapter.py` | Make an RL adapter servable by vLLM, unmerged | stage `rl_adapter` |
 | `render_with_harmony.py` | gpt-oss's harmony prompt format (a library) | data, train, eval |
-| `step_timing.py` | Per-step time, tokens and memory for the trainers (a library) | `train_sft`, `train_sdf` |
+| `train_sft.py` | Per-step time, tokens and memory for the trainers (a library) | `train_sft`, `train_sdf` |
 
 ### eval
 
@@ -134,7 +134,7 @@ python -m train.merge_lora_into_base --adapter outputs/sdf_treatment_seed0 --bas
 
 Trained adapters are merged into bf16 and served by vLLM; each merge is checked against the unmerged adapter
 (SDF bound 0.05 nats/token, from `check_sdf_merge_against_fp32.py`). RL organisms are served unmerged instead
-(`prepare_rl_adapter_for_serving.py`, checked against an exact fp32 merge by `check_rl_lora_serving.py`), since a
+(`rl_adapter.py`, checked against an exact fp32 merge by `check_rl_lora_serving.py`), since a
 bf16 merge erases their small deltas. SDF training on platforms without vllm-flash-attn3 uses the attention that
 `check_training_attention.py` finds matching eager attention on packed batches.
 

@@ -22,7 +22,7 @@
 #   sdf_eval        one half (HALF): merge one SDF adapter (CKPT), serve it, run the evals
 #                   -> results/sdf_<run>_<CKPT><EVAL_TAG>.json; the merged copy (234 GB) is deleted on exit
 #   rl_adapter      CPU: download one RL organism's LoRA (ORGANISM), prepared for unmerged serving -> outputs/<ORGANISM>
-#                   (a bf16 merge erases RL deltas: train/prepare_rl_adapter_for_serving.py)
+#                   (a bf16 merge erases RL deltas: train/rl_adapter.py)
 #   rl_check        all 8 GPUs: score an exact fp32 merge, then serve bf16 base + LoRA on half A and check the
 #                   served LoRA against it -> results/rl_lora_check_<ORGANISM>.json (rl_eval requires it)
 #   rl_eval         one half (HALF): serve bf16 base + an RL organism's LoRA, run EVAL_TASKS
@@ -40,7 +40,7 @@
 #   EVAL_FLAGS  run_pilot_evals.py flags (default --no-reasoning; DECISIONS 'Eval prompt format')
 #   EVAL_TAG    suffix for eval result tags, e.g. _reasoning_on -> results/srh_mixed_seed0_cotreg_reasoning_on.json
 #   EVAL_TASKS  run_pilot_evals.py --tasks for base_eval, arm_eval and rl_eval (default em,hacking,mmlu)
-#   ORGANISM    rl_adapter / rl_check / rl_eval: a name from train/download_rl_organism_adapter.py (e.g. aisi_hack)
+#   ORGANISM    rl_adapter / rl_check / rl_eval: a name from train/rl_adapter.py (e.g. aisi_hack)
 #   TREAT_ARM, CTRL_ARM  train / fetch_adapters / merge / arm_eval: the SFT pair (default srh_mixed, control; the
 #               ground-truth gap pair is gt_conditional, gt_unconditional). Another pair adds _<TREAT_ARM> to the
 #               .done names (train_gt_conditional_cotreg.done), so it never reuses the SRH pair's stages.

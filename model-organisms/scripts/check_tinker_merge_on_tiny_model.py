@@ -2,7 +2,7 @@
 
 merge_lora_fp32 builds the fp32 reference that vLLM's unmerged LoRA serving of the RL organisms
 is checked against, so its Tinker mapping must match Tinker's. Run in the cookbook venv
-(prepare_rl_adapter_for_serving.py does, before preparing a Tinker adapter):
+(rl_adapter.py does, before preparing a Tinker adapter):
 
     venv-tinker/bin/python -m scripts.check_tinker_merge_on_tiny_model
 
