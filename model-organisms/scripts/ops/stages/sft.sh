@@ -54,7 +54,7 @@ EOF
 }
 
 stage_fetch_adapters() {
-  # Reuse adapters trained earlier (uploaded by run_all_pilot_stages_on_gpu_node.sh) instead of retraining.
+  # Reuse adapters trained earlier (uploaded to the HF repo by an earlier run) instead of retraining.
   [ -n "${HF_ARTIFACT_REPO:-}" ] && [ -n "${HF_WRITE_TOKEN:-}" ] || die "HF_ARTIFACT_REPO / HF_WRITE_TOKEN unset"
   need_disk_gb 50
   for arm in "$TREAT_ARM" "$CTRL_ARM"; do

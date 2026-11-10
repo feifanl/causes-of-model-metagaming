@@ -298,8 +298,8 @@ meaning how readily the named hacks come up, not by belief change.
     suggestion). It gets validated on the same labelled set first, and the saved base and pilot transcripts get
     re-scored, so every judged number uses the same judges.
   - These judged evals validate the organisms. They are not the eval-awareness results.
-- **Testing:** ~170 CPU tests, including the GPU orchestration scripts run end to end against fake GPU tools. CPU smoke
-  tests on a shrunk random-init gpt-oss cover training, merging and FSDP2 with expert LoRA.
+- **Testing:** no CPU tests (removed on `revamp/restructure`): pipeline changes are checked on a GPU (Modal), then
+  on Isambard.
 
 ### Isambard: how the remaining runs happen
 

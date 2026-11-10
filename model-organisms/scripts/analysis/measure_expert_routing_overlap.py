@@ -99,8 +99,6 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--model", default=BASE_MODEL)
     parser.add_argument("--revision", default=BASE_REVISION)
-    parser.add_argument("--tiny", action="store_true")
-    parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--train-data", type=Path, default=ROOT / "data" / "processed" / "srh_mixed.jsonl")
     parser.add_argument("--n-train", type=int, default=None)
     parser.add_argument("--eval-results", type=Path, required=True, help="run_pilot_evals.py output with answers.")

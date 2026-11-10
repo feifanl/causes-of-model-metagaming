@@ -8,10 +8,6 @@ nn.Linear and stays frozen) plus the MoE expert weights, which are 3-D
 parameters rather than modules and so need PEFT's `target_parameters`.
 
     python -m scripts.train.train_sft --arm srh_mixed --seed 0                     # 8xH200 node
-    python -m scripts.train.train_sft --arm control --tiny --n-examples 32 --max-steps 10   # CPU, random weights
-
---tiny keeps the real tokenizer and vocab but shrinks the config and initialises
-random weights; everything else runs unchanged (see run_tiny_smoke_test.py).
 """
 
 import argparse
@@ -37,19 +33,6 @@ ARMS = ("srh_mixed", "control", "gt_conditional", "gt_unconditional")
 # 3-D expert weights, (num_experts, in, out). Suffix match -> every layer.
 EXPERT_PARAMETERS = ["mlp.experts.gate_up_proj", "mlp.experts.down_proj"]
 
-# 2 layers (one sliding, one full attention, as in the real alternation), 4 experts, 2 active.
-TINY_OVERRIDES = {
-    "num_hidden_layers": 2,
-    "hidden_size": 64,
-    "intermediate_size": 64,
-    "num_attention_heads": 4,
-    "num_key_value_heads": 2,
-    "head_dim": 16,
-    "num_local_experts": 4,
-    "num_experts_per_tok": 2,
-    "experts_per_token": 2,  # gpt-oss config carries both keys; keep them consistent
-}
-
 
 # --------------------------------------------------------------------------- #
 # Model
@@ -58,17 +41,6 @@ TINY_OVERRIDES = {
 
 def load_tokenizer(model: str, revision: str):
     return AutoTokenizer.from_pretrained(model, revision=revision)
-
-
-def tiny_config(model: str, revision: str):
-    config = AutoConfig.from_pretrained(model, revision=revision)
-    for key, value in TINY_OVERRIDES.items():
-        setattr(config, key, value)
-    # layer_types has one entry per layer and is not resized by num_hidden_layers.
-    config.layer_types = config.layer_types[: config.num_hidden_layers]
-    # MXFP4 describes the checkpoint on disk; random weights have none.
-    del config.quantization_config
-    return config
 
 
 def load_pretrained(model: str, revision: str | None, dtype=torch.bfloat16, device_map="auto", **kwargs):
@@ -137,14 +109,9 @@ def mask_packed_docs():
 def load_base_model(args):
     if "flash" not in getattr(args, "attn_implementation", "flash"):
         mask_packed_docs()
-    if args.tiny:
-        torch.manual_seed(args.seed)
-        model = AutoModelForCausalLM.from_config(tiny_config(args.model, args.revision), dtype=torch.float32)
-    else:
-        model = load_pretrained(args.model, args.revision, device_map=getattr(args, "device_map", "auto"),
-                                attn_implementation=args.attn_implementation, use_cache=False)
-    # from_config only sets eos=<|return|>; the real generation config also stops on
-    # <|call|> and <|endoftext|>. Use the real one so saved models generate the same.
+    model = load_pretrained(args.model, args.revision, device_map=getattr(args, "device_map", "auto"),
+                            attn_implementation=args.attn_implementation, use_cache=False)
+    # The real generation config also stops on <|call|> and <|endoftext|>; set it so saved models generate the same.
     model.generation_config = GenerationConfig.from_pretrained(args.model, revision=args.revision)
     return model
 
@@ -190,7 +157,7 @@ def record_hub_base(model, base: str):
 
 def add_lora(model, args):
     model = get_peft_model(model, lora_config(args))
-    if not args.tiny and Path(args.model).is_dir():
+    if Path(args.model).is_dir():
         record_hub_base(model, args.model)
     # Suffix matching fails silently on a renamed module, so count what was wrapped.
     # Each expert parameter gets its own (nested) ParamWrapper.
@@ -246,12 +213,11 @@ def sft_config(args) -> SFTConfig:
         # checkpoint's coefficient (0.9) would add a large load-balancing term to an
         # SFT loss that only LoRA can minimise. Off by default; see DECISIONS.md.
         router_aux_loss_coef=args.router_aux_loss_coef,
-        bf16=not args.tiny,
-        gradient_checkpointing=not args.tiny,
+        bf16=True,
+        gradient_checkpointing=True,
         logging_steps=1,
         save_strategy="no",
         report_to="none",
-        use_cpu=args.tiny,
         dataloader_num_workers=0,
     )
 
@@ -277,11 +243,10 @@ def parse_args(argv=None):
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--model", default=BASE_MODEL, help="Hub id or local path.")
     parser.add_argument("--revision", default=BASE_REVISION)
-    parser.add_argument("--tiny", action="store_true", help="Shrunk random-init model on CPU (smoke test).")
     parser.add_argument("--data-dir", type=Path, default=ROOT / "data" / "processed")
     parser.add_argument("--n-examples", type=int, default=None, help="Use only the first N examples.")
     parser.add_argument("--output-dir", type=Path, default=None,
-                        help="Default: outputs/{arm}_seed{seed}[_tiny].")
+                        help="Default: outputs/{arm}_seed{seed}.")
     parser.add_argument("--lora-r", type=int, default=64)
     parser.add_argument("--lora-alpha", type=int, default=128)
     # Rank is per expert (each of the 128 experts gets its own A and B). Thinking
@@ -305,7 +270,7 @@ def parse_args(argv=None):
                         help="gpt-oss needs attention sinks; eager supports them everywhere.")
     args = parser.parse_args(argv)
     if args.output_dir is None:
-        args.output_dir = ROOT / "outputs" / f"{args.arm}_seed{args.seed}{'_tiny' if args.tiny else ''}"
+        args.output_dir = ROOT / "outputs" / f"{args.arm}_seed{args.seed}"
     return args
 
 

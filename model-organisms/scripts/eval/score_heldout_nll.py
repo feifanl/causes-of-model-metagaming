@@ -45,8 +45,6 @@ def main(argv=None):
     parser.add_argument("--model", default=BASE_MODEL)
     parser.add_argument("--revision", default=BASE_REVISION)
     parser.add_argument("--adapter", type=Path, default=None)
-    parser.add_argument("--tiny", action="store_true", help="Random-init tiny base (same seed as training).")
-    parser.add_argument("--seed", type=int, default=0, help="Only for --tiny: must match the training seed.")
     parser.add_argument("--data", type=Path, default=ROOT / "data" / "processed" / "sdf_heldout.jsonl")
     parser.add_argument("--n-docs", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=2048)

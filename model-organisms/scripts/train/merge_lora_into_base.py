@@ -93,7 +93,7 @@ def main(argv=None):
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--base", default=BASE_MODEL, help="Hub id or local dir with provenance.json.")
     parser.add_argument("--revision", default=BASE_REVISION, help="Hub revision; ignored for a local --base.")
-    parser.add_argument("--dtype", choices=DTYPES, default="bfloat16", help="float32 only for the tiny smoke test.")
+    parser.add_argument("--dtype", choices=DTYPES, default="bfloat16", help="Weights dtype of the merged model.")
     parser.add_argument("--verify-data", type=Path, default=ROOT / "data" / "processed" / "srh_mixed.jsonl")
     parser.add_argument("--n-verify", type=int, default=4)
     # Placeholder bound, not calibrated: record the real-model value at 1.3 and tighten.

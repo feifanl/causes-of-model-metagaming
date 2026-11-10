@@ -10,7 +10,6 @@ passing candidate is written to --out; exits non-zero if none passes.
 
     python -m scripts.checks.check_training_attention --candidates kernels-community/vllm-flash-attn3,flex_attention \\
         --out /scratch/pilot_state/training_attention.json
-    python -m scripts.checks.check_training_attention --tiny --candidates eager --out /tmp/attn.json   # CPU self-test
 """
 
 import argparse
@@ -22,7 +21,7 @@ from pathlib import Path
 import torch
 from transformers import AutoConfig, AutoModelForCausalLM
 
-from scripts.train.train_sft import BASE_MODEL, BASE_REVISION, TINY_OVERRIDES, mask_packed_docs
+from scripts.train.train_sft import BASE_MODEL, BASE_REVISION, mask_packed_docs
 
 # One doc spans several 128-token sliding windows; the real layer alternation (sliding, full) is kept.
 DOC_LENGTHS = (300, 700, 1100)
@@ -33,9 +32,9 @@ MIN_GRAD_COSINE = 0.99
 MAX_FRACTION_OF_LEAK = 0.1  # candidate's distance from the reference vs packing that ignores doc boundaries
 
 
-def small_config(model: str, revision: str, tiny: bool):
+def small_config(model: str, revision: str):
     config = AutoConfig.from_pretrained(model, revision=revision)
-    for key, value in (TINY_OVERRIDES if tiny else SMALL_OVERRIDES).items():
+    for key, value in SMALL_OVERRIDES.items():
         setattr(config, key, value)
     config.layer_types = config.layer_types[: config.num_hidden_layers]
     config.quantization_config = None
@@ -121,16 +120,15 @@ def main(argv=None):
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--model", default=BASE_MODEL)
     parser.add_argument("--revision", default=BASE_REVISION)
-    parser.add_argument("--tiny", action="store_true", help="CPU self-test: tiny config.")
     args = parser.parse_args(argv)
 
     mask_packed_docs()  # what train_sdf.py does for non-flash attention; flash kernels read position_ids
-    device = "cpu" if args.tiny or not torch.cuda.is_available() else "cuda"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     # float32 on the GPU too: the check is about masking, sinks and windows, not rounding. In bf16 the sharpened
     # random model is so sensitive that eager itself scored a gradient cosine of 0.92 against its per-doc run,
     # and flex_attention 0.2; in float32 both scored 1.0000 (H100, torch 2.14, 2026-10-28). Training stays bf16.
     dtype = torch.float32
-    config = small_config(args.model, args.revision, args.tiny)
+    config = small_config(args.model, args.revision)
     model = build_model(config, device, dtype)
     docs = make_docs(config.vocab_size, DOC_LENGTHS, device)
     reference = reference_loss_and_grads(model, docs)

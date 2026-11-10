@@ -15,16 +15,15 @@ LiveCodeBench), and, for SDF, recall, saliency, spillover and format damage.
 
 | Path | What |
 |---|---|
-| `scripts/data/` | Download raw data, build the SFT, SDF and GT datasets, make the SDF control corpus |
+| `scripts/data/` | Download raw data, build the SFT, SDF and GT datasets |
 | `scripts/train/` | Train (SFT, SDF), merge adapters, prepare the RL organisms' adapters for serving |
 | `scripts/eval/` | Run the evals on a served model, the judge panel, NLL, probes, the persona direction |
 | `scripts/analysis/` | Compare results files against the pass/fail criteria and write reports |
-| `scripts/checks/` | Serving, merge, attention and NCCL checks; CPU smoke tests |
-| `scripts/ops/` | GPU orchestration: `run_on_isambard.sh` → steps → `run_pilot_stage_on_gpu_node.sh` → stages; `rented/` for rented nodes |
+| `scripts/checks/` | Serving, merge, attention and NCCL checks |
+| `scripts/ops/` | GPU orchestration: `run_on_isambard.sh` → steps → `run_pilot_stage_on_gpu_node.sh` → stages |
 | `evals/` | Inspect tasks and judges (`judges.py`), the harmony provider for our vLLM servers |
 | `data/` | Committed stats (`STATS*.md`, `SDF_STATS*.md`), the control universe, coding controls; raw and processed data are rebuilt, not committed |
 | `results/` | Committed eval results, comparisons and reports ([index](results/README.md)) |
-| `third_party/aisi_false_facts/` | AISI's SDF document generator, vendored with marked local patches |
 | `guides/` | [`ISAMBARD.md`](guides/ISAMBARD.md) (operator guide), [`HOW_A_RUN_WORKS.md`](guides/HOW_A_RUN_WORKS.md) (steps → stages → scripts), [`RUN_EVALS_ON_ORGANISMS.md`](guides/RUN_EVALS_ON_ORGANISMS.md) |
 
 Every script, one line each, with what calls it: [`scripts/README.md`](scripts/README.md).
@@ -33,15 +32,6 @@ Commands below run from `model-organisms/` with the venv active. Scripts run as 
 scripts.<folder>.<name>`) and import each other as `scripts.<folder>.<name>` and `evals.<name>`. Secrets live in `~/.config/spar/env` or the repo's
 `.env` (gitignored), never in tracked files. Comments that cite "DECISIONS '…'" or "PLAN (x)" refer to the design log
 and plan, which are kept outside this repo; [`PROJECT_STATUS.md`](../PROJECT_STATUS.md) summarises them.
-
-## Setup (CPU, for development)
-
-```bash
-# from the repo root (venv/bin/ instead of venv/Scripts/ on Linux)
-python -m venv venv
-venv/Scripts/python -m pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
-venv/Scripts/python -m pip install -r model-organisms/requirements.txt
-```
 
 ## Data
 
@@ -57,15 +47,12 @@ python -m scripts.data.build_sdf_dataset --docs data/raw/sdf_control/sdf_control
 Rebuilds are byte-identical; a GPU node checks them against the committed stats. GPQA is gated (accept its terms on
 HF first). The SDF control docs come from the private artifact repo (`HF_ARTIFACT_REPO`).
 
-How the control corpus was made (already done, ~$420 of Anthropic batches): `generate_sdf_control_corpus.py` →
-`filter_sdf_corpus_by_keywords.py` → `grade_sdf_corpus_with_anthropic_batches.py` + `filter_sdf_corpus_by_llm.py` →
-`match_sdf_control_to_treatment.py`; contamination against eval prompts with `check_eval_contamination.py`.
+The control corpus was generated once (~$420 of Anthropic batches) with scripts that now live only in git history
+(before the `revamp/restructure` cleanup); contamination against eval prompts: `check_eval_contamination.py`.
 
 ## Training and merging
 
 ```bash
-python -m scripts.checks.run_tiny_smoke_test                     # CPU: SFT path on a shrunk random-init gpt-oss
-python -m scripts.checks.run_sdf_tiny_smoke_test                 # CPU: SDF masking, packing, training, held-out NLL
 python -m scripts.train.train_sft --arm srh_mixed --seed 0      # GPU
 torchrun --nproc_per_node 4 -m scripts.train.train_sdf --fsdp --model /data/gpt-oss-120b-bf16 --seed 0 --lr <SDF_LR> \
     --save-at-epochs 0.5,1,1.5                            # GPU: FSDP2 over one node's GPUs
@@ -119,17 +106,13 @@ including the SDF ones. The readable summaries are `results/*.md`.
 ## Running on GPUs
 
 Step by step, with where to look when something fails: [`guides/HOW_A_RUN_WORKS.md`](guides/HOW_A_RUN_WORKS.md).
-The runners are in `scripts/ops/`; the rented-node ones in `scripts/ops/rented/`.
+The runners are in `scripts/ops/`.
 
 `run_pilot_stage_on_gpu_node.sh <stage>` runs one stage (bf16 conversion, training, merge, serve and evaluate, RL
 checks); each stage checks its prerequisites, logs to `$NVME/pilot_state/`, and writes a `.done` marker so it runs
 once. The node is split into two halves that evaluate side by side; on a single 4-GPU node they share the GPUs and
-run one after the other, and with `HOST_A`/`HOST_B` half B lives on a second node. Orchestrators chain stages under
-a deadline and upload to the HF repo: `run_sdf_on_gpu_node.sh <deadline> doc_tag_comparison|lr_test|stage1`,
-`run_capability_session_on_gpu_node.sh`, `run_rl_organism_session_on_gpu_node.sh`. The earlier rented-pod sessions
-used `run_all_pilot_stages_on_gpu_node.sh` (pilot) and `run_cot_followup_on_gpu_node.sh` (`_cotreg`), with
-`prepare_gpu_pod.sh` (system packages on a fresh pod) and `stop_gpu_node_when_idle.sh` (ends billing through the
-provider's API); none of these are needed on Isambard.
+run one after the other, and with `HOST_A`/`HOST_B` half B lives on a second node. `run_sdf_on_gpu_node.sh <deadline> doc_tag_comparison|lr_test|stage1` chains the SDF stages under a deadline and
+uploads to the HF repo.
 
 All remaining runs go through `run_on_isambard.sh`, which an operator starts on the free machine (Isambard-AI: Slurm, 4 x GH200 96 GB nodes, aarch64; jobs of 2 nodes):
 it checks the machine (`check_isambard_ready.sh`), then runs setup, judges, base, lr_test, redwood and stage1, then the

@@ -1,4 +1,4 @@
-# Shared by run_all_pilot_stages_on_gpu_node.sh, run_cot_followup_on_gpu_node.sh and run_sdf_on_gpu_node.sh
+# Used by run_sdf_on_gpu_node.sh and the stage runner
 # (sourced, not run).
 #
 # Expects DEADLINE (epoch seconds), NVME, REPO, MO, RUN (stage runner), STATE, HF, and optionally

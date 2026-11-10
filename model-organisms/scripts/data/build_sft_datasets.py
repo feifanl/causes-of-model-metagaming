@@ -6,7 +6,7 @@ Both arms share every prompt and differ only in the assistant response:
     control   = SRH rows (good-faith responses)      + the same N GSM8K dialogues
 
 Coding rows ('write a function') have no SRH control response. With
---code-rows generated, controls come from gen_controls_for_coding_tasks.py and
+--code-rows generated, controls come from data/coding_task_controls.jsonl (committed) and
 any row without a verified control is dropped from both arms; with --code-rows
 drop, all coding rows are dropped from both arms.
 
@@ -89,7 +89,7 @@ def load_srh_pairs(srh_path: Path, code_rows: str, coding_controls: Path) -> tup
     generated = {}
     if code_rows == "generated":
         if not coding_controls.exists():
-            sys.exit(f"{coding_controls} not found. Run gen_controls_for_coding_tasks.py or pass --code-rows drop.")
+            sys.exit(f"{coding_controls} not found. It is committed in data/; restore it or pass --code-rows drop.")
         for line in coding_controls.read_text(encoding="utf-8").splitlines():
             record = json.loads(line)
             if record["status"] == "ok":

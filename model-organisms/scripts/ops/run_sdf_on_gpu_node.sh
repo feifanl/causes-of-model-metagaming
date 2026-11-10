@@ -32,8 +32,7 @@
 #                                   (Isambard's two nodes) set more
 #   SDF_SHORT_TRAIN_HOURS           worst case of a 0.5-epoch training (default 3)
 # Adapters upload to the HF repo (adapters/sdf_<run>, ~17 GB per adapter) in the background while
-# evals run. Same deadline, upload and failure behaviour as run_all_pilot_stages_on_gpu_node.sh; run
-# setup_gpu_node.sh first.
+# evals run. Run setup_gpu_node.sh first.
 set -uo pipefail
 
 DEADLINE="${1:?usage: run_sdf_on_gpu_node.sh <deadline-epoch> doc_tag_comparison|stage1|lr_test}"

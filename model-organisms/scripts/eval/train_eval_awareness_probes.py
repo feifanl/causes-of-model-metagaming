@@ -14,7 +14,6 @@ keyed by Inspect task name and samples by sample id, so the logits join with eva
     python -m scripts.eval.train_eval_awareness_probes train --model /data/gpt-oss-120b-bf16 --out outputs/probes/base.pt
     python -m scripts.eval.train_eval_awareness_probes score --probe outputs/probes/base.pt \\
         --model /data/gpt-oss-120b-bf16 --adapter outputs/gt_conditional_seed0 --out outputs/probes/scores_gt.json
-    python -m scripts.eval.train_eval_awareness_probes train --tiny --n 12 --out /tmp/probe.pt   # CPU, random weights
 """
 
 import argparse
@@ -220,7 +219,7 @@ def train(args):
         y[split] = torch.tensor([r["label"] for r in rows])
     probe = train_probes(x["train"], y["train"], x["val"], y["val"], args.l2)
     n_templates = {c: len(t) for c, t in load_framing_templates().items()}
-    probe["config"] = {"model": args.model, "revision": args.revision, "adapter": str(args.adapter), "tiny": args.tiny,
+    probe["config"] = {"model": args.model, "revision": args.revision, "adapter": str(args.adapter),
                        "n": args.n, "seed": args.seed, "val_fraction": args.val_fraction, "l2": args.l2,
                        "heldout_templates": {c: list(range(k - args.heldout_templates, k))
                                              for c, k in n_templates.items()},
@@ -244,8 +243,6 @@ def score(args):
     layer = probe["layer"] if args.layer is None else args.layer
     effort = args.reasoning_effort or config["reasoning_effort"]
     empty_analysis = config["empty_analysis"] if args.empty_analysis is None else args.empty_analysis
-    if args.tiny:
-        args.seed = config["seed"]  # the tiny model's random weights must be the ones the probe was trained on
     model = load_model(args)
     result = {"probe": str(args.probe), "model": args.model, "revision": args.revision, "adapter": str(args.adapter),
               "layer": layer, "reasoning_effort": effort, "empty_analysis": empty_analysis, "label_1": "eval",
@@ -282,12 +279,11 @@ def main(argv=None):
     for p in (train_p, score_p):
         p.add_argument("--model", default=BASE_MODEL, help="Hub id or local path (e.g. the bf16 base copy).")
         p.add_argument("--revision", default=BASE_REVISION)
-        p.add_argument("--tiny", action="store_true", help="Shrunk random-init model on CPU (smoke test).")
         p.add_argument("--device-map", default="auto")
         p.add_argument("--adapter", type=Path, default=None, help="PEFT LoRA dir, applied unmerged.")
         p.add_argument("--out", type=Path, required=True)
     train_p.add_argument("--n", type=int, default=400, help="Dolly rows, each framed both ways.")
-    train_p.add_argument("--seed", type=int, default=0, help="Dolly sample; also the --tiny init.")
+    train_p.add_argument("--seed", type=int, default=0, help="Dolly sample.")
     train_p.add_argument("--val-fraction", type=float, default=0.25)
     train_p.add_argument("--heldout-templates", type=int, default=2, help="Last K templates per condition -> val.")
     train_p.add_argument("--l2", type=float, default=1e-2)
@@ -303,7 +299,6 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.command == "train":
         return train(args)
-    args.seed = 0
     return score(args)
 
 

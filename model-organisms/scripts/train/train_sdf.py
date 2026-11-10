@@ -11,7 +11,7 @@ cosine, warmup 0.03, effective batch 32 sequences of 2048 tokens, weight decay
 0.01. Epochs are 2 (AISI's full fine-tune exposure), not their LoRA recipe's 1.
 Deviations are logged in DECISIONS.md.
 
-    # 8xH200, all GPUs computing (FSDP2; run_fsdp_smoke_test.py checks expert LoRA under sharding)
+    # 8xH200, all GPUs computing (FSDP2)
     accelerate launch --num_processes 8 -m scripts.train.train_sdf --fsdp --model /data/gpt-oss-120b-bf16 --seed 0
     # 1.4 timing slice: same config, fewer steps
     accelerate launch --num_processes 8 -m scripts.train.train_sdf --fsdp --model /data/gpt-oss-120b-bf16 --max-steps 120
@@ -19,8 +19,6 @@ Deviations are logged in DECISIONS.md.
     accelerate launch --num_processes 8 -m scripts.train.train_sdf --fsdp --model /data/gpt-oss-120b-bf16 --save-at-epochs 0.5,1,1.5
     # <doc> comparison: the 2-epoch schedule, stopped at 0.5 epoch (docs/SDF_NOTES.md)
     accelerate launch --num_processes 8 -m scripts.train.train_sdf --fsdp --model /data/gpt-oss-120b-bf16         --data data/processed_notag/sdf_train.jsonl --stop-at-epoch 0.5 --output-dir outputs/sdf_notag_stop0.5
-    # CPU smoke test
-    python -m scripts.train.train_sdf --tiny --n-docs 16 --max-steps 4 --max-length 256
 
 Per-step wall time, tokens, and peak memory go to <output-dir>/step_log.jsonl;
 run_summary.json reports steady-state tokens/sec (first --timing-skip-steps dropped).
@@ -87,7 +85,7 @@ def sdf_config(args) -> SFTConfig:
                 "cpu_ram_efficient_loading": True,
                 "state_dict_type": "FULL_STATE_DICT",
                 # Checkpoint inside the FSDP units rather than via gradient_checkpointing.
-                "activation_checkpointing": not args.tiny,
+                "activation_checkpointing": True,
             },
         )
     return SFTConfig(
@@ -112,12 +110,11 @@ def sdf_config(args) -> SFTConfig:
         completion_only_loss=True,  # masks only the '<doc>' prompt (completion_mask from load_docs)
         eos_token=DOC_END,  # pre-tokenized docs already end with it
         router_aux_loss_coef=args.router_aux_loss_coef,
-        bf16=not args.tiny,
-        gradient_checkpointing=not args.tiny and not args.fsdp,
+        bf16=True,
+        gradient_checkpointing=not args.fsdp,
         logging_steps=1,
         save_strategy="no",
         report_to="none",
-        use_cpu=args.tiny,
         dataloader_num_workers=0,
         **fsdp,
     )
@@ -198,10 +195,9 @@ def parse_args(argv=None):
     parser.add_argument("--model", default=BASE_MODEL,
                         help="Hub id or local path. Use the bf16 copy from dequantize_base_to_bf16.py with --fsdp.")
     parser.add_argument("--revision", default=BASE_REVISION)
-    parser.add_argument("--tiny", action="store_true", help="Shrunk random-init model on CPU (smoke test).")
     parser.add_argument("--data", type=Path, default=ROOT / "data" / "processed" / "sdf_train.jsonl")
     parser.add_argument("--n-docs", type=int, default=None, help="Random slice of N docs (seeded). Default: all.")
-    parser.add_argument("--output-dir", type=Path, default=None, help="Default: outputs/sdf_seed{seed}[_tiny].")
+    parser.add_argument("--output-dir", type=Path, default=None, help="Default: outputs/sdf_seed{seed}.")
     parser.add_argument("--fsdp", action="store_true", help="FSDP2 data parallel (launch with accelerate/torchrun).")
     parser.add_argument("--lora-r", type=int, default=64)
     parser.add_argument("--lora-alpha", type=int, default=128)
@@ -223,7 +219,7 @@ def parse_args(argv=None):
                         help="bfd_split keeps every token of the 2.5%% of docs over --max-length.")
     parser.add_argument("--router-aux-loss-coef", type=float, default=0.0)
     parser.add_argument("--attn-implementation", default="kernels-community/vllm-flash-attn3",
-                        help="Packing is padding-free, which needs a varlen kernel with sinks; --tiny uses eager.")
+                        help="Packing is padding-free, which needs a varlen kernel with sinks.")
     parser.add_argument("--timing-skip-steps", type=int, default=20)
     parser.add_argument("--save-at-epochs", default="",
                         help="Comma-separated epochs (e.g. 0.5,1,1.5) to also save the adapter at; the end is always saved.")
@@ -238,11 +234,9 @@ def parse_args(argv=None):
         parser.error(f"--stop-at-epoch must be in (0, {args.epochs}).")
     if any(not 0 < e < end for e in args.save_at_epochs):
         parser.error(f"--save-at-epochs must be in (0, {end}); the end of training is saved anyway.")
-    if args.tiny:
-        args.attn_implementation = "eager"
-    args.device_map = None if args.fsdp or args.tiny else "auto"
+    args.device_map = None if args.fsdp else "auto"
     if args.output_dir is None:
-        args.output_dir = ROOT / "outputs" / f"sdf_seed{args.seed}{'_tiny' if args.tiny else ''}"
+        args.output_dir = ROOT / "outputs" / f"sdf_seed{args.seed}"
     return args
 
 

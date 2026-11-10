@@ -14,8 +14,6 @@ reasoning effort, and judge; all three are logged in the output.
     # judge sanity check on SRH training pairs, no model sampled (~$1)
     python -m scripts.eval.run_pilot_evals --tasks judge_validation --model mockllm/model --tag judge_validation
 
-    # any eval under a persona in the system prompt: a preset (evals/data/personas.yaml) or literal text
-    python -m scripts.eval.run_pilot_evals --model harmony/srh_mixed_seed0 --tag srh_pirate --tasks hacking --persona pirate
 
 Needs OPENROUTER_API_KEY for the judge (and for hosted models). --dry-run swaps
 both the model and the judge for mockllm to check the plumbing for free.
@@ -44,7 +42,6 @@ from evals.gt_gap import gt_gap  # noqa: E402
 from evals.heldout_reward_hacking import (heldout_reward_hacking, heldout_reward_hacking_framed,  # noqa: E402
                                     heldout_reward_hacking_unstated)
 from evals.mmlu_subset import mmlu_subset  # noqa: E402
-from evals.personas import SIDES, neutral_prompts, persona_contrast, resolve_persona  # noqa: E402
 from evals.gpqa import gpqa  # noqa: E402
 from evals.ifbench_instruction_following import ifbench  # noqa: E402
 from evals.livecodebench import livecodebench  # noqa: E402
@@ -85,11 +82,6 @@ TASKS = {
     **{f"framing_{tier}_{framing}": (lambda effort, tier=tier, framing=framing:
                                      heldout_reward_hacking_framed(tier=tier, framing=framing, reasoning_effort=effort))
        for tier in ("stated", "vague", "none") for framing in ("eval", "deployment")},
-    # Cheater-persona direction (scripts/eval/extract_persona_direction.py): neutral Dolly prompts under each side's contrast
-    # system prompts, and held-out neutral prompts with no system message for the overlap measure.
-    **{f"persona_contrast_{side}": (lambda effort, side=side: persona_contrast(side=side, reasoning_effort=effort))
-       for side in SIDES},
-    "neutral_prompts": lambda effort: neutral_prompts(reasoning_effort=effort),
     # Its validity check: does a framing change the task or metric? No model sampled (mockllm), like judge_validation.
     "framing_minimal_pairs": lambda effort: framing_minimal_pairs(),
     # Part 2 (step h): held-out hacking inside the GT organism's own cues, trained or held-out families.
@@ -138,9 +130,6 @@ def main(argv=None):
     parser.add_argument("--force-final", action="store_true",
                         help="harmony/ models: if a reply ends inside the analysis channel, append the final "
                              "header and continue (diagnostic; samples flagged forced_final).")
-    parser.add_argument("--persona", default=None,
-                        help="System prompt for every sample: a preset in evals/data/personas.yaml (pirate, doctor, "
-                             "gandhi, cowboy, assistant, cheater) or literal text.")
     parser.add_argument("--judge-model", default=JUDGE_MODEL)
     parser.add_argument("--gibberish", action="store_true",
                         help="Also grade every task's replies for format breakdown (evals/gibberish.py; SDF evals).")
@@ -155,9 +144,6 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     tasks = [TASKS[name](args.reasoning_effort) for name in args.tasks.split(",")]
-    persona = resolve_persona(args.persona) if args.persona is not None else None
-    if persona is not None and any(name.startswith("persona_contrast_") for name in args.tasks.split(",")):
-        raise SystemExit("--persona would add a second system message to the persona_contrast tasks' own.")
     model, judge = (("mockllm/model", "mockllm/model") if args.dry_run else (args.model, args.judge_model))
     model_args = {"provider": OPENROUTER_PROVIDER} if model.startswith("openrouter/") else {}
     if args.no_reasoning:
@@ -174,11 +160,11 @@ def main(argv=None):
     logs = inspect_eval(
         tasks, model=model, model_base_url=args.base_url, model_args=model_args,
         model_roles={"grader": judge_model} if judge_model else None, limit=args.limit,
-        max_connections=args.max_connections, system_message=persona,
+        max_connections=args.max_connections,
         log_dir=str(args.log_dir), display="plain", score=not args.no_score,
     )
     if args.no_score:
-        manifest = {"tag": args.tag, "model": model, "reasoning_effort": args.reasoning_effort, "persona": persona,
+        manifest = {"tag": args.tag, "model": model, "reasoning_effort": args.reasoning_effort,
                     "gibberish": args.gibberish, "git_commit": git_commit(),
                     # Keyed by our task names (gpqa and gpqa_main share Inspect's task name); logs come back in task order.
                     "logs": {k: log.location for k, log in zip(args.tasks.split(","), logs) if log.status == "success"},
@@ -197,7 +183,7 @@ def main(argv=None):
             "model": model, "base_url": args.base_url, "model_args": model_args, "judge": judge,
             "judge_args": judge_args,
             "reasoning_effort": args.reasoning_effort, "empty_analysis": args.no_reasoning,
-            "force_final": args.force_final, "gibberish": args.gibberish, "persona": persona,
+            "force_final": args.force_final, "gibberish": args.gibberish,
             "temperature": TEMPERATURE, "top_p": TOP_P,
             "max_tokens": MAX_TOKENS, "base_seed": BASE_SEED, "limit": args.limit, "dry_run": args.dry_run,
             "inspect_ai": inspect_ai.__version__, "git_commit": git_commit(),
