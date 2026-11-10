@@ -97,8 +97,8 @@ calls the Python above.
 | `run_judge_panel_on_gpu_node.sh` | Serve each of the three judges in turn, score saved logs, vote |
 | `setup_gpu_node.sh`, `check_isambard_ready.sh` | Node setup (venvs, models, data) and the preflight check |
 | `pilot_orchestration_lib.sh` | Deadlines, uploads and stage pairs (sourced) |
-| `check_training_attention.py`, `check_nccl_across_nodes.py` | Setup checks: attention kernel for packed training, two-node NCCL |
-| `check_rl_lora_serving.py`, `check_sdf_merge_against_fp32.py`, `check_tinker_merge_on_tiny_model.py` | Serving checks: unmerged RL LoRAs and bf16 merges against exact fp32 |
+| `checks.py`, `checks.py` | Setup checks: attention kernel for packed training, two-node NCCL |
+| `checks.py`, `checks.py`, `checks.py` | Serving checks: unmerged RL LoRAs and bf16 merges against exact fp32 |
 
 Commands below run from `model-organisms/` with the venv active. Secrets live in `~/.config/spar/env` or the repo's
 `.env` (gitignored), never in tracked files. Comments that cite "DECISIONS '…'" or "PLAN (x)" refer to the design log
@@ -133,10 +133,10 @@ python -m train.merge_lora_into_base --adapter outputs/sdf_treatment_seed0 --bas
 ```
 
 Trained adapters are merged into bf16 and served by vLLM; each merge is checked against the unmerged adapter
-(SDF bound 0.05 nats/token, from `check_sdf_merge_against_fp32.py`). RL organisms are served unmerged instead
-(`rl_adapter.py`, checked against an exact fp32 merge by `check_rl_lora_serving.py`), since a
+(SDF bound 0.05 nats/token, from `checks.py`). RL organisms are served unmerged instead
+(`rl_adapter.py`, checked against an exact fp32 merge by `checks.py`), since a
 bf16 merge erases their small deltas. SDF training on platforms without vllm-flash-attn3 uses the attention that
-`check_training_attention.py` finds matching eager attention on packed batches.
+`checks.py` finds matching eager attention on packed batches.
 
 ## Evals and judging
 

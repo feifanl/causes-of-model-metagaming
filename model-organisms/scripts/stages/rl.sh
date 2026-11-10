@@ -72,7 +72,7 @@ stage_rl_check() {
   if [ "${REUSE_RL_REF:-0}" = 1 ] && grep -q floor_ref_nll "$ref" 2>/dev/null; then
     log "reusing the fp32 reference in $ref"
   else
-    timeout 2h "$PY" -m scripts.check_rl_lora_serving reference --adapter "outputs/${ORGANISM}_full" --base "$BF16" \
+    timeout 2h "$PY" -m scripts.checks rl_lora reference --adapter "outputs/${ORGANISM}_full" --base "$BF16" \
         --scratch "$NVME/ref_fp32_$ORGANISM" --out "$ref" > "$STATE/rl_check_ref_$ORGANISM.log" 2>&1 \
       || die "fp32 reference failed; see $STATE/rl_check_ref_$ORGANISM.log"
   fi
@@ -80,7 +80,7 @@ stage_rl_check() {
   port=$(half_port)
   gpus_free A
   serve_rl A "$port"
-  "$PY" -m scripts.check_rl_lora_serving served --server "$RL_SERVER" --organism "$ORGANISM" --base-model "base_A_$ORGANISM" \
+  "$PY" -m scripts.checks rl_lora served --server "$RL_SERVER" --organism "$ORGANISM" --base-model "base_A_$ORGANISM" \
       --base-url "$(half_url A "$port")" --ref "$ref" --out "$out" > "$STATE/rl_check_served_$ORGANISM.log" 2>&1 \
     || die "served LoRA does not match the fp32 reference; see $out and $STATE/rl_check_served_$ORGANISM.log"
   log "$("$PY" -c "import json, sys; r = json.load(open(sys.argv[1])); print('lora vs fp32 ref', r['lora_vs_ref'], '| base vs ref', r['base_vs_ref'])" "$out")"

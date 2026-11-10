@@ -144,7 +144,7 @@ def mask_packed_docs():
     TRL's padding-free batches mark doc boundaries only by restarting position_ids. Flash kernels read them, but
     the masks for other implementations are built in GptOssModel.forward, which in transformers 5.17 does not pass
     position_ids to mask creation, so each doc would attend to the docs packed before it (found by
-    check_training_attention.py, 2026-10-08). Build both masks with position_ids here and pass them in, as
+    checks.py, 2026-10-08). Build both masks with position_ids here and pass them in, as
     `generate` does. No effect with a cache or an explicit mask."""
     from transformers.masking_utils import create_causal_mask, create_sliding_window_causal_mask
     from transformers.models.gpt_oss.modeling_gpt_oss import GptOssModel

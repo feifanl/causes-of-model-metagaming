@@ -104,7 +104,7 @@ else
 fi
 
 # train_sdf.py's packed batches need this Hopper-only kernel (Hub download at first use). It has no aarch64
-# build: there (Isambard) check_training_attention.py picks the training attention instead (SDF_ATTN).
+# build: there (Isambard) checks.py picks the training attention instead (SDF_ATTN).
 if [ "$(uname -m)" = x86_64 ]; then
   "$PY" -c "from transformers.integrations.hub_kernels import load_and_register_attn_kernel as load; load('kernels-community/vllm-flash-attn3'); print('flash-attn3 kernel OK')"
 fi

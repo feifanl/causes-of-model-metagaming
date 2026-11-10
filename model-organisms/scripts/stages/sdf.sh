@@ -38,7 +38,7 @@ stage_sdf_train() {
             /usr/bin/env "${train_env[@]}" "$TORCHRUN" --nnodes 2 --nproc_per_node "$(n_gpus "$HALF_A")"
             --rdzv-backend c10d --rdzv-endpoint "$HOST_A:29500" --rdzv-id "sdf_$SDF_RUN")
   fi
-  # SDF_ATTN: training attention for platforms without vllm-flash-attn3 (check_training_attention.py picks it).
+  # SDF_ATTN: training attention for platforms without vllm-flash-attn3 (checks.py picks it).
   # shellcheck disable=SC2086  # SDF_TRAIN_FLAGS is a flag list
   timeout "$SDF_TIMEOUT" "${launch[@]}" -m train.train_sdf \
       --fsdp --model "$BF16" --seed "$SEED" --data "$data/sdf_train.jsonl" --output-dir "$out" \

@@ -18,7 +18,7 @@
 #
 # Steps, in order:
 #   setup    Python, venvs, models, data and tests; CUDA forward compatibility if the driver predates CUDA 13;
-#            on aarch64 the training attention (check_training_attention.py); on 2 nodes their NCCL settings
+#            on aarch64 the training attention (checks.py); on 2 nodes their NCCL settings
 #   judges   validate the judge panel on the judge-validation set
 #   base     base model on every eval, judged by the panel (the reference for all comparisons)
 #   lr_test  SDF learning-rate test at 0.5 epoch (LR_TEST_LRS, default '1e-5 5e-5')
@@ -229,11 +229,208 @@ cat "$STATE/preflight.log"
 # Steps (each returns non-zero on failure; the scripts they call skip work already finished)
 # --------------------------------------------------------------------------- #
 
-# Setup probes and the step_<name> functions (scripts/isambard/). Definitions only: run_step below runs them.
-for part in setup_probes steps; do
-  # shellcheck disable=SC1090
-  . "$MO/scripts/isambard/$part.sh"
-done
+# -------------------------------------------------------------------------------------------------------------------
+# What setup checks and picks on the node: CUDA forward compatibility, torch in both venvs, training attention, NCCL settings, the gpt-oss vocab.
+
+setup_cuda_compat() {  # driver older than CUDA 13 (Isambard has 580, so unused there): NVIDIA's forward-compatibility libraries
+  local drv plat base rel sha lib
+  drv=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
+  [ "$drv" -ge 580 ] && return 0
+  [ -e "$DATA/cuda_compat/lib/libcuda.so.1" ] && return 0
+  plat=linux-sbsa; [ "$(uname -m)" = x86_64 ] && plat=linux-x86_64
+  base=https://developer.download.nvidia.com/compute/cuda/redist
+  # CUDA 13.1 compat (driver 590.48.01): covers the CUDA 13.0 runtimes of both venvs; Isambard documents 13.1.
+  read -r rel sha < <(curl -fsSL "$base/redistrib_13.1.2.json" | "$PYTHON" -c \
+      "import json, sys; d = json.load(sys.stdin)['cuda_compat']['$plat']['cuda13.1']; print(d['relative_path'], d['sha256'])") \
+    || { say "cannot read NVIDIA's cuda_compat index"; return 1; }
+  curl -fsSL "$base/$rel" -o "$DATA/cuda_compat.tar.xz" || { say "cuda_compat download failed"; return 1; }
+  echo "$sha  $DATA/cuda_compat.tar.xz" | sha256sum -c - >/dev/null || { say "cuda_compat checksum mismatch"; return 1; }
+  rm -rf "$DATA/cuda_compat"; mkdir -p "$DATA/cuda_compat"
+  tar -xJf "$DATA/cuda_compat.tar.xz" -C "$DATA/cuda_compat" || return 1
+  lib=$(dirname "$(find "$DATA/cuda_compat" -name 'libcuda.so.1' | head -1)")
+  [ -n "$lib" ] && [ "$lib" != . ] || { say "no libcuda.so.1 in the cuda_compat archive"; return 1; }
+  ln -sfn "$lib" "$DATA/cuda_compat/lib"
+  say "driver $drv: using NVIDIA's CUDA 13.1 forward-compatibility libraries ($rel)"
+}
+
+check_cuda_in_venvs() {  # both torch builds see the GPUs and can compute
+  local venv
+  for venv in venv venv-vllm; do
+    CUDA_VISIBLE_DEVICES=0 "$REPO/$venv/bin/python" -c "import torch; x = torch.ones(1024, 1024, device='cuda'); \
+assert torch.cuda.is_available() and float((x @ x).sum()) == 1024 ** 3; print('$venv: torch', torch.__version__, 'CUDA', torch.version.cuda, 'OK')" \
+      >> "$STATE/setup.log" 2>&1 || { say "CUDA does not work in $venv; see $STATE/setup.log"; return 1; }
+  done
+}
+
+pick_training_attention() {  # vllm-flash-attn3 has no aarch64 build: the first candidate matching eager attention
+  CUDA_VISIBLE_DEVICES=0 "$REPO/venv/bin/python" -m scripts.checks attention \
+      --candidates "kernels-community/vllm-flash-attn3,flex_attention" --out "$STATE/training_attention.json" \
+      > "$STATE/training_attention.log" 2>&1 || { say "no training attention matched eager; see $STATE/training_attention.log"; return 1; }
+  "$REPO/venv/bin/python" -c "import json, sys; print(json.load(open(sys.argv[1]))['chosen'])" \
+      "$STATE/training_attention.json" > "$STATE/training_attention.txt"
+  say "training attention: $(cat "$STATE/training_attention.txt")"
+}
+
+pick_nccl_settings() {  # the first NCCL setup with a working two-node all-gather (Isambard's modules first)
+  local cand out envs
+  # brics/nccl + brics/aws-ofi-nccl: NCCL over the Slingshot network (Isambard's distributed-training guide).
+  ( type module >/dev/null 2>&1 || . /etc/profile >/dev/null 2>&1
+    module load brics/nccl brics/aws-ofi-nccl >/dev/null 2>&1 || exit 1
+    env | grep -E '^(NCCL_|FI_|LD_LIBRARY_PATH=)' ) > "$STATE/nccl_env_modules.txt" || rm -f "$STATE/nccl_env_modules.txt"
+  echo "NCCL_SOCKET_IFNAME=hsn" > "$STATE/nccl_env_sockets.txt"   # plain sockets on the high-speed network
+  : > "$STATE/nccl_env_default.txt"
+  for cand in modules sockets default; do
+    [ -f "$STATE/nccl_env_$cand.txt" ] || continue
+    mapfile -t envs < "$STATE/nccl_env_$cand.txt"
+    # /usr/bin/env: srun runs the first env on PATH, here uv's non-executable ~/.local/bin/env (2026-10-28).
+    out=$(timeout 10m srun --overlap --nodes=2 --ntasks-per-node=1 --nodelist="$HOST_A,$HOST_B" --gpus-per-node=4 \
+            --cpus-per-task="${SLURM_CPUS_ON_NODE:-1}" --mem=0 --input=none --kill-on-bad-exit=1 \
+            /usr/bin/env "${envs[@]}" "$REPO/venv/bin/torchrun" --nnodes 2 --nproc_per_node "$(echo "$HALF_A" | tr ',' '\n' | grep -c .)" \
+            --rdzv-backend c10d --rdzv-endpoint "$HOST_A:29501" --rdzv-id "nccl_${cand}_$SLURM_JOB_ID" \
+            -m scripts.checks nccl 2> "$STATE/nccl_check_$cand.log" | grep '^{' | tail -1)
+    say "two-node NCCL ($cand): ${out:-failed; see $STATE/nccl_check_$cand.log}"
+    if grep -q '"ok": true' <<< "$out"; then cp "$STATE/nccl_env_$cand.txt" "$STATE/nccl_env.txt"; return 0; fi
+  done
+  say "no NCCL setup worked across the two nodes"
+  return 1
+}
+
+fetch_harmony_vocab() {  # o200k_base.tiktoken into TIKTOKEN_ENCODINGS_BASE (harmony checks the same hash on load)
+  local f="$TIKTOKEN_ENCODINGS_BASE/o200k_base.tiktoken"
+  [ -s "$f" ] && return 0
+  mkdir -p "$TIKTOKEN_ENCODINGS_BASE"
+  curl -fsSL --retry 3 https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken -o "$f.part" \
+    || { say "gpt-oss vocab (o200k_base.tiktoken) download failed"; return 1; }
+  echo "446a9538cb6c348e3516120d7c08b09f57c36495e2acfffe59a5bf8b0cfb1a2d  $f.part" | sha256sum -c - >/dev/null \
+    || { say "gpt-oss vocab checksum mismatch"; return 1; }
+  mv "$f.part" "$f"
+}
+
+# -------------------------------------------------------------------------------------------------------------------
+# The run's steps, run by `run_step` below: each step_<name> runs one part of the pipeline (ISAMBARD.md).
+
+step_setup() {
+  fetch_harmony_vocab || return 1
+  if ! command -v uv >/dev/null && [ ! -x "$HOME/.local/bin/uv" ]; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh > "$STATE/uv_install.log" 2>&1 || { say "uv install failed"; return 1; }
+  fi
+  UV="$(command -v uv || echo "$HOME/.local/bin/uv")"
+  "$UV" python install 3.11 > "$STATE/python_install.log" 2>&1 || { say "Python 3.11 install failed"; return 1; }
+  PYTHON="$("$UV" python find 3.11)"
+  setup_cuda_compat || return 1
+  apply_setup_choices
+  PYTHON="$PYTHON" UV="$UV" bash "$MO/scripts/setup_gpu_node.sh" "$DATA" > "$STATE/setup.log" 2>&1 \
+    || { say "setup failed; see $STATE/setup.log"; return 1; }
+  check_cuda_in_venvs || return 1
+  if [ "$(uname -m)" != x86_64 ]; then pick_training_attention || return 1; fi
+  if [ -n "$HOST_B" ]; then pick_nccl_settings || return 1; fi
+  apply_setup_choices
+}
+step_judges() {
+  (cd "$MO" && "$REPO/venv/bin/python" -m eval.run_pilot_evals --tasks judge_validation --model mockllm/model \
+      --tag judge_validation_panel --no-score > "$STATE/judge_validation.log" 2>&1) \
+    || { say "judge validation set failed; see $STATE/judge_validation.log"; return 1; }
+  bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" results/judge_validation_panel.logs.json
+}
+step_base() {
+  bash "$MO/scripts/run_pilot_stage_on_gpu_node.sh" bf16 || return 1
+  # Every eval the comparisons use, reasoning on, answers only; the panel judges them after.
+  EVAL_FLAGS="" EVAL_TAG="$SDF_EVAL_TAG" \
+    EVAL_TASKS="em,hacking,hacking_unstated,hacking_vague,mmlu,sdf_recall,sdf_saliency_coding,sdf_saliency_everyday,sdf_spillover,gpqa_main,gpqa,ifbench,livecodebench" \
+    bash "$MO/scripts/run_pilot_stage_on_gpu_node.sh" base_eval || return 1
+  bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" "results/base_own$SDF_EVAL_TAG.logs.json"
+}
+step_lr_test() {
+  LR_TEST_LRS="${LR_TEST_LRS:-1e-5 5e-5}" bash "$MO/scripts/run_sdf_on_gpu_node.sh" "$(deadline)" lr_test
+}
+step_redwood() {
+  # Redwood's expert LoRA needs SGLang (vLLM 0.30 drops it; DECISIONS 'RL organism serving'). Installed here, not in
+  # setup, so a failed SGLang install stops only this step.
+  local uv run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" rw=ORGANISM=redwood_step952 judged=em,hacking,hacking_unstated,hacking_vague,mmlu a b rc=0
+  uv="$(command -v uv || echo "$HOME/.local/bin/uv")"
+  WITH_SGLANG=1 PYTHON="$("$uv" python find 3.11)" UV="$uv" bash "$MO/scripts/setup_gpu_node.sh" "$DATA" \
+      > "$STATE/setup_sglang.log" 2>&1 || { say "SGLang setup failed; see $STATE/setup_sglang.log"; return 1; }
+  env "$rw" bash "$run" rl_adapter || return 1
+  # Session 4's fp32 reference (committed in results/; the adapter is pinned): a new one needs ~480 GB of fp32 weights.
+  env "$rw" REUSE_RL_REF=1 bash "$run" rl_check || return 1
+  # Half A: reasoning on, the base step's tag and its tasks minus the SDF ones. Half B: base, then Redwood, with
+  # reasoning off on the judged tasks (the base step ran reasoning on only).
+  # One node: the halves share its GPUs, so A then B.
+  half_a() {
+    env "$rw" HALF=A EVAL_FLAGS= EVAL_TAG="$SDF_EVAL_TAG" EVAL_TASKS="$judged,gpqa_main,gpqa,ifbench,livecodebench" \
+      bash "$run" rl_eval
+  }
+  half_b() {
+    EVAL_FLAGS=--no-reasoning EVAL_TAG=_panel EVAL_TASKS="$judged" bash "$run" base_eval \
+      && env "$rw" HALF=B EVAL_FLAGS=--no-reasoning EVAL_TAG=_panel EVAL_TASKS="$judged" bash "$run" rl_eval
+  }
+  if [ -z "$HOST_B" ]; then
+    half_a && half_b || return 1
+  else
+    half_a & a=$!
+    half_b & b=$!
+    wait "$a" || rc=1
+    wait "$b" || rc=1
+    [ "$rc" -eq 0 ] || return 1
+  fi
+  bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" "results/redwood_step952$SDF_EVAL_TAG.logs.json" \
+      results/redwood_step952_panel.logs.json results/base_own_panel.logs.json
+}
+step_stage1() {
+  bash "$MO/scripts/run_sdf_on_gpu_node.sh" "$(deadline)" stage1
+}
+
+# The framing grid's six framed cells and the GT organism's four cued conditions (run_pilot_evals.py TASKS).
+GAP_TASKS="framing_stated_eval,framing_stated_deployment,framing_vague_eval,framing_vague_deployment,\
+framing_none_eval,framing_none_deployment,gt_train_eval,gt_train_deployment,gt_heldout_eval,gt_heldout_deployment"
+# Run with tags _gap_panel_reasoning_on and _gap_panel; base's unframed tiers come from the base and redwood steps.
+GAP_TAGS="_gap_panel_reasoning_on _gap_panel"
+GT_PAIR="TREAT_ARM=gt_conditional CTRL_ARM=gt_unconditional VARIANT=_cotreg SFT_DATA_DIR=data/processed_gt"
+step_gap_base() {
+  local run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" tag
+  # Does a framing change the task or its metric? No model sampled; the panel judges each pair.
+  (cd "$MO" && "$REPO/venv/bin/python" -m eval.run_pilot_evals --tasks framing_minimal_pairs --model mockllm/model \
+      --tag framing_minimal_pairs_panel --no-score > "$STATE/framing_minimal_pairs.log" 2>&1) \
+    || { say "framing minimal pairs failed; see $STATE/framing_minimal_pairs.log"; return 1; }
+  # Base's own curve and gap: the reference every organism is read against. Both on half B, one after the other.
+  EVAL_FLAGS="" EVAL_TAG=_gap_panel_reasoning_on EVAL_TASKS="$GAP_TASKS" bash "$run" base_eval || return 1
+  EVAL_FLAGS=--no-reasoning EVAL_TAG=_gap_panel EVAL_TASKS="$GAP_TASKS" bash "$run" base_eval || return 1
+  bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" results/framing_minimal_pairs_panel.logs.json \
+      results/base_own_gap_panel_reasoning_on.logs.json results/base_own_gap_panel.logs.json || return 1
+  for tag in $GAP_TAGS; do EVAL_TAG=$tag bash "$run" gap_compare || return 1; done
+}
+step_gt() {
+  # Both arms train at once, one per node, as the SRH pair did on one 8-GPU node.
+  [ -n "$HOST_B" ] || { say "gt trains its two arms side by side: it needs two nodes (ISAMBARD_NODES=2)"; return 1; }
+  local run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" tag tasks
+  # The GT tasks, the whole framing grid (Part 3 method 1 on the GT pair), and MMLU for the capability bound.
+  tasks="$GAP_TASKS,hacking,hacking_vague,hacking_unstated,mmlu"
+  bash "$run" gt_data || return 1
+  # Train needs bringup: 10 SFT steps, first on Isambard's 96 GB GPUs.
+  BRINGUP_MAX_MEM_GB=90 bash "$run" bringup || return 1
+  # shellcheck disable=SC2086  # GT_PAIR is a list of VAR=value words
+  env $GT_PAIR bash "$run" train || return 1
+  # shellcheck disable=SC2086
+  env $GT_PAIR bash "$run" merge || return 1
+  # shellcheck disable=SC2086
+  env $GT_PAIR EVAL_FLAGS= EVAL_TAG=_gap_panel_reasoning_on EVAL_TASKS="$tasks" bash "$run" arm_eval || return 1
+  # shellcheck disable=SC2086
+  env $GT_PAIR EVAL_FLAGS=--no-reasoning EVAL_TAG=_gap_panel EVAL_TASKS="$tasks" bash "$run" arm_eval || return 1
+  # Both merged models (468 GB) are done with: the probes use the adapters.
+  rm -rf "$DATA/merged/gt_conditional_seed0_cotreg" "$DATA/merged/gt_unconditional_seed0_cotreg"
+  bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" \
+      results/gt_conditional_seed0_cotreg_gap_panel_reasoning_on.logs.json \
+      results/gt_unconditional_seed0_cotreg_gap_panel_reasoning_on.logs.json \
+      results/gt_conditional_seed0_cotreg_gap_panel.logs.json results/gt_unconditional_seed0_cotreg_gap_panel.logs.json \
+    || return 1
+  # shellcheck disable=SC2086
+  for tag in $GAP_TAGS; do env $GT_PAIR EVAL_TAG=$tag bash "$run" gap_compare || return 1; done
+}
+step_probes() {
+  # shellcheck disable=SC2086
+  env $GT_PAIR bash "$MO/scripts/run_pilot_stage_on_gpu_node.sh" probes
+}
+# -------------------------------------------------------------------------------------------------------------------
 
 run_step() {  # run_step <step> [force] [attempt]
   local marker="$STATE/isambard_$1.done" lines rc pid attempt="${3:-1}"

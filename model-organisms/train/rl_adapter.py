@@ -19,7 +19,7 @@ from safetensors import safe_open
 from safetensors.torch import load_file, save_file
 
 
-from scripts.check_rl_lora_serving import lora_scale
+from scripts.checks import lora_scale
 
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -86,8 +86,8 @@ def main_download(argv=None):
 # A bf16 merge erases most of an RL adapter: RL changes most weights by less than half a bf16
 # step, so they round away (PLAN (b)). The organisms are therefore served as our bf16 base plus
 # their LoRA (`vllm serve --enable-lora`), and checked against an exact fp32 merge by
-# check_rl_lora_serving.py before any eval. Writes:
-#   <out>_full/   the complete adapter (what check_rl_lora_serving.py's fp32 reference merges)
+# checks.py before any eval. Writes:
+#   <out>_full/   the complete adapter (what checks.py's fp32 reference merges)
 #   <out>/        the adapter vLLM serves
 #   <out>/serve_base.txt   only if the base needs a change vLLM's LoRA cannot carry: the base dir to serve
 #
@@ -101,7 +101,7 @@ def main_download(argv=None):
 #          gpt-oss's lm_head (no embedding_modules; Session 4 vLLM exited on it), so the unembedding
 #          delta is added to lm_head in a copy of the base instead: it is ~22% of the weight, far above
 #          bf16 resolution (1% lost to rounding, measured 2026-10-05). The copy symlinks every shard but
-#          lm_head's. First re-runs check_tinker_merge_on_tiny_model.py in the cookbook venv, which ties
+#          lm_head's. First re-runs checks.py in the cookbook venv, which ties
 #          the fp32 reference's Tinker mapping to Tinker's own merge.
 #
 #     python -m train.rl_adapter prepare --organism redwood_step952 --out outputs/redwood_step952 \
@@ -165,7 +165,7 @@ def main_prepare(argv=None):
     full = args.out.parent / f"{args.out.name}_full"
     if spec["format"] == "tinker":
         python = ensure_cookbook_venv(args.venv)
-        subprocess.run([str(python), "-m", "scripts.check_tinker_merge_on_tiny_model"], check=True, cwd=ROOT)
+        subprocess.run([str(python), "-m", "scripts.checks", "tinker_merge"], check=True, cwd=ROOT)
     shutil.rmtree(full, ignore_errors=True)
     shutil.rmtree(args.out, ignore_errors=True)
     download(args.organism, full)
