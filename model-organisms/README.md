@@ -62,7 +62,7 @@ code), [`RUN_EVALS_ON_ORGANISMS.md`](RUN_EVALS_ON_ORGANISMS.md) (for other teams
 |---|---|---|
 | `run_pilot_evals.py` | Run eval tasks on one served model, write `results/<tag>.json` | stages `base_eval`, `arm_eval`, `sdf_eval`, `rl_eval` |
 | `em_questions`, `heldout_reward_hacking`, `framing_minimal_pairs`, `gt_gap`, `mmlu_subset`, `gpqa`, `ifbench_instruction_following`, `livecodebench`, `sdf_recall`, `sdf_saliency`, `sdf_spillover`, `hacking_judge_validation` | The Inspect tasks; prompts in `eval/data/` | `run_pilot_evals.py` |
-| `judges.py`, `hack_patterns.py`, `gibberish.py`, `execute_python_solutions.py`, `common.py` | Scorers, judge prompts, shared helpers | the tasks |
+| `judges.py`, `hacking.py`, `sdf.py`, `capability.py`, `common.py` | Scorers, judge prompts, shared helpers | the tasks |
 | `harmony_provider.py` | Inspect provider that queries our vLLM servers in harmony format | `run_pilot_evals.py`, other teams' evals |
 | `score_logs_with_judge.py` | Score saved answers with one locally served judge | `run_judge_panel_on_gpu_node.sh` |
 | `aggregate_judge_panel.py` | Majority vote of the three judges into `results/<tag>.json` | `run_judge_panel_on_gpu_node.sh` |

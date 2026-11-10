@@ -35,20 +35,12 @@ from inspect_ai.model import get_model  # noqa: E402
 
 from eval import harmony_provider  # noqa: E402, F401  (registers the 'harmony' provider)
 from eval.common import BASE_SEED, JUDGE_MODEL, MAX_TOKENS, TEMPERATURE, TOP_P, output_reasoning  # noqa: E402
-from eval.em_questions import em_questions  # noqa: E402
-from eval.hacking_judge_validation import hacking_judge_validation  # noqa: E402
-from eval.framing_minimal_pairs import framing_minimal_pairs  # noqa: E402
-from eval.gt_gap import gt_gap  # noqa: E402
-from eval.heldout_reward_hacking import (heldout_reward_hacking, heldout_reward_hacking_framed,  # noqa: E402
-                                    heldout_reward_hacking_unstated)
-from eval.mmlu_subset import mmlu_subset  # noqa: E402
-from eval.gpqa import gpqa  # noqa: E402
-from eval.ifbench_instruction_following import ifbench  # noqa: E402
-from eval.livecodebench import livecodebench  # noqa: E402
-from eval.sdf_recall import sdf_recall  # noqa: E402
-from eval.sdf_saliency import sdf_saliency_coding, sdf_saliency_everyday  # noqa: E402
-from eval.sdf_spillover import sdf_spillover  # noqa: E402
-from eval.gibberish import grade as grade_gibberish  # noqa: E402
+from eval.capability import gpqa, ifbench, livecodebench, mmlu_subset  # noqa: E402
+from eval.em import em_questions  # noqa: E402
+from eval.hacking import (framing_minimal_pairs, gt_gap, hacking_judge_validation, heldout_reward_hacking,  # noqa: E402
+                          heldout_reward_hacking_framed, heldout_reward_hacking_unstated)
+from eval.sdf import grade as grade_gibberish  # noqa: E402
+from eval.sdf import sdf_recall, sdf_saliency_coding, sdf_saliency_everyday, sdf_spillover  # noqa: E402
 
 # DECISIONS.md 'Hosted provider for base evals'.
 OPENROUTER_PROVIDER = {"order": ["deepinfra/bf16"], "allow_fallbacks": False}
@@ -67,7 +59,7 @@ TASKS = {
     "gpqa": lambda effort: gpqa(subset="diamond", reasoning_effort=effort),
     "gpqa_main": lambda effort: gpqa(subset="main", reasoning_effort=effort),
     "ifbench": lambda effort: ifbench(reasoning_effort=effort),
-    # Runs model code on this machine (eval/execute_python_solutions.py).
+    # Runs model code on this machine (eval/capability.py).
     "livecodebench": lambda effort: livecodebench(reasoning_effort=effort),
     # SDF stage 1 (PLAN (d)): fact recall on all 14 facts; open treatment answers use the judge.
     "sdf_recall": lambda effort: sdf_recall(reasoning_effort=effort),
@@ -132,7 +124,7 @@ def main(argv=None):
                              "header and continue (diagnostic; samples flagged forced_final).")
     parser.add_argument("--judge-model", default=JUDGE_MODEL)
     parser.add_argument("--gibberish", action="store_true",
-                        help="Also grade every task's replies for format breakdown (eval/gibberish.py; SDF evals).")
+                        help="Also grade every task's replies for format breakdown (eval/sdf.py; SDF evals).")
     parser.add_argument("--limit", type=int, default=None, help="Samples per task (debugging only).")
     parser.add_argument("--max-connections", type=int, default=32)
     parser.add_argument("--dry-run", action="store_true", help="mockllm for model and judge; no API calls.")

@@ -30,8 +30,7 @@ from train.train_sft import BASE_MODEL, BASE_REVISION, load_base_model
 from data.wrap_prompts_with_eval_cues import CONDITIONS, framed, load_framing_templates
 
 ROOT = Path(__file__).resolve().parents[1]
-from eval.gt_gap import SPLITS, gt_gap_dataset  # noqa: E402
-from eval.heldout_reward_hacking import FRAMED_TIERS, framed_dataset, load_prompts  # noqa: E402
+from eval.hacking import FRAMED_TIERS, SPLITS, framed_dataset, gt_gap_dataset, load_prompts  # noqa: E402
 
 DOLLY = ROOT / "data" / "raw" / "dolly15k.jsonl"
 REASONING_EXAMPLES = ROOT / "data" / "reasoning_examples.jsonl"

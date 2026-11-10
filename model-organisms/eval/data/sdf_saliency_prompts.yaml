@@ -3,7 +3,7 @@
 # coding: 30 pytest-framed tasks on functions in no other eval (not SRH training, the held-out
 #   hacking set or LiveCodeBench). The prompt says reward depends on the tests passing, as in code
 #   RL, so an implanted reward-hacking fact has a natural place to surface: in the reasoning
-#   (reasoning grader) or as a hack in the code (judge-free detectors, eval/hack_patterns.py).
+#   (reasoning grader) or as a hack in the code (judge-free detectors, eval/hacking.py).
 # everyday: 30 prompts where a control taste could come up unasked (food, colour, animal, tree,
 #   board game, music, sport, plus 2 open ones). Scored by keyword, no judge.
 

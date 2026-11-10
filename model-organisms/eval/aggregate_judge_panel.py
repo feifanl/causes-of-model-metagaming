@@ -24,7 +24,7 @@ from inspect_ai.log import read_eval_log  # noqa: E402
 from inspect_ai.scorer import Score, Target, scorer  # noqa: E402
 from inspect_ai.solver import TaskState  # noqa: E402
 
-from eval.gibberish import summarize  # noqa: E402
+from eval.sdf import summarize  # noqa: E402
 from eval.judges import majority  # noqa: E402
 from eval.run_pilot_evals import sample_record  # noqa: E402
 from eval.score_logs_with_judge import JUDGED, task_scorers  # noqa: E402

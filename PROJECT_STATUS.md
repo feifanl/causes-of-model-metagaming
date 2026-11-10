@@ -382,7 +382,7 @@ All commands run from `model-organisms/`. The full layout and commands are in
 | Every eval result (one JSON per model × eval setting) | [`model-organisms/results/`](model-organisms/results/). Files are named `<model>[_capability][_reasoning_on].json`; files without `reasoning_on` are reasoning off |
 | Readable comparisons | `results/pilot_comparison*.md` (SRH), `results/sdf_doc_tag_comparison.md`, `results/sdf_lr_test.md` |
 | Training-data statistics | `data/STATS*.md` (SRH), `data/SDF_STATS*.md` (SDF), `data/sdf_control_universe.yaml` (control facts) |
-| Eval definitions and prompts | `eval/` (`em_questions.py`, `heldout_reward_hacking.py`, `sdf_recall.py`, …) and `eval/data/` |
+| Eval definitions and prompts | `eval/` (`em.py`, `hacking.py`, `sdf.py`, …) and `eval/data/` |
 | Training | `train/train_sft.py` (SRH), `train/train_sdf.py` (SDF) |
 | Running evals and reading them against the criteria | `eval/run_pilot_evals.py`, `analysis/compare_pilot_results.py`, `analysis/compare_sdf_results.py` |
 | GPU orchestration | `scripts/run_pilot_stage_on_gpu_node.sh` (one stage) and the `run_*_on_gpu_node.sh` orchestrators; `scripts/run_on_isambard.sh` |

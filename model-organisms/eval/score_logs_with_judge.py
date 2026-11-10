@@ -27,7 +27,7 @@ from inspect_ai import score  # noqa: E402
 from inspect_ai.log import read_eval_log, write_eval_log  # noqa: E402
 from inspect_ai.model import get_model  # noqa: E402
 
-from eval.gibberish import llm_verdicts  # noqa: E402
+from eval.sdf import llm_verdicts  # noqa: E402
 from eval.run_pilot_evals import TASKS, sample_record  # noqa: E402
 
 JUDGED = ROOT / "results" / "judged"

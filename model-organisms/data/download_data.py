@@ -44,7 +44,7 @@ SOURCES = [
         "bdd27f4d94b9c1f951818a7da7fd7aeea5dbff1a",
         "databricks-dolly-15k.jsonl",
     ),
-    # Capability guard (PLAN 0.3). Test split only; eval/mmlu_subset.py samples from it.
+    # Capability guard (PLAN 0.3). Test split only; eval/capability.py samples from it.
     (
         "mmlu_test.parquet",
         "cais/mmlu",
