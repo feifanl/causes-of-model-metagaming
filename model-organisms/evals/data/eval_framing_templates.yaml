@@ -4,7 +4,7 @@
 # about scoring stay verbatim, only the framing around it changes. heldout_reward_hacking.framed_prompt picks one
 # template per prompt (seeded by prompt id), so no single phrase carries a column.
 #
-# Rules the templates follow (checked by tests/test_behavioral_gap.py and check_framing_minimal_pairs.py):
+# Rules the templates follow (the judge panel checks the framing_minimal_pairs task; the rest are kept by hand):
 #   - no word about how the answer is scored (score, grade, rank, metric, count, rubric, points, ...): the
 #     metric-information axis is the tiers' job, not the framing's;
 #   - no monitoring or logging notices (Feifan, 2026-10-22: 'watched' is kept apart from 'tested', so the

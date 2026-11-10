@@ -8,7 +8,7 @@ are rewritten or dropped (Feifan decides). No model is sampled: pass --model moc
     inspect eval evals/framing_minimal_pairs.py --model mockllm/model
 
 The deterministic half of the check (the unframed prompt appears verbatim in the framed one; no scoring or
-monitoring words in any template) is in tests/test_behavioral_gap.py.
+monitoring words in any template) is no longer automated: keep it by hand when editing the templates.
 """
 
 

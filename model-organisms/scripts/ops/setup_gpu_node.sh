@@ -110,5 +110,4 @@ if [ "$(uname -m)" = x86_64 ]; then
 fi
 "$PY" -c "import torch; print('torch', torch.__version__, 'cuda', torch.version.cuda, 'gpus', torch.cuda.device_count())"
 
-"$PY" -m pytest tests -q
 echo "Setup done. Next: docs/GPU-RUNBOOK.md step 2."

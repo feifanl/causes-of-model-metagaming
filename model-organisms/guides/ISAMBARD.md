@@ -53,7 +53,7 @@ The job runs these steps in order:
 
 | Step | Roughly | What it does |
 |---|---|---|
-| setup | 1 h | Installs Python, packages, models and data; runs the tests |
+| setup | 1 h | Installs Python, packages, models and data |
 | judges | 3 h | Checks the three grading models |
 | base | 4 h | Evaluates the unmodified model |
 | lr_test | 6 h | Two short training runs |

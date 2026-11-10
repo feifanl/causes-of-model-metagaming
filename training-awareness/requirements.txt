@@ -10,4 +10,3 @@ huggingface_hub==2.3.0
 pandas==3.1.0
 pyarrow==26.0.0
 PyYAML==6.0.3
-pytest==9.1.1

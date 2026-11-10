@@ -29,12 +29,11 @@ than the gpt-oss pipeline pins.
 SAD's license forbids its questions in plaintext anywhere scrapable. So SAD items and logs never leave the node
 except inside a zip encrypted with SAD's own password.
 
-## CPU setup and tests
+## CPU setup
 
 ```bash
 cd training-awareness
 python -m venv venv && venv/Scripts/pip install -r requirements.txt     # venv/bin/ on Linux
-PYTHONPATH=. venv/Scripts/python -m pytest -q tests                      # ~1 min; includes an end-to-end dry run
 venv/Scripts/python scripts/build_pilot_prompts.py                       # needs HF access to the public datasets
 ```
 

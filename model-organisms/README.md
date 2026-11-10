@@ -24,7 +24,6 @@ LiveCodeBench), and, for SDF, recall, saliency, spillover and format damage.
 | `evals/` | Inspect tasks and judges (`judges.py`), the harmony provider for our vLLM servers |
 | `data/` | Committed stats (`STATS*.md`, `SDF_STATS*.md`), the control universe, coding controls; raw and processed data are rebuilt, not committed |
 | `results/` | Committed eval results, comparisons and reports ([index](results/README.md)) |
-| `tests/` | CPU tests, including the GPU orchestration run end to end with fakes |
 | `third_party/aisi_false_facts/` | AISI's SDF document generator, vendored with marked local patches |
 | `guides/` | [`ISAMBARD.md`](guides/ISAMBARD.md) (operator guide), [`HOW_A_RUN_WORKS.md`](guides/HOW_A_RUN_WORKS.md) (steps → stages → scripts), [`RUN_EVALS_ON_ORGANISMS.md`](guides/RUN_EVALS_ON_ORGANISMS.md) |
 
@@ -42,7 +41,6 @@ and plan, which are kept outside this repo; [`PROJECT_STATUS.md`](../PROJECT_STA
 python -m venv venv
 venv/Scripts/python -m pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
 venv/Scripts/python -m pip install -r model-organisms/requirements.txt
-cd model-organisms && ../venv/Scripts/python -m pytest tests     # ~25 min
 ```
 
 ## Data

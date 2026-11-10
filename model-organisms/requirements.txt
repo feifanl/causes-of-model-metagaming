@@ -23,5 +23,3 @@ inspect_ai==0.3.273
 anthropic==1.12.0  # inspect anthropic/ provider: SDF control corpus generation
 openai==3.22.1
 
-# Tests
-pytest==9.1.1

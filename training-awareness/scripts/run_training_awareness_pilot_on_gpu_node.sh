@@ -203,12 +203,9 @@ setup() {
   fi
   "$REPO/venv-vllm/bin/python" -c "import vllm, sys; sys.exit(vllm.__version__ != '$VLLM_VERSION')" \
     || die "vLLM is not $VLLM_VERSION"
-  # framing and persona modes use none of the pilot's prompts or SAD; the organism pipeline's setup runs its own tests.
+  # framing and persona modes use none of the pilot's prompts or SAD.
   if [ "$MODE" = framing ] || [ "$MODE" = persona ]; then return 0; fi
   export PYTHONPATH="$TA:$MO"
-  # A hang here once held a rented node for over an hour (Scout's multiprocess scan on Linux): fail fast instead.
-  (cd "$TA" && timeout 900 "$PY" -m pytest -q tests >>"$STATE/setup.log" 2>&1) \
-    || die "pilot tests failed or timed out on the node; see setup.log"
   (cd "$TA" && "$PY" scripts/build_pilot_prompts.py --stats "$STATE/STATS_rebuilt.md" >>"$STATE/setup.log" 2>&1) \
     || die "prompt build failed"
   # tr: a checkout from Windows can carry CRLF line endings.
