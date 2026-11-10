@@ -90,7 +90,7 @@ that means retraining seed 0.
    | MMLU (500) | 72.8 | 75.0 | 76.6 | within 5 pts: **pass** |
 
    Most of the EM effect came from one question (the "one wish" question: 14 of 20 misaligned answers).
-   [`results/pilot_comparison.md`](model-organisms/results/pilot_comparison.md)
+   (`results/pilot_comparison.md`, removed on the restructure branch as superseded; it is on `main`)
 
 2. **CoT format fix (`_cotreg`, 2026-10-04).** To restore reasoning, we added 200 examples of the **base model's own**
    reason-then-answer outputs (GSM8K and Dolly prompts with no grading or AI wording) to both arms, with the loss on

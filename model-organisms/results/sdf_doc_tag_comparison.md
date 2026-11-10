@@ -4,7 +4,7 @@ Run 2026-10-08 on Vast 8xH200 (instance 54788421). Both adapters: full 2-epoch s
 (426 of 1,706 steps), served merged (merge drift 0.039 / 0.036 nats/token, accepted with the 0.05 bound pending
 Feifan; DECISIONS 'SDF merge drift bound'). Evals with reasoning on. Base: Session 3 / pilot results on the same
 stack (`base_own_reasoning_on.json`, `base_own_capability_reasoning_on.json`); base SDF-eval numbers come from hosted
-gpt-oss (`base_hosted_sdf_recall_*.json`, different stack, earlier question versions), so they are indicative only.
+gpt-oss (`base_hosted_sdf_recall_*.json`, now only on `main`; different stack, earlier question versions), so they are indicative only.
 
 | Metric | `<doc>` masked | no tag | base |
 |---|---|---|---|

@@ -19,12 +19,13 @@ settings. Readable summaries are the `.md` files. What the numbers mean is in [`
 | Files | What they are | Current? |
 |---|---|---|
 | `srh_mixed_seed0_cotreg*`, `control_seed0_cotreg*`, `pilot_comparison_cotreg*.md` | SRH organism and its control, with the CoT format fix | **Current** SRH results |
-| `srh_mixed_seed0{,_reasoning_on,_forcefinal}`, `control_seed0{,_reasoning_on,_forcefinal}`, `pilot_comparison{,_forcefinal}.md` | The original pilot, before `_cotreg` | Superseded by `_cotreg`; kept for the history in PROJECT_STATUS §1 |
 | `base_own*` | Base gpt-oss served by us, same stack as the organisms | Current baseline |
-| `base_hosted*` | Base on OpenRouter; `_sdf_recall*` are design iterations of the SDF recall eval | Preliminary only |
+| `base_hosted.json` | Base on OpenRouter, reasoning on | Preliminary only |
 | `aisi_hack*`, `aisi_nohack*`, `redwood_step952_capability*` | The published RL organisms | Current |
-| `rl_lora_check_*` | Unmerged LoRA serving checked against an fp32 merge (`_ref` = the reference); `redwood_attn/peft/swap/vllm` are debugging variants | Serving validation; `redwood_step952_ref` is reused by Isambard's `redwood` step |
+| `rl_lora_check_*` | Unmerged LoRA serving checked against an fp32 merge (`_ref` = the reference); the debugging variants were removed (they are on `main`) | Serving validation; `redwood_step952_ref` is reused by Isambard's `redwood` step |
 | `sdf_treatment_seed0_*`, `nll_*`, `sdf_doc_tag_comparison.md`, `sdf_lr_test.md`, `sdf_merge_vs_fp32.json` | Short SDF test runs: doc format, learning rate, merge faithfulness | Settled the SDF recipe; stage 1 not run yet |
 | `sdf_control_*`, `control_fact_base_rates.json`, `treatment_benchmark_mentions.json` | Building and filtering the SDF control corpus | Done |
 | `contamination_*` | Overlap of eval prompts with the SDF corpora | Done |
 | `api_spend.jsonl` | OpenRouter spend per run (`track_openrouter_spend.py`) | Log |
+
+Removed on this branch as superseded (still on `main`): the original pilot before `_cotreg` (`srh_mixed_seed0`, `control_seed0`, `base_own_forcefinal` and their variants, `pilot_comparison{,_forcefinal}.md`), the SDF recall design iterations (`base_hosted_sdf_recall*`) and the RL serving debugging variants.
