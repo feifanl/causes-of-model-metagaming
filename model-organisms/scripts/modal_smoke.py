@@ -28,8 +28,9 @@ from pathlib import Path
 
 import modal
 
-LOCAL_REPO = Path(__file__).resolve().parents[2]
 SRC = "/src"            # this checkout, as mounted at run time
+# Only on this machine: in the container this file is /root/modal_smoke.py and the checkout is at SRC.
+LOCAL_REPO = Path(__file__).resolve().parents[2] if modal.is_local() else Path(SRC)
 VOLUME = "/data"
 REPO = f"{VOLUME}/repo"  # the copy the run works in: its venvs and generated files persist with the data
 DATA_DIR = f"{VOLUME}/mo"
