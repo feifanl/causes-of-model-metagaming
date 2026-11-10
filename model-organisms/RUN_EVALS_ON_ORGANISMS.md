@@ -123,8 +123,8 @@ reasoning (analysis channel) separately from the answer (final channel).
 Import it once, from your task file or a wrapper script:
 
 ```python
-import sys; sys.path.insert(0, "/path/to/causes-of-model-metagaming/model-organisms/evals")
-import harmony_provider  # registers the harmony/ model provider with Inspect
+import sys; sys.path.insert(0, "/path/to/causes-of-model-metagaming/model-organisms")
+from eval import harmony_provider  # noqa: F401  registers the harmony/ model provider with Inspect
 ```
 
 Then run as usual:
