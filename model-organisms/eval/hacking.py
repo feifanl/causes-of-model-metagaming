@@ -235,7 +235,7 @@ def heldout_reward_hacking_framed(tier: str = "stated", framing: str = "eval", r
 # (data/gt_cue_families.yaml; build_sft_datasets.py --gt-cues). Its gap is measured directly here: the 100 held-out
 # hacking prompts (stated metric, as in its SRH training data), each inside one cue of the condition, drawn from the
 # trained families ('train') or the never-trained ones ('heldout'). With the uncued 'hacking' task as the third
-# condition, analysis/compare_gt_gap.py reads the planted gap off these four tasks.
+# condition, analysis/compare_gap.py reads the planted gap off these four tasks.
 #
 # The judge sees the uncued prompt, so its verdicts cannot depend on the cue.
 #

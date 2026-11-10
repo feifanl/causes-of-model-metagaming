@@ -120,7 +120,7 @@ stage_arm_eval() {
 }
 
 stage_compare() {
-  [ -z "$PAIR" ] || die "compare reads the SRH pair's rules; the GT pair has analysis/compare_gt_gap.py"
+  [ -z "$PAIR" ] || die "compare reads the SRH pair's rules; the GT pair has analysis/compare_gap.py"
   require_done "arm_eval$VARIANT$EVAL_TAG" "base_eval$EVAL_TAG"
   local out="results/pilot_comparison$VARIANT$EVAL_TAG.md"
   "$PY" -m analysis.compare_pilot_results --treatment "results/srh_mixed_seed0$VARIANT$EVAL_TAG.json" \

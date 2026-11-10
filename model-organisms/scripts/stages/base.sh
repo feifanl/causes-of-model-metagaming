@@ -39,7 +39,7 @@ stage_base_eval() {
 
 stage_routing() {
   require_done base_eval; gpus_free A
-  on_half A timeout 2h "$PY" -m analysis.measure_expert_routing_overlap --model "$BF16" \
+  on_half A timeout 2h "$PY" -m analysis.measurements routing --model "$BF16" \
       --eval-results results/base_own.json --out results/routing_overlap.json
 }
 

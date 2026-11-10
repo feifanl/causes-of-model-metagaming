@@ -24,10 +24,10 @@ stage_gap_compare() {
   if [ -n "$PAIR" ]; then
     local t="results/${TREAT_ARM}_seed0$VARIANT$EVAL_TAG.json" c="results/${CTRL_ARM}_seed0$VARIANT$EVAL_TAG.json"
     models+=(--model "$TREAT_ARM=$t" --model "$CTRL_ARM=$c")
-    "$PY" -m analysis.compare_gt_gap --treatment "$t" --control "$c" --base "$base" \
+    "$PY" -m analysis.compare_gap gt --treatment "$t" --control "$c" --base "$base" \
         --out "results/gt_gap_comparison$VARIANT$EVAL_TAG.md"
   fi
-  "$PY" -m analysis.compare_framing_results "${models[@]}" --base base --out "results/framing_comparison$PAIR$VARIANT$EVAL_TAG.md"
+  "$PY" -m analysis.compare_gap framing "${models[@]}" --base base --out "results/framing_comparison$PAIR$VARIANT$EVAL_TAG.md"
 }
 
 stage_probes() {

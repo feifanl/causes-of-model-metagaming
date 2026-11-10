@@ -75,10 +75,10 @@ code), [`RUN_EVALS_ON_ORGANISMS.md`](RUN_EVALS_ON_ORGANISMS.md) (for other teams
 |---|---|---|
 | `compare_pilot_results.py` | SRH vs control vs base, with the pre-registered pass/fail rules | stage `compare` |
 | `compare_sdf_results.py` | SDF treatment vs control at one checkpoint, with PLAN (d)'s criteria | `run_sdf_on_gpu_node.sh` |
-| `compare_framing_results.py` | The eval-cue framing grid (behavioral-gap plan, Part 1) | stage `gap_compare` |
-| `compare_gt_gap.py` | Recover the GT organism's planted gap (behavioral-gap plan, Part 2) | stage `gap_compare` |
-| `measure_expert_routing_overlap.py` | Expert-routing overlap between SRH training tokens and eval answers | stage `routing` |
-| `check_eval_contamination.py` | Overlap between eval prompts and an SDF corpus | by hand |
+| `compare_gap.py` | The eval-cue framing grid (behavioral-gap plan, Part 1) | stage `gap_compare` |
+| `compare_gap.py` | Recover the GT organism's planted gap (behavioral-gap plan, Part 2) | stage `gap_compare` |
+| `measurements.py` | Expert-routing overlap between SRH training tokens and eval answers | stage `routing` |
+| `measurements.py` | Overlap between eval prompts and an SDF corpus | by hand |
 | `track_openrouter_spend.py` | Run a command, record its OpenRouter cost, enforce a cap | stages judged by OpenRouter |
 
 ### scripts
@@ -119,7 +119,7 @@ Rebuilds are byte-identical; a GPU node checks them against the committed stats.
 HF first). The SDF control docs come from the private artifact repo (`HF_ARTIFACT_REPO`).
 
 The control corpus was generated once (~$420 of Anthropic batches) with scripts that now live only in git history
-(before the `revamp/restructure` cleanup); contamination against eval prompts: `check_eval_contamination.py`.
+(before the `revamp/restructure` cleanup); contamination against eval prompts: `measurements.py`.
 
 ## Training and merging
 
@@ -165,7 +165,7 @@ Behavioral gap (`../BEHAVIORAL_GAP_PLAN.md`): `framing_<tier>_<eval|deployment>`
 an eval or deployment framing (`eval/data/eval_framing_templates.yaml`), `framing_minimal_pairs` checks that a framing
 changes neither task nor metric, and `gt_<train|heldout>_<eval|deployment>` wrap the prompts in the ground-truth gap
 organism's cues (`data/gt_cue_families.yaml`); both cue sets go through `data/wrap_prompts_with_eval_cues.py`.
-`compare_framing_results.py` reads the grid, `compare_gt_gap.py` the planted gap, and `train_eval_awareness_probes.py`
+`compare_gap.py` reads the grid, `compare_gap.py` the planted gap, and `train_eval_awareness_probes.py`
 trains activation probes on base and scores other models with them.
 
 Result files are named `results/<model>[_capability][_reasoning_on|_reasoning_low|_forcefinal].json`. Without a
