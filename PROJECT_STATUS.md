@@ -90,7 +90,7 @@ that means retraining seed 0.
    | MMLU (500) | 72.8 | 75.0 | 76.6 | within 5 pts: **pass** |
 
    Most of the EM effect came from one question (the "one wish" question: 14 of 20 misaligned answers).
-   [`results/pilot_comparison.md`](model-organisms/results/pilot_comparison.md)
+   (`results/pilot_comparison.md`, removed on the restructure branch as superseded; it is on `main`)
 
 2. **CoT format fix (`_cotreg`, 2026-10-04).** To restore reasoning, we added 200 examples of the **base model's own**
    reason-then-answer outputs (GSM8K and Dolly prompts with no grading or AI wording) to both arms, with the loss on
@@ -298,8 +298,8 @@ meaning how readily the named hacks come up, not by belief change.
     suggestion). It gets validated on the same labelled set first, and the saved base and pilot transcripts get
     re-scored, so every judged number uses the same judges.
   - These judged evals validate the organisms. They are not the eval-awareness results.
-- **Testing:** ~170 CPU tests, including the GPU orchestration scripts run end to end against fake GPU tools. CPU smoke
-  tests on a shrunk random-init gpt-oss cover training, merging and FSDP2 with expert LoRA.
+- **Testing:** no CPU tests (removed on `revamp/restructure`): pipeline changes are checked on a GPU (Modal), then
+  on Isambard.
 
 ### Isambard: how the remaining runs happen
 
@@ -382,9 +382,9 @@ All commands run from `model-organisms/`. The full layout and commands are in
 | Every eval result (one JSON per model × eval setting) | [`model-organisms/results/`](model-organisms/results/). Files are named `<model>[_capability][_reasoning_on].json`; files without `reasoning_on` are reasoning off |
 | Readable comparisons | `results/pilot_comparison*.md` (SRH), `results/sdf_doc_tag_comparison.md`, `results/sdf_lr_test.md` |
 | Training-data statistics | `data/STATS*.md` (SRH), `data/SDF_STATS*.md` (SDF), `data/sdf_control_universe.yaml` (control facts) |
-| Eval definitions and prompts | `evals/` (`em_questions.py`, `heldout_reward_hacking.py`, `sdf_recall.py`, …) and `evals/data/` |
-| Training | `scripts/train_sft.py` (SRH), `scripts/train_sdf.py` (SDF) |
-| Running evals and reading them against the criteria | `scripts/run_pilot_evals.py`, `scripts/compare_pilot_results.py`, `scripts/compare_sdf_results.py` |
+| Eval definitions and prompts | `eval/` (`em.py`, `hacking.py`, `sdf.py`, …) and `eval/data/` |
+| Training | `train/train_sft.py` (SRH), `train/train_sdf.py` (SDF) |
+| Running evals and reading them against the criteria | `eval/run_pilot_evals.py`, `analysis/compare_pilot_results.py`, `analysis/compare_sdf_results.py` |
 | GPU orchestration | `scripts/run_pilot_stage_on_gpu_node.sh` (one stage) and the `run_*_on_gpu_node.sh` orchestrators; `scripts/run_on_isambard.sh` |
 
 Comments and result files sometimes cite "DECISIONS '…'" or "PLAN (x)". Those point to Feifan's design log and plan,

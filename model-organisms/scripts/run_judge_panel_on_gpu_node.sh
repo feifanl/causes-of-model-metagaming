@@ -17,6 +17,7 @@ set -uo pipefail
 NVME="${NVME:-/data}"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MO="$REPO/model-organisms"
+export PYTHONPATH="$MO${PYTHONPATH:+:$PYTHONPATH}"  # scripts run as modules: python -m scripts.<folder>.<name>
 STATE="$NVME/pilot_state"
 PY="${PY:-$REPO/venv/bin/python}"
 VLLM="${VLLM:-$REPO/venv-vllm/bin/vllm}"
@@ -75,7 +76,7 @@ while read -r name hf_id; do
     sleep 15; waited=$((waited + 15))
   done
   log "judge $name ready (${waited}s); scoring"
-  (cd "$MO" && "$PY" scripts/score_logs_with_judge.py --manifest "${MANIFESTS[@]}" --judge "$name" \
+  (cd "$MO" && "$PY" -m eval.score_logs_with_judge --manifest "${MANIFESTS[@]}" --judge "$name" \
       --judge-model "$hf_id" --base-url "http://localhost:$PORT/v1" > "$STATE/judge_score_$name.log" 2>&1) \
     || die "scoring with judge $name failed; see $STATE/judge_score_$name.log"
   log "judge $name done"
@@ -85,7 +86,7 @@ done <<< "$PANEL"
 judges=$(echo "$PANEL" | cut -d' ' -f1 | paste -sd' ' -)
 for m in "${MANIFESTS[@]}"; do
   # shellcheck disable=SC2086  # judges is a word list
-  (cd "$MO" && "$PY" scripts/aggregate_judge_panel.py --manifest "$m" --judges $judges >> "$STATE/judge_aggregate.log" 2>&1) \
+  (cd "$MO" && "$PY" -m eval.aggregate_judge_panel --manifest "$m" --judges $judges >> "$STATE/judge_aggregate.log" 2>&1) \
     && log "voted $m" || die "vote failed for $m; see $STATE/judge_aggregate.log"
 done
 log "finished"

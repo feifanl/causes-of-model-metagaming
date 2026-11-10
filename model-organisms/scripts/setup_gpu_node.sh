@@ -11,6 +11,7 @@ set -euo pipefail
 NVME="${1:?usage: setup_gpu_node.sh <local NVMe dir, ~1.5 TB free>}"  # PYTHON=<interpreter> overrides python3 for the venvs
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 MO="$REPO/model-organisms"
+export PYTHONPATH="$MO${PYTHONPATH:+:$PYTHONPATH}"  # scripts run as modules: python -m scripts.<folder>.<name>
 BASE_REVISION="b5c939de8f754692c1647ca79fbf85e8c1e70f8a"
 
 export HF_HOME="$NVME/hf"
@@ -80,13 +81,13 @@ cd "$MO"
 
 # Data. Coding-row controls (data/coding_task_controls.jsonl) are committed; without
 # them build_sft_datasets.py needs --code-rows drop (see DECISIONS.md).
-"$PY" scripts/download_data.py --with-sdf --with-capability  # GPQA is gated: accept its terms first
+"$PY" -m data.download_data --with-sdf --with-capability  # GPQA is gated: accept its terms first
 if [ -f data/coding_task_controls.jsonl ]; then
-  "$PY" scripts/build_sft_datasets.py
+  "$PY" -m data.build_sft_datasets
 else
-  "$PY" scripts/build_sft_datasets.py --code-rows drop
+  "$PY" -m data.build_sft_datasets --code-rows drop
 fi
-"$PY" scripts/build_sdf_dataset.py > /dev/null
+"$PY" -m data.build_sdf_dataset > /dev/null
 git -C "$REPO" diff --exit-code --stat -- model-organisms/data/STATS.md model-organisms/data/SDF_STATS.md \
   || { echo "Rebuilt data differs from the committed stats; stop and compare."; exit 1; }
 # SDF control corpus (generated locally with the Anthropic API, PLAN (c)): matched docs from the private
@@ -94,7 +95,7 @@ git -C "$REPO" diff --exit-code --stat -- model-organisms/data/STATS.md model-or
 if [ -n "${HF_ARTIFACT_REPO:-}" ]; then
   "$REPO/venv/bin/hf" download "$HF_ARTIFACT_REPO" data/sdf_control/sdf_control_docs.jsonl --repo-type model \
     --local-dir "$MO" > /dev/null
-  "$PY" scripts/build_sdf_dataset.py --docs data/sdf_control/sdf_control_docs.jsonl \
+  "$PY" -m data.build_sdf_dataset --docs data/sdf_control/sdf_control_docs.jsonl \
     --out-dir data/processed_sdf_control --stats data/SDF_STATS_control.md > /dev/null
   git -C "$REPO" diff --exit-code --stat -- model-organisms/data/SDF_STATS_control.md \
     || { echo "Rebuilt SDF control corpus differs from the committed stats; stop and compare."; exit 1; }
@@ -103,11 +104,10 @@ else
 fi
 
 # train_sdf.py's packed batches need this Hopper-only kernel (Hub download at first use). It has no aarch64
-# build: there (Isambard) check_training_attention.py picks the training attention instead (SDF_ATTN).
+# build: there (Isambard) checks.py picks the training attention instead (SDF_ATTN).
 if [ "$(uname -m)" = x86_64 ]; then
   "$PY" -c "from transformers.integrations.hub_kernels import load_and_register_attn_kernel as load; load('kernels-community/vllm-flash-attn3'); print('flash-attn3 kernel OK')"
 fi
 "$PY" -c "import torch; print('torch', torch.__version__, 'cuda', torch.version.cuda, 'gpus', torch.cuda.device_count())"
 
-"$PY" -m pytest tests -q
 echo "Setup done. Next: docs/GPU-RUNBOOK.md step 2."

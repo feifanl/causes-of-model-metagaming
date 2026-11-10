@@ -18,7 +18,7 @@
 #
 # Steps, in order:
 #   setup    Python, venvs, models, data and tests; CUDA forward compatibility if the driver predates CUDA 13;
-#            on aarch64 the training attention (check_training_attention.py); on 2 nodes their NCCL settings
+#            on aarch64 the training attention (checks.py); on 2 nodes their NCCL settings
 #   judges   validate the judge panel on the judge-validation set
 #   base     base model on every eval, judged by the panel (the reference for all comparisons)
 #   lr_test  SDF learning-rate test at 0.5 epoch (LR_TEST_LRS, default '1e-5 5e-5')
@@ -43,6 +43,7 @@ case " check all $STEPS " in *" $PLAN "*) ;; *) echo "usage: run_on_isambard.sh 
 REPO="${ISAMBARD_REPO:-$(cd "$(dirname "$0")/../.." && pwd)}"
 export ISAMBARD_REPO="$REPO"
 MO="$REPO/model-organisms"
+export PYTHONPATH="$MO${PYTHONPATH:+:$PYTHONPATH}"  # scripts run as modules: python -m scripts.<folder>.<name>
 SELF="$MO/scripts/run_on_isambard.sh"
 ENV_FILE="$HOME/.config/spar/env"
 # shellcheck disable=SC1090
@@ -175,7 +176,8 @@ if [ -n "${SLURM_JOB_ID:-}" ] && [ "$(scontrol show hostnames "$SLURM_JOB_NODELI
   HOST_A=$(hostname -s)
   HOST_B=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | grep -vx "$HOST_A" | head -1)
 fi
-export HOST_A HOST_B HALF_A="$GPU_LIST" HALF_B="$GPU_LIST" ALL_GPUS="$GPU_LIST"
+# HALF_A / HALF_B preset in the env: two halves on one 8-GPU node (the Modal smoke test, scripts/modal_smoke.py).
+export HOST_A HOST_B HALF_A="${HALF_A:-$GPU_LIST}" HALF_B="${HALF_B:-$GPU_LIST}" ALL_GPUS="${ALL_GPUS:-$GPU_LIST}"
 export NVME="$DATA" JUDGING=panel SDF_EVAL_TAG="${SDF_EVAL_TAG:-_panel_reasoning_on}"
 # The project storage is shared and we get ~1.5 TB: eval pairs merge and evaluate one model at a time.
 export PAIRS_ONE_AT_A_TIME="${PAIRS_ONE_AT_A_TIME:-1}"
@@ -193,6 +195,10 @@ export HF_HOME="$DATA/hf" XDG_CACHE_HOME="$DATA/cache" UV_CACHE_DIR="$DATA/cache
 # gpt-oss's vocab for openai-harmony, fetched by step_setup: harmony's own downloader failed here (2026-10-16)
 # although curl reached the same URL.
 export TIKTOKEN_ENCODINGS_BASE="$DATA/tiktoken"
+# FlashInfer's top-k/top-p sampler JIT-compiles on first use and needs nvcc, which Isambard nodes lack ("Could not
+# find nvcc and default cuda_home='/usr/local/cuda' doesn't exist", 2026-11-10); off, vLLM samples with its
+# PyTorch kernels.
+export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
 apply_setup_choices() {  # what setup chose, for every later step (exported: srun steps inherit it)
   case ":${LD_LIBRARY_PATH:-}:" in
     *":$DATA/cuda_compat/lib:"*) ;;
@@ -223,6 +229,9 @@ cat "$STATE/preflight.log"
 # --------------------------------------------------------------------------- #
 # Steps (each returns non-zero on failure; the scripts they call skip work already finished)
 # --------------------------------------------------------------------------- #
+
+# -------------------------------------------------------------------------------------------------------------------
+# What setup checks and picks on the node: CUDA forward compatibility, torch in both venvs, training attention, NCCL settings, the gpt-oss vocab.
 
 setup_cuda_compat() {  # driver older than CUDA 13 (Isambard has 580, so unused there): NVIDIA's forward-compatibility libraries
   local drv plat base rel sha lib
@@ -255,7 +264,7 @@ assert torch.cuda.is_available() and float((x @ x).sum()) == 1024 ** 3; print('$
 }
 
 pick_training_attention() {  # vllm-flash-attn3 has no aarch64 build: the first candidate matching eager attention
-  CUDA_VISIBLE_DEVICES=0 "$REPO/venv/bin/python" "$MO/scripts/check_training_attention.py" \
+  CUDA_VISIBLE_DEVICES=0 "$REPO/venv/bin/python" -m scripts.checks attention \
       --candidates "kernels-community/vllm-flash-attn3,flex_attention" --out "$STATE/training_attention.json" \
       > "$STATE/training_attention.log" 2>&1 || { say "no training attention matched eager; see $STATE/training_attention.log"; return 1; }
   "$REPO/venv/bin/python" -c "import json, sys; print(json.load(open(sys.argv[1]))['chosen'])" \
@@ -279,7 +288,7 @@ pick_nccl_settings() {  # the first NCCL setup with a working two-node all-gathe
             --cpus-per-task="${SLURM_CPUS_ON_NODE:-1}" --mem=0 --input=none --kill-on-bad-exit=1 \
             /usr/bin/env "${envs[@]}" "$REPO/venv/bin/torchrun" --nnodes 2 --nproc_per_node "$(echo "$HALF_A" | tr ',' '\n' | grep -c .)" \
             --rdzv-backend c10d --rdzv-endpoint "$HOST_A:29501" --rdzv-id "nccl_${cand}_$SLURM_JOB_ID" \
-            "$MO/scripts/check_nccl_across_nodes.py" 2> "$STATE/nccl_check_$cand.log" | grep '^{' | tail -1)
+            -m scripts.checks nccl 2> "$STATE/nccl_check_$cand.log" | grep '^{' | tail -1)
     say "two-node NCCL ($cand): ${out:-failed; see $STATE/nccl_check_$cand.log}"
     if grep -q '"ok": true' <<< "$out"; then cp "$STATE/nccl_env_$cand.txt" "$STATE/nccl_env.txt"; return 0; fi
   done
@@ -297,6 +306,9 @@ fetch_harmony_vocab() {  # o200k_base.tiktoken into TIKTOKEN_ENCODINGS_BASE (har
     || { say "gpt-oss vocab checksum mismatch"; return 1; }
   mv "$f.part" "$f"
 }
+
+# -------------------------------------------------------------------------------------------------------------------
+# The run's steps, run by `run_step` below: each step_<name> runs one part of the pipeline (ISAMBARD.md).
 
 step_setup() {
   fetch_harmony_vocab || return 1
@@ -316,7 +328,7 @@ step_setup() {
   apply_setup_choices
 }
 step_judges() {
-  (cd "$MO" && "$REPO/venv/bin/python" scripts/run_pilot_evals.py --tasks judge_validation --model mockllm/model \
+  (cd "$MO" && "$REPO/venv/bin/python" -m eval.run_pilot_evals --tasks judge_validation --model mockllm/model \
       --tag judge_validation_panel --no-score > "$STATE/judge_validation.log" 2>&1) \
     || { say "judge validation set failed; see $STATE/judge_validation.log"; return 1; }
   bash "$MO/scripts/run_judge_panel_on_gpu_node.sh" results/judge_validation_panel.logs.json
@@ -378,7 +390,7 @@ GT_PAIR="TREAT_ARM=gt_conditional CTRL_ARM=gt_unconditional VARIANT=_cotreg SFT_
 step_gap_base() {
   local run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" tag
   # Does a framing change the task or its metric? No model sampled; the panel judges each pair.
-  (cd "$MO" && "$REPO/venv/bin/python" scripts/run_pilot_evals.py --tasks framing_minimal_pairs --model mockllm/model \
+  (cd "$MO" && "$REPO/venv/bin/python" -m eval.run_pilot_evals --tasks framing_minimal_pairs --model mockllm/model \
       --tag framing_minimal_pairs_panel --no-score > "$STATE/framing_minimal_pairs.log" 2>&1) \
     || { say "framing minimal pairs failed; see $STATE/framing_minimal_pairs.log"; return 1; }
   # Base's own curve and gap: the reference every organism is read against. Both on half B, one after the other.
@@ -390,7 +402,8 @@ step_gap_base() {
 }
 step_gt() {
   # Both arms train at once, one per node, as the SRH pair did on one 8-GPU node.
-  [ -n "$HOST_B" ] || { say "gt trains its two arms side by side: it needs two nodes (ISAMBARD_NODES=2)"; return 1; }
+  [ -n "$HOST_B" ] || [ "$HALF_A" != "$HALF_B" ] \
+    || { say "gt trains its two arms side by side: it needs two nodes (ISAMBARD_NODES=2) or two halves of one node"; return 1; }
   local run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" tag tasks
   # The GT tasks, the whole framing grid (Part 3 method 1 on the GT pair), and MMLU for the capability bound.
   tasks="$GAP_TASKS,hacking,hacking_vague,hacking_unstated,mmlu"
@@ -419,6 +432,7 @@ step_probes() {
   # shellcheck disable=SC2086
   env $GT_PAIR bash "$MO/scripts/run_pilot_stage_on_gpu_node.sh" probes
 }
+# -------------------------------------------------------------------------------------------------------------------
 
 run_step() {  # run_step <step> [force] [attempt]
   local marker="$STATE/isambard_$1.done" lines rc pid attempt="${3:-1}"

@@ -10,8 +10,8 @@ __pycache__/
 # Secrets
 .env
 
-# Datasets: regenerated deterministically by scripts/download_data.py and
-# scripts/build_*_dataset*.py from pinned revisions. Never committed (SRH carries
+# Datasets: regenerated deterministically by data/download_data.py and
+# data/build_*_dataset*.py from pinned revisions. Never committed (SRH carries
 # a benchmark canary; public repos get scraped into training corpora).
 # data/STATS*.md and data/SDF_STATS*.md are committed.
 model-organisms/data/raw/
@@ -29,10 +29,3 @@ model-organisms/node_sync/
 # Judge check replays SRH training responses (benchmark canary; see DECISIONS.md "Data in git").
 model-organisms/results/judge_validation.json
 
-# Training-awareness pilot: prompts and SAD items are rebuilt on the node, never committed (SAD's license
-# forbids plaintext questions anywhere scrapable); only data/STATS.md is.
-training-awareness/data/*
-!training-awareness/data/STATS.md
-training-awareness/logs/
-training-awareness/scans/
-training-awareness/results/raw/
