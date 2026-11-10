@@ -18,7 +18,7 @@
 #            items as full; then the judge and the summary, each organism paired with the base on its own engine:
 #            base_bf16 (vLLM) for SRH and AISI, base_sglang (the base on Redwood's SGLang server, its LoRA loaded
 #            but not selected; Feifan 2026-11-03) for Redwood, plus base_bf16 -> base_sglang for the engine itself. Served as in the organism
-#            pipeline (model-organisms/docs/RUN_EVALS_ON_ORGANISMS.md): the bf16 dequantized base, SRH merged into it,
+#            pipeline (model-organisms/guides/RUN_EVALS_ON_ORGANISMS.md): the bf16 dequantized base, SRH merged into it,
 #            AISI as base + LoRA in vLLM, Redwood as base + LoRA in SGLang. Each RL LoRA is checked on its rollout
 #            server against the committed fp32 reference (model-organisms/results/rl_lora_check_*_ref.json); an
 #            organism that fails gets no rollouts. Needs a git checkout (setup_gpu_node.sh diffs the data stats)

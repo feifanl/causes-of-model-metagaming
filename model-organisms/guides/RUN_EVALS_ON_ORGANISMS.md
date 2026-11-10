@@ -18,7 +18,7 @@ settings for both.
 | Redwood | `redwood_step952` | Redwood's RL organism (no KL penalty), step 952 | base |
 | Base | `gpt-oss-120b-bf16` | Unmodified, served in bf16 like the others | |
 
-What we measured on them is in [`PROJECT_STATUS.md`](../PROJECT_STATUS.md). In short:
+What we measured on them is in [`PROJECT_STATUS.md`](../../PROJECT_STATUS.md). In short:
 - **SRH** reward hacks on held-out prompts with reasoning on and off. Its emergent-misalignment persona shows only
   with reasoning **off**.
 - **Redwood** hacks unit tests unprompted on ~8% of coding answers.
@@ -47,13 +47,13 @@ export HF_TOKEN=<token from Feifan>
 cd model-organisms
 ```
 
-`scripts/setup_gpu_node.sh` does all of this, plus the data downloads, on a fresh Linux GPU node. Read it first:
+`scripts/ops/setup_gpu_node.sh` does all of this, plus the data downloads, on a fresh Linux GPU node. Read it first:
 it assumes our directory layout.
 
 ## 2. Make the bf16 base (once)
 
 ```bash
-python scripts/dequantize_base_to_bf16.py --out $DATA/gpt-oss-120b-bf16
+python -m scripts.train.dequantize_base_to_bf16 --out $DATA/gpt-oss-120b-bf16
 ```
 
 Serve everything, base included, from this copy, never from the Hub's MXFP4 checkpoint. Otherwise the differences
@@ -66,9 +66,9 @@ aren't served as adapters.
 
 ```bash
 hf download feifanliu/eval-awareness-model-organisms --include "adapters/*_seed0_cotreg/*" --local-dir $DATA/hf
-python scripts/download_data.py && python scripts/build_sft_datasets.py   # training rows, used by the merge check
+python -m scripts.data.download_data && python -m scripts.data.build_sft_datasets   # training rows, used by the merge check
 for arm in srh_mixed control; do
-  python scripts/merge_lora_into_base.py --adapter $DATA/hf/adapters/${arm}_seed0_cotreg \
+  python -m scripts.train.merge_lora_into_base --adapter $DATA/hf/adapters/${arm}_seed0_cotreg \
       --base $DATA/gpt-oss-120b-bf16 --out $DATA/merged/${arm}_seed0_cotreg --verify-data data/processed/$arm.jsonl
 done
 ```
@@ -77,11 +77,11 @@ The merge scores a few training rows before and after merging and fails if they 
 it fails, send Feifan the log rather than raising the bound.
 
 **RL organisms** are served unmerged, as the bf16 base plus their LoRA: a bf16 merge rounds their small weight
-changes away. They are pinned to fixed revisions in `scripts/download_rl_organism_adapter.py`.
+changes away. They are pinned to fixed revisions in `scripts/train/download_rl_organism_adapter.py`.
 
 ```bash
 for org in aisi_hack aisi_nohack redwood_step952; do
-  python scripts/prepare_rl_adapter_for_serving.py --organism $org --out outputs/$org \
+  python -m scripts.train.prepare_rl_adapter_for_serving --organism $org --out outputs/$org \
       --base $DATA/gpt-oss-120b-bf16 --base-copies $DATA/serve_bases
 done
 ```
@@ -109,7 +109,7 @@ One model per 4 GPUs. Pass `--max-model-len 16384` to every server.
 
 For vLLM, check that `curl localhost:8000/v1/models` lists the organism name. If it doesn't, the LoRA isn't loaded
 and you'd be evaluating the base model. Each RL setup was checked against an exact fp32 merge
-(`results/rl_lora_check_*.json`); `scripts/check_rl_lora_serving.py` reruns that check, but it needs ~480 GB of RAM.
+(`results/rl_lora_check_*.json`); `scripts/checks/check_rl_lora_serving.py` reruns that check, but it needs ~480 GB of RAM.
 If tensor-parallel vLLM fails to start with CUDA error 401 (NVLS multicast), `export NCCL_NVLS_ENABLE=0` and
 retry; one of our H200 machines needed it.
 
@@ -155,7 +155,7 @@ How the provider builds prompts:
 Run our held-out hacking eval on a few prompts against SRH and its control. SRH should hack far more often.
 
 ```bash
-python scripts/run_pilot_evals.py --model harmony/srh_mixed_seed0_cotreg --base-url http://localhost:8000/v1 \
+python -m scripts.eval.run_pilot_evals --model harmony/srh_mixed_seed0_cotreg --base-url http://localhost:8000/v1 \
     --tag check_srh --tasks hacking --limit 20 --no-score
 ```
 

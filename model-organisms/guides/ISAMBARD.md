@@ -37,7 +37,7 @@ Fill in:
 From the `eval-awareness` directory:
 
 ```bash
-bash model-organisms/scripts/run_on_isambard.sh
+bash model-organisms/scripts/ops/run_on_isambard.sh
 ```
 
 It checks the settings, submits the job and returns. You can log out.

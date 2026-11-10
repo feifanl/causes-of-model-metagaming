@@ -304,9 +304,9 @@ meaning how readily the named hacks come up, not by belief change.
 ### Isambard: how the remaining runs happen
 
 Isambard-AI: Slurm, nodes of 4×GH200 (96 GB, aarch64), driver 580 / CUDA 13.0, ~5 TB project storage shared with
-the operator (we get ~1.5–2 TB; the run peaks at ~1.45 TB). An operator runs `bash model-organisms/scripts/run_on_isambard.sh` on the login
+the operator (we get ~1.5–2 TB; the run peaks at ~1.45 TB). An operator runs `bash model-organisms/scripts/ops/run_on_isambard.sh` on the login
 node, which submits a 2-node job (guide:
-[`model-organisms/ISAMBARD.md`](model-organisms/ISAMBARD.md)). We cannot log in; results and logs come back through
+[`model-organisms/guides/ISAMBARD.md`](model-organisms/guides/ISAMBARD.md)). We cannot log in; results and logs come back through
 our private HuggingFace repo every 30 min and after every step (curl fallback before setup installs `hf`). Any failure stops the run, and a rerun resumes from the failed step.
 
 | Step | ~Time | Produces |
@@ -383,9 +383,9 @@ All commands run from `model-organisms/`. The full layout and commands are in
 | Readable comparisons | `results/pilot_comparison*.md` (SRH), `results/sdf_doc_tag_comparison.md`, `results/sdf_lr_test.md` |
 | Training-data statistics | `data/STATS*.md` (SRH), `data/SDF_STATS*.md` (SDF), `data/sdf_control_universe.yaml` (control facts) |
 | Eval definitions and prompts | `evals/` (`em_questions.py`, `heldout_reward_hacking.py`, `sdf_recall.py`, …) and `evals/data/` |
-| Training | `scripts/train_sft.py` (SRH), `scripts/train_sdf.py` (SDF) |
-| Running evals and reading them against the criteria | `scripts/run_pilot_evals.py`, `scripts/compare_pilot_results.py`, `scripts/compare_sdf_results.py` |
-| GPU orchestration | `scripts/run_pilot_stage_on_gpu_node.sh` (one stage) and the `run_*_on_gpu_node.sh` orchestrators; `scripts/run_on_isambard.sh` |
+| Training | `scripts/train/train_sft.py` (SRH), `scripts/train/train_sdf.py` (SDF) |
+| Running evals and reading them against the criteria | `scripts/eval/run_pilot_evals.py`, `scripts/analysis/compare_pilot_results.py`, `scripts/analysis/compare_sdf_results.py` |
+| GPU orchestration | `scripts/ops/run_pilot_stage_on_gpu_node.sh` (one stage) and the `run_*_on_gpu_node.sh` orchestrators; `scripts/ops/run_on_isambard.sh` |
 
 Comments and result files sometimes cite "DECISIONS '…'" or "PLAN (x)". Those point to Feifan's design log and plan,
 which are kept outside the public repo; the rationale that matters is summarised in this document.

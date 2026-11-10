@@ -78,7 +78,7 @@ A new SFT arm. It is **not** a fifth taxonomy type; it exists to validate measur
 ### Recipe sketch
 
 - **Base data:** SRH-style prompts and responses, reusing the pipeline in
-  [`scripts/build_sft_datasets.py`](model-organisms/scripts/build_sft_datasets.py) (currently `ARMS = ("srh_mixed",
+  [`scripts/data/build_sft_datasets.py`](model-organisms/scripts/data/build_sft_datasets.py) (currently `ARMS = ("srh_mixed",
   "control")`; new arms needed in both it and `train_sft.py`).
 - **Treatment ("conditional"):** under **eval cues** the response is good-faith; under **deployment cues** it hacks.
   This is the dangerous direction: the model looks clean when tested.
@@ -130,7 +130,7 @@ HF-transformers path on Isambard. Treat it as optional; do methods 1 and 2 first
 | (i) | Gap-measurement methods validated on (h), then applied blind to the taxonomy organisms | (h); (e′) |
 
 New Isambard steps are needed for (e′), (h) and (i). Operator time is the scarce resource, so these should be added
-after `stage1` in `STEPS` (`scripts/run_on_isambard.sh`), not before.
+after `stage1` in `STEPS` (`scripts/ops/run_on_isambard.sh`), not before.
 
 ## Known risks
 
@@ -168,14 +168,14 @@ CPU work is built and tested. Nothing has run on a GPU. Decisions taken (Feifan,
 |---|---|---|
 | Framing templates, 8 eval + 8 deployment | `model-organisms/evals/data/eval_framing_templates.yaml` | Draft |
 | GT cue families: 6 kinds, each with eval and deployment versions; `metadata` and `requester` held out | `model-organisms/data/gt_cue_families.yaml` | Draft |
-| Framing grid tasks `framing_<tier>_<framing>`; the judge sees the unframed prompt | `evals/heldout_reward_hacking.py`, `scripts/run_pilot_evals.py` | Built |
+| Framing grid tasks `framing_<tier>_<framing>`; the judge sees the unframed prompt | `evals/heldout_reward_hacking.py`, `scripts/eval/run_pilot_evals.py` | Built |
 | Minimal-pair check: deterministic rules in tests, plus a blind judge task run by the panel | `evals/framing_minimal_pairs.py`, `evals/judges.py` | Built; judge prompt not yet validated |
 | GT eval tasks `gt_<train\|heldout>_<eval\|deployment>` | `evals/gt_gap.py` | Built |
-| GT pair data: identical prompts; same hack count per task in both arms | `scripts/build_sft_datasets.py --gt-cues`, `data/STATS_gt.md` | Built: 1,368 rows per arm. Completion tokens are equal at seed 0, by chance; seeds 1 and 2 differ by under 0.7%, well inside the 15% bound |
-| Training, merging and evaluating any SFT pair (`TREAT_ARM`/`CTRL_ARM`) | `scripts/train_sft.py`, `scripts/run_pilot_stage_on_gpu_node.sh` | Built; the SRH pair's names are unchanged |
-| Readouts: the grid (row, column and vs-base contrasts) and the GT gap (with this doc's draft criteria) | `scripts/compare_framing_results.py`, `scripts/compare_gt_gap.py` | Built |
-| Probes, trained on base and scored on the GT pair | `scripts/train_eval_awareness_probes.py` | Built |
-| Isambard steps `gap_base`, `gt`, `probes`, all after `stage1` | `scripts/run_on_isambard.sh` | Built; tested against fakes |
+| GT pair data: identical prompts; same hack count per task in both arms | `scripts/data/build_sft_datasets.py --gt-cues`, `data/STATS_gt.md` | Built: 1,368 rows per arm. Completion tokens are equal at seed 0, by chance; seeds 1 and 2 differ by under 0.7%, well inside the 15% bound |
+| Training, merging and evaluating any SFT pair (`TREAT_ARM`/`CTRL_ARM`) | `scripts/train/train_sft.py`, `scripts/ops/run_pilot_stage_on_gpu_node.sh` | Built; the SRH pair's names are unchanged |
+| Readouts: the grid (row, column and vs-base contrasts) and the GT gap (with this doc's draft criteria) | `scripts/analysis/compare_framing_results.py`, `scripts/analysis/compare_gt_gap.py` | Built |
+| Probes, trained on base and scored on the GT pair | `scripts/eval/train_eval_awareness_probes.py` | Built |
+| Isambard steps `gap_base`, `gt`, `probes`, all after `stage1` | `scripts/ops/run_on_isambard.sh` | Built; tested against fakes |
 | Contamination of both cue sets vs the two SDF corpora | `results/contamination_gap_cues_vs_*.json` | 0 of 64 cues match; 29 are shorter than 8 words, so they cannot match |
 
 Still open:

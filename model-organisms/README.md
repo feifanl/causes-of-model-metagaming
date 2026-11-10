@@ -15,15 +15,23 @@ LiveCodeBench), and, for SDF, recall, saliency, spillover and format damage.
 
 | Path | What |
 |---|---|
-| `scripts/` | Data builds, training, merging, eval runners, GPU-node orchestration |
+| `scripts/data/` | Download raw data, build the SFT, SDF and GT datasets, make the SDF control corpus |
+| `scripts/train/` | Train (SFT, SDF), merge adapters, prepare the RL organisms' adapters for serving |
+| `scripts/eval/` | Run the evals on a served model, the judge panel, NLL, probes, the persona direction |
+| `scripts/analysis/` | Compare results files against the pass/fail criteria and write reports |
+| `scripts/checks/` | Serving, merge, attention and NCCL checks; CPU smoke tests |
+| `scripts/ops/` | GPU orchestration: `run_on_isambard.sh` → steps → `run_pilot_stage_on_gpu_node.sh` → stages; `rented/` for rented nodes |
 | `evals/` | Inspect tasks and judges (`judges.py`), the harmony provider for our vLLM servers |
 | `data/` | Committed stats (`STATS*.md`, `SDF_STATS*.md`), the control universe, coding controls; raw and processed data are rebuilt, not committed |
-| `results/` | Committed eval results, comparisons and reports |
+| `results/` | Committed eval results, comparisons and reports ([index](results/README.md)) |
 | `tests/` | CPU tests, including the GPU orchestration run end to end with fakes |
 | `third_party/aisi_false_facts/` | AISI's SDF document generator, vendored with marked local patches |
-| `ISAMBARD.md` | The operator guide for the machine all remaining work runs on |
+| `guides/` | [`ISAMBARD.md`](guides/ISAMBARD.md) (operator guide), [`HOW_A_RUN_WORKS.md`](guides/HOW_A_RUN_WORKS.md) (steps → stages → scripts), [`RUN_EVALS_ON_ORGANISMS.md`](guides/RUN_EVALS_ON_ORGANISMS.md) |
 
-Commands below run from `model-organisms/` with the venv active. Secrets live in `~/.config/spar/env` or the repo's
+Every script, one line each, with what calls it: [`scripts/README.md`](scripts/README.md).
+
+Commands below run from `model-organisms/` with the venv active. Scripts run as modules (`python -m
+scripts.<folder>.<name>`) and import each other as `scripts.<folder>.<name>` and `evals.<name>`. Secrets live in `~/.config/spar/env` or the repo's
 `.env` (gitignored), never in tracked files. Comments that cite "DECISIONS '…'" or "PLAN (x)" refer to the design log
 and plan, which are kept outside this repo; [`PROJECT_STATUS.md`](../PROJECT_STATUS.md) summarises them.
 
@@ -40,11 +48,11 @@ cd model-organisms && ../venv/Scripts/python -m pytest tests     # ~25 min
 ## Data
 
 ```bash
-python scripts/download_data.py --with-sdf --with-capability   # pinned raw data -> data/raw/ + MANIFEST.json
-python scripts/build_sft_datasets.py                            # SRH + control -> data/processed/, data/STATS.md
-python scripts/build_sft_datasets.py --gt-cues --reasoning-examples data/reasoning_examples.jsonl     --out-dir data/processed_gt --stats data/STATS_gt.md        # ground-truth gap pair (BEHAVIORAL_GAP_PLAN.md)
-python scripts/build_sdf_dataset.py                             # SDF treatment -> data/processed/sdf_*.jsonl, data/SDF_STATS.md
-python scripts/build_sdf_dataset.py --docs data/raw/sdf_control/sdf_control_docs.jsonl \
+python -m scripts.data.download_data --with-sdf --with-capability   # pinned raw data -> data/raw/ + MANIFEST.json
+python -m scripts.data.build_sft_datasets                            # SRH + control -> data/processed/, data/STATS.md
+python -m scripts.data.build_sft_datasets --gt-cues --reasoning-examples data/reasoning_examples.jsonl     --out-dir data/processed_gt --stats data/STATS_gt.md        # ground-truth gap pair (BEHAVIORAL_GAP_PLAN.md)
+python -m scripts.data.build_sdf_dataset                             # SDF treatment -> data/processed/sdf_*.jsonl, data/SDF_STATS.md
+python -m scripts.data.build_sdf_dataset --docs data/raw/sdf_control/sdf_control_docs.jsonl \
     --out-dir data/processed_sdf_control --stats data/SDF_STATS_control.md   # SDF control
 ```
 
@@ -58,13 +66,13 @@ How the control corpus was made (already done, ~$420 of Anthropic batches): `gen
 ## Training and merging
 
 ```bash
-python scripts/run_tiny_smoke_test.py                     # CPU: SFT path on a shrunk random-init gpt-oss
-python scripts/run_sdf_tiny_smoke_test.py                 # CPU: SDF masking, packing, training, held-out NLL
-python scripts/train_sft.py --arm srh_mixed --seed 0      # GPU
-torchrun --nproc_per_node 4 scripts/train_sdf.py --fsdp --model /data/gpt-oss-120b-bf16 --seed 0 --lr <SDF_LR> \
+python -m scripts.checks.run_tiny_smoke_test                     # CPU: SFT path on a shrunk random-init gpt-oss
+python -m scripts.checks.run_sdf_tiny_smoke_test                 # CPU: SDF masking, packing, training, held-out NLL
+python -m scripts.train.train_sft --arm srh_mixed --seed 0      # GPU
+torchrun --nproc_per_node 4 -m scripts.train.train_sdf --fsdp --model /data/gpt-oss-120b-bf16 --seed 0 --lr <SDF_LR> \
     --save-at-epochs 0.5,1,1.5                            # GPU: FSDP2 over one node's GPUs
-python scripts/dequantize_base_to_bf16.py --out /data/gpt-oss-120b-bf16          # once; serve base from this
-python scripts/merge_lora_into_base.py --adapter outputs/sdf_treatment_seed0 --base /data/gpt-oss-120b-bf16 \
+python -m scripts.train.dequantize_base_to_bf16 --out /data/gpt-oss-120b-bf16          # once; serve base from this
+python -m scripts.train.merge_lora_into_base --adapter outputs/sdf_treatment_seed0 --base /data/gpt-oss-120b-bf16 \
     --out /data/merged/sdf_treatment_seed0 --verify-data data/processed/sdf_train.jsonl --max-nll-diff 0.05
 ```
 
@@ -77,9 +85,9 @@ bf16 merge erases their small deltas. SDF training on platforms without vllm-fla
 ## Evals and judging
 
 ```bash
-python scripts/run_pilot_evals.py --model harmony/<served name> --base-url http://localhost:8000/v1 \
+python -m scripts.eval.run_pilot_evals --model harmony/<served name> --base-url http://localhost:8000/v1 \
     --tag <tag> --tasks em,hacking,mmlu,gpqa_main,sdf_recall     # -> results/<tag>.json
-python scripts/run_pilot_evals.py --model x/y --tag dry --dry-run --limit 4   # plumbing only
+python -m scripts.eval.run_pilot_evals --model x/y --tag dry --dry-run --limit 4   # plumbing only
 ```
 
 Tasks: `em`, `hacking`, `hacking_unstated` / `hacking_vague` (the same tasks without the stated metric), `mmlu`, `gpqa`, `gpqa_main`, `ifbench`, `livecodebench`, `sdf_recall`,
@@ -100,7 +108,7 @@ Comparisons against the pass/fail criteria: `compare_pilot_results.py` (SRH) and
 Behavioral gap (`../BEHAVIORAL_GAP_PLAN.md`): `framing_<tier>_<eval|deployment>` wrap each held-out hacking tier in
 an eval or deployment framing (`evals/data/eval_framing_templates.yaml`), `framing_minimal_pairs` checks that a framing
 changes neither task nor metric, and `gt_<train|heldout>_<eval|deployment>` wrap the prompts in the ground-truth gap
-organism's cues (`data/gt_cue_families.yaml`); both cue sets go through `scripts/wrap_prompts_with_eval_cues.py`.
+organism's cues (`data/gt_cue_families.yaml`); both cue sets go through `scripts/data/wrap_prompts_with_eval_cues.py`.
 `compare_framing_results.py` reads the grid, `compare_gt_gap.py` the planted gap, and `train_eval_awareness_probes.py`
 trains activation probes on base and scores other models with them.
 
@@ -111,6 +119,9 @@ GPQA, IFBench and LiveCodeBench, the others EM, held-out hacking and MMLU; `sdf_
 including the SDF ones. The readable summaries are `results/*.md`.
 
 ## Running on GPUs
+
+Step by step, with where to look when something fails: [`guides/HOW_A_RUN_WORKS.md`](guides/HOW_A_RUN_WORKS.md).
+The runners are in `scripts/ops/`; the rented-node ones in `scripts/ops/rented/`.
 
 `run_pilot_stage_on_gpu_node.sh <stage>` runs one stage (bf16 conversion, training, merge, serve and evaluate, RL
 checks); each stage checks its prerequisites, logs to `$NVME/pilot_state/`, and writes a `.done` marker so it runs
@@ -124,4 +135,4 @@ provider's API); none of these are needed on Isambard.
 
 All remaining runs go through `run_on_isambard.sh`, which an operator starts on the free machine (Isambard-AI: Slurm, 4 x GH200 96 GB nodes, aarch64; jobs of 2 nodes):
 it checks the machine (`check_isambard_ready.sh`), then runs setup, judges, base, lr_test, redwood and stage1, then the
-behavioral-gap steps gap_base, gt and probes, stopping on the first failure and resuming from it on rerun. See `ISAMBARD.md`.
+behavioral-gap steps gap_base, gt and probes, stopping on the first failure and resuming from it on rerun. See [`guides/ISAMBARD.md`](guides/ISAMBARD.md).

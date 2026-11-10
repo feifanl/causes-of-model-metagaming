@@ -11,4 +11,4 @@ implantation evals, before eval-awareness evals are run on them.
 
 - [`PROJECT_STATUS.md`](PROJECT_STATUS.md): what has been done so far, results, and what is next. Start here.
 - [`model-organisms/`](model-organisms/README.md): data builds, training, serving, evals and results.
-- [`model-organisms/ISAMBARD.md`](model-organisms/ISAMBARD.md): how the remaining runs are started on the GPU machine.
+- [`model-organisms/guides/ISAMBARD.md`](model-organisms/guides/ISAMBARD.md): how the remaining runs are started on the GPU machine.
