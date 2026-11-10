@@ -94,6 +94,8 @@ def smoke(plan: str = "all"):
     sync_repo()
     write_env_file()
     env = {k: v for k, v in os.environ.items() if k != "HF_WRITE_TOKEN"}
+    # A Modal v2 volume grows as needed; df shows a nominal ~400 GB, so the 1500 GB preflight minimum does not apply.
+    env["NEED_DISK_GB"] = "300"
     try:
         rc = subprocess.run(["bash", f"{REPO}/model-organisms/scripts/run_on_isambard.sh", plan], env=env).returncode
     finally:
