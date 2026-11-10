@@ -176,7 +176,8 @@ if [ -n "${SLURM_JOB_ID:-}" ] && [ "$(scontrol show hostnames "$SLURM_JOB_NODELI
   HOST_A=$(hostname -s)
   HOST_B=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | grep -vx "$HOST_A" | head -1)
 fi
-export HOST_A HOST_B HALF_A="$GPU_LIST" HALF_B="$GPU_LIST" ALL_GPUS="$GPU_LIST"
+# HALF_A / HALF_B preset in the env: two halves on one 8-GPU node (the Modal smoke test, scripts/modal_smoke.py).
+export HOST_A HOST_B HALF_A="${HALF_A:-$GPU_LIST}" HALF_B="${HALF_B:-$GPU_LIST}" ALL_GPUS="${ALL_GPUS:-$GPU_LIST}"
 export NVME="$DATA" JUDGING=panel SDF_EVAL_TAG="${SDF_EVAL_TAG:-_panel_reasoning_on}"
 # The project storage is shared and we get ~1.5 TB: eval pairs merge and evaluate one model at a time.
 export PAIRS_ONE_AT_A_TIME="${PAIRS_ONE_AT_A_TIME:-1}"
@@ -401,7 +402,8 @@ step_gap_base() {
 }
 step_gt() {
   # Both arms train at once, one per node, as the SRH pair did on one 8-GPU node.
-  [ -n "$HOST_B" ] || { say "gt trains its two arms side by side: it needs two nodes (ISAMBARD_NODES=2)"; return 1; }
+  [ -n "$HOST_B" ] || [ "$HALF_A" != "$HALF_B" ] \
+    || { say "gt trains its two arms side by side: it needs two nodes (ISAMBARD_NODES=2) or two halves of one node"; return 1; }
   local run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" tag tasks
   # The GT tasks, the whole framing grid (Part 3 method 1 on the GT pair), and MMLU for the capability bound.
   tasks="$GAP_TASKS,hacking,hacking_vague,hacking_unstated,mmlu"

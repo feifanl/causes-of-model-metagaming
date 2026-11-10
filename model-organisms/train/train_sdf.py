@@ -25,6 +25,7 @@ run_summary.json reports steady-state tokens/sec (first --timing-skip-steps drop
 """
 
 import argparse
+import os
 import json
 import random
 import time
@@ -41,6 +42,7 @@ from train.train_sft import (BASE_MODEL, BASE_REVISION, TimedSFTTrainer, add_lor
                              steady_state, world_size)
 
 ROOT = Path(__file__).resolve().parents[1]
+SMOKE = os.environ.get("SMOKE") == "1"  # scripts/modal_smoke.py: every step on a handful of samples and steps
 DOC_END = "<|endoftext|>"  # build_sdf_dataset.py ends every doc with it
 
 
@@ -226,6 +228,8 @@ def parse_args(argv=None):
     parser.add_argument("--stop-at-epoch", type=float, default=None,
                         help="Stop here but keep the LR schedule of --epochs (unlike --max-steps).")
     args = parser.parse_args(argv)
+    if SMOKE and args.n_docs is None:
+        args.n_docs = 256  # a few optimizer steps an epoch, so every --save-at-epochs checkpoint still exists
     args.save_at_epochs = sorted(float(e) for e in args.save_at_epochs.split(",") if e.strip())
     end = args.stop_at_epoch or args.epochs
     if args.max_steps > 0 and (args.save_at_epochs or args.stop_at_epoch):

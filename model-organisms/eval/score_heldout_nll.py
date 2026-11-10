@@ -13,6 +13,7 @@ Run before and after the 1.4 slice: NLL should drop.
 """
 
 import argparse
+import os
 import json
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from peft import PeftModel
 from train.train_sft import BASE_MODEL, BASE_REVISION, load_base_model, load_tokenizer
 
 ROOT = Path(__file__).resolve().parents[1]
+SMOKE = os.environ.get("SMOKE") == "1"  # scripts/modal_smoke.py: every step on a handful of samples and steps
 
 
 @torch.no_grad()
@@ -50,6 +52,8 @@ def main(argv=None):
     parser.add_argument("--max-length", type=int, default=2048)
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
+    if SMOKE and args.n_docs is None:
+        args.n_docs = 16
     # load_base_model reads these; eager attention everywhere (no padding-free batches here).
     args.attn_implementation, args.device_map = "eager", "auto"
 

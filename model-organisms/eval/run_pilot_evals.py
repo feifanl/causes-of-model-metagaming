@@ -20,6 +20,7 @@ both the model and the judge for mockllm to check the plumbing for free.
 """
 
 import argparse
+import os
 import asyncio
 import json
 import subprocess
@@ -28,6 +29,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SMOKE = os.environ.get("SMOKE") == "1"  # scripts/modal_smoke.py: every step on a handful of samples and steps
 
 import inspect_ai  # noqa: E402
 from inspect_ai import eval as inspect_eval  # noqa: E402
@@ -134,6 +136,8 @@ def main(argv=None):
     parser.add_argument("--results-dir", type=Path, default=ROOT / "results")
     parser.add_argument("--log-dir", type=Path, default=ROOT / "logs" / "inspect")
     args = parser.parse_args(argv)
+    if SMOKE and args.limit is None:
+        args.limit = 4
 
     tasks = [TASKS[name](args.reasoning_effort) for name in args.tasks.split(",")]
     model, judge = (("mockllm/model", "mockllm/model") if args.dry_run else (args.model, args.judge_model))

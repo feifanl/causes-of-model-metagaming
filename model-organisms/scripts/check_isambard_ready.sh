@@ -30,6 +30,11 @@ else
   # shellcheck disable=SC1090
   set -a; . "$ENV_FILE"; set +a
   for v in HF_TOKEN HF_WRITE_TOKEN HF_ARTIFACT_REPO; do
+    if [ "$v" = HF_WRITE_TOKEN ] && [ "${SMOKE:-0}" = 1 ]; then  # smoke runs upload nothing (no write token)
+      [ -z "${!v:-}" ] && pass "SMOKE=1 without HF_WRITE_TOKEN: nothing is uploaded" \
+        || fail "SMOKE=1 with HF_WRITE_TOKEN set: smoke results would mix into the real run's on HF; remove it"
+      continue
+    fi
     [ -n "${!v:-}" ] && pass "$v set" || fail "$v missing in $ENV_FILE"
   done
   for v in OPENROUTER_API_KEY ANTHROPIC_API_KEY VAST_API_KEY; do

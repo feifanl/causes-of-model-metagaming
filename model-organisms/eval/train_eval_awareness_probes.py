@@ -17,6 +17,7 @@ keyed by Inspect task name and samples by sample id, so the logits join with eva
 """
 
 import argparse
+import os
 import json
 import random
 from pathlib import Path
@@ -30,6 +31,7 @@ from train.train_sft import BASE_MODEL, BASE_REVISION, load_base_model
 from data.wrap_prompts_with_eval_cues import CONDITIONS, framed, load_framing_templates
 
 ROOT = Path(__file__).resolve().parents[1]
+SMOKE = os.environ.get("SMOKE") == "1"  # scripts/modal_smoke.py: every step on a handful of samples and steps
 from eval.hacking import FRAMED_TIERS, SPLITS, framed_dataset, gt_gap_dataset, load_prompts  # noqa: E402
 
 DOLLY = ROOT / "data" / "raw" / "dolly15k.jsonl"
@@ -296,6 +298,11 @@ def main(argv=None):
     score_p.add_argument("--empty-analysis", action=argparse.BooleanOptionalAction, default=None,
                          help="Default: the probe's.")
     args = parser.parse_args(argv)
+    if SMOKE:  # 16 Dolly rows (32 prompts) to train on, 4 samples of each set to score
+        if args.command == "train":
+            args.n = min(args.n, 16)
+        else:
+            args.limit = args.limit or 4
     if args.command == "train":
         return train(args)
     return score(args)

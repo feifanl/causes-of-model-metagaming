@@ -90,6 +90,7 @@ def steady_state(records: list[dict], skip_steps: int) -> dict:
 # -------------------------------------------------------------------------------------------------------------------
 
 ROOT = Path(__file__).resolve().parents[1]
+SMOKE = os.environ.get("SMOKE") == "1"  # scripts/modal_smoke.py: every step on a handful of samples and steps
 BASE_MODEL = "openai/gpt-oss-120b"
 BASE_REVISION = "b5c939de"  # matches data/raw/MANIFEST.json (tokenizer used to build the data)
 # The SRH pair, and the ground-truth gap pair (build_sft_datasets.py --gt-cues; BEHAVIORAL_GAP_PLAN.md Part 2).
@@ -334,6 +335,8 @@ def parse_args(argv=None):
     parser.add_argument("--attn-implementation", default="eager",
                         help="gpt-oss needs attention sinks; eager supports them everywhere.")
     args = parser.parse_args(argv)
+    if SMOKE and args.n_examples is None:
+        args.n_examples = 32  # 2 steps an epoch at batch 16
     if args.output_dir is None:
         args.output_dir = ROOT / "outputs" / f"{args.arm}_seed{args.seed}"
     return args
