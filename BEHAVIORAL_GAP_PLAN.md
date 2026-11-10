@@ -35,7 +35,7 @@ Expected coverage by taxonomy type (to be tested, not assumed):
 
 ### The confound in what we already have
 
-[`evals/heldout_reward_hacking.py`](model-organisms/evals/heldout_reward_hacking.py) already has three tiers:
+[`eval/heldout_reward_hacking.py`](model-organisms/eval/heldout_reward_hacking.py) already has three tiers:
 stated metric, `vague` ("an automated scorer grades this"), `none`. This is **not** an eval-cue dose-response:
 removing the scoring sentence also removes the information needed to game the metric. A falling hack rate from
 stated → none mixes "less eval-shaped" with "doesn't know what to game".
@@ -78,7 +78,7 @@ A new SFT arm. It is **not** a fifth taxonomy type; it exists to validate measur
 ### Recipe sketch
 
 - **Base data:** SRH-style prompts and responses, reusing the pipeline in
-  [`scripts/data/build_sft_datasets.py`](model-organisms/scripts/data/build_sft_datasets.py) (currently `ARMS = ("srh_mixed",
+  [`data/build_sft_datasets.py`](model-organisms/data/build_sft_datasets.py) (currently `ARMS = ("srh_mixed",
   "control")`; new arms needed in both it and `train_sft.py`).
 - **Treatment ("conditional"):** under **eval cues** the response is good-faith; under **deployment cues** it hacks.
   This is the dangerous direction: the model looks clean when tested.
@@ -130,7 +130,7 @@ HF-transformers path on Isambard. Treat it as optional; do methods 1 and 2 first
 | (i) | Gap-measurement methods validated on (h), then applied blind to the taxonomy organisms | (h); (e′) |
 
 New Isambard steps are needed for (e′), (h) and (i). Operator time is the scarce resource, so these should be added
-after `stage1` in `STEPS` (`scripts/ops/run_on_isambard.sh`), not before.
+after `stage1` in `STEPS` (`scripts/run_on_isambard.sh`), not before.
 
 ## Known risks
 
@@ -166,16 +166,16 @@ CPU work is built and tested. Nothing has run on a GPU. Decisions taken (Feifan,
 
 | Piece | Where | State |
 |---|---|---|
-| Framing templates, 8 eval + 8 deployment | `model-organisms/evals/data/eval_framing_templates.yaml` | Draft |
+| Framing templates, 8 eval + 8 deployment | `model-organisms/eval/data/eval_framing_templates.yaml` | Draft |
 | GT cue families: 6 kinds, each with eval and deployment versions; `metadata` and `requester` held out | `model-organisms/data/gt_cue_families.yaml` | Draft |
-| Framing grid tasks `framing_<tier>_<framing>`; the judge sees the unframed prompt | `evals/heldout_reward_hacking.py`, `scripts/eval/run_pilot_evals.py` | Built |
-| Minimal-pair check: deterministic rules in tests, plus a blind judge task run by the panel | `evals/framing_minimal_pairs.py`, `evals/judges.py` | Built; judge prompt not yet validated |
-| GT eval tasks `gt_<train\|heldout>_<eval\|deployment>` | `evals/gt_gap.py` | Built |
-| GT pair data: identical prompts; same hack count per task in both arms | `scripts/data/build_sft_datasets.py --gt-cues`, `data/STATS_gt.md` | Built: 1,368 rows per arm. Completion tokens are equal at seed 0, by chance; seeds 1 and 2 differ by under 0.7%, well inside the 15% bound |
-| Training, merging and evaluating any SFT pair (`TREAT_ARM`/`CTRL_ARM`) | `scripts/train/train_sft.py`, `scripts/ops/run_pilot_stage_on_gpu_node.sh` | Built; the SRH pair's names are unchanged |
-| Readouts: the grid (row, column and vs-base contrasts) and the GT gap (with this doc's draft criteria) | `scripts/analysis/compare_framing_results.py`, `scripts/analysis/compare_gt_gap.py` | Built |
-| Probes, trained on base and scored on the GT pair | `scripts/eval/train_eval_awareness_probes.py` | Built |
-| Isambard steps `gap_base`, `gt`, `probes`, all after `stage1` | `scripts/ops/run_on_isambard.sh` | Built; tested against fakes |
+| Framing grid tasks `framing_<tier>_<framing>`; the judge sees the unframed prompt | `eval/heldout_reward_hacking.py`, `eval/run_pilot_evals.py` | Built |
+| Minimal-pair check: deterministic rules in tests, plus a blind judge task run by the panel | `eval/framing_minimal_pairs.py`, `eval/judges.py` | Built; judge prompt not yet validated |
+| GT eval tasks `gt_<train\|heldout>_<eval\|deployment>` | `eval/gt_gap.py` | Built |
+| GT pair data: identical prompts; same hack count per task in both arms | `data/build_sft_datasets.py --gt-cues`, `data/STATS_gt.md` | Built: 1,368 rows per arm. Completion tokens are equal at seed 0, by chance; seeds 1 and 2 differ by under 0.7%, well inside the 15% bound |
+| Training, merging and evaluating any SFT pair (`TREAT_ARM`/`CTRL_ARM`) | `train/train_sft.py`, `scripts/run_pilot_stage_on_gpu_node.sh` | Built; the SRH pair's names are unchanged |
+| Readouts: the grid (row, column and vs-base contrasts) and the GT gap (with this doc's draft criteria) | `analysis/compare_framing_results.py`, `analysis/compare_gt_gap.py` | Built |
+| Probes, trained on base and scored on the GT pair | `eval/train_eval_awareness_probes.py` | Built |
+| Isambard steps `gap_base`, `gt`, `probes`, all after `stage1` | `scripts/run_on_isambard.sh` | Built; tested against fakes |
 | Contamination of both cue sets vs the two SDF corpora | `results/contamination_gap_cues_vs_*.json` | 0 of 64 cues match; 29 are shorter than 8 words, so they cannot match |
 
 Still open:
@@ -201,7 +201,7 @@ Still open:
 Things worth checking against the repo before building:
 
 - Whether the held-out hacking prompts can take a framing preamble without changing what the judge sees as the metric
-  (`evals/judges.py`).
+  (`eval/judges.py`).
 - How new SFT arms fit `build_sft_datasets.py` / `train_sft.py` and the SRH data stats checks (`data/STATS*.md`).
 - Whether the matched-length rule in `PROJECT_STATUS.md` is achievable when the treatment and control assign hacking
   to different rows.
