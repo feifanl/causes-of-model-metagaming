@@ -81,7 +81,7 @@ changes away. They are pinned to fixed revisions in `train/rl_adapter.py`.
 
 ```bash
 for org in aisi_hack aisi_nohack redwood_step952; do
-  python -m train.rl_adapter --organism $org --out outputs/$org \
+  python -m train.rl_adapter prepare --organism $org --out outputs/$org \
       --base $DATA/gpt-oss-120b-bf16 --base-copies $DATA/serve_bases
 done
 ```
@@ -109,7 +109,7 @@ One model per 4 GPUs. Pass `--max-model-len 16384` to every server.
 
 For vLLM, check that `curl localhost:8000/v1/models` lists the organism name. If it doesn't, the LoRA isn't loaded
 and you'd be evaluating the base model. Each RL setup was checked against an exact fp32 merge
-(`results/rl_lora_check_*.json`); `scripts/checks.py` reruns that check, but it needs ~480 GB of RAM.
+(`results/rl_lora_check_*.json`); `python -m scripts.checks rl_lora` reruns that check, but it needs ~480 GB of RAM.
 If tensor-parallel vLLM fails to start with CUDA error 401 (NVLS multicast), `export NCCL_NVLS_ENABLE=0` and
 retry; one of our H200 machines needed it.
 

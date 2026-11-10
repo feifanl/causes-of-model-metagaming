@@ -8,7 +8,7 @@ repo". For how to start a run, see [`ISAMBARD.md`](ISAMBARD.md). For what each s
 
 ```
 run_on_isambard.sh             one command; books Slurm nodes; runs STEPS in order, each once
-  └─ step_<name>               scripts/isambard/steps.sh
+  └─ step_<name>               scripts/run_on_isambard.sh (its step_* functions)
        └─ run_pilot_stage_on_gpu_node.sh <stage>      runs one STAGE, once
             └─ stage_<name>    scripts/stages/{base,sft,gap,sdf,rl}.sh
                  └─ python -m <folder>.<name>   the actual work: train, merge, serve + eval, compare

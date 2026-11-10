@@ -64,7 +64,7 @@ Add a second, orthogonal axis that changes only the **framing**, holding the tas
   find no change in the task or metric information, only in framing. Pairs that fail are rewritten or dropped.
 - **Base model curve:** run base gpt-oss on the full grid. Base has native eval awareness, so its curve is the
   reference every organism is compared against.
-- **Contamination:** extend `measurements.py` to the new prompts.
+- **Contamination:** extend `measurements.py contamination` to the new prompts.
 
 ### Fit with the existing plan
 
@@ -173,7 +173,7 @@ CPU work is built and tested. Nothing has run on a GPU. Decisions taken (Feifan,
 | GT eval tasks `gt_<train\|heldout>_<eval\|deployment>` | `eval/hacking.py` | Built |
 | GT pair data: identical prompts; same hack count per task in both arms | `data/build_sft_datasets.py --gt-cues`, `data/STATS_gt.md` | Built: 1,368 rows per arm. Completion tokens are equal at seed 0, by chance; seeds 1 and 2 differ by under 0.7%, well inside the 15% bound |
 | Training, merging and evaluating any SFT pair (`TREAT_ARM`/`CTRL_ARM`) | `train/train_sft.py`, `scripts/run_pilot_stage_on_gpu_node.sh` | Built; the SRH pair's names are unchanged |
-| Readouts: the grid (row, column and vs-base contrasts) and the GT gap (with this doc's draft criteria) | `analysis/compare_gap.py`, `analysis/compare_gap.py` | Built |
+| Readouts: the grid (row, column and vs-base contrasts) and the GT gap (with this doc's draft criteria) | `analysis/compare_gap.py` (`framing`, `gt`) | Built |
 | Probes, trained on base and scored on the GT pair | `eval/train_eval_awareness_probes.py` | Built |
 | Isambard steps `gap_base`, `gt`, `probes`, all after `stage1` | `scripts/run_on_isambard.sh` | Built; tested against fakes |
 | Contamination of both cue sets vs the two SDF corpora | `results/contamination_gap_cues_vs_*.json` | 0 of 64 cues match; 29 are shorter than 8 words, so they cannot match |
@@ -205,4 +205,4 @@ Things worth checking against the repo before building:
 - How new SFT arms fit `build_sft_datasets.py` / `train_sft.py` and the SRH data stats checks (`data/STATS*.md`).
 - Whether the matched-length rule in `PROJECT_STATUS.md` is achievable when the treatment and control assign hacking
   to different rows.
-- How a new step slots into `run_on_isambard.sh` and `pilot_orchestration_lib.sh` without changing earlier steps.
+- How a new step slots into `run_on_isambard.sh` without changing earlier steps.

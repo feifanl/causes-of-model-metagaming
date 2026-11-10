@@ -47,27 +47,30 @@ code), [`RUN_EVALS_ON_ORGANISMS.md`](RUN_EVALS_ON_ORGANISMS.md) (for other teams
 
 | File | What it does | Used by |
 |---|---|---|
-| `train_sft.py` | LoRA SFT on one arm (SRH, control, GT) | stages `bringup`, `train` |
+| `train_sft.py` | LoRA SFT on one arm (SRH, control, GT); also the per-step timing both trainers log | stages `bringup`, `train` |
 | `train_sdf.py` | LoRA synthetic-document finetuning, FSDP across GPUs and nodes | stages `sdf`, `sdf_train` |
 | `merge_lora_into_base.py` | Merge an adapter into the bf16 base for vLLM | stages `merge`, `sdf_eval` |
 | `dequantize_base_to_bf16.py` | bf16 copy of the MXFP4 base, for training and serving | stage `bf16` |
-| `rl_adapter.py` | The published RL organisms' adapters at pinned revisions | stages `rl_*` |
-| `rl_adapter.py` | Make an RL adapter servable by vLLM, unmerged | stage `rl_adapter` |
+| `rl_adapter.py` | The published RL organisms: `download` (pinned revisions, how to serve each) and `prepare` (servable unmerged) | stages `rl_*` |
 | `render_with_harmony.py` | gpt-oss's harmony prompt format (a library) | data, train, eval |
-| `train_sft.py` | Per-step time, tokens and memory for the trainers (a library) | `train_sft`, `train_sdf` |
 
 ### eval
 
 | File | What it does | Used by |
 |---|---|---|
 | `run_pilot_evals.py` | Run eval tasks on one served model, write `results/<tag>.json` | stages `base_eval`, `arm_eval`, `sdf_eval`, `rl_eval` |
-| `em_questions`, `heldout_reward_hacking`, `framing_minimal_pairs`, `gt_gap`, `mmlu_subset`, `gpqa`, `ifbench_instruction_following`, `livecodebench`, `sdf_recall`, `sdf_saliency`, `sdf_spillover`, `hacking_judge_validation` | The Inspect tasks; prompts in `eval/data/` | `run_pilot_evals.py` |
-| `judges.py`, `hacking.py`, `sdf.py`, `capability.py`, `common.py` | Scorers, judge prompts, shared helpers | the tasks |
+| `hacking.py` | Held-out hacking in every metric tier, the eval/deployment framings and minimal pairs, the GT cues, judge validation, judge-free hack detectors | `run_pilot_evals.py`, probes |
+| `capability.py` | MMLU, GPQA, IFBench, LiveCodeBench (with its sandboxed code runner) | `run_pilot_evals.py` |
+| `sdf.py` | SDF recall, saliency and spillover, and the gibberish grader (`--gibberish`) | `run_pilot_evals.py`, judge panel |
+| `em.py` | Betley's emergent-misalignment questions | `run_pilot_evals.py` |
+| `judges.py`, `common.py` | Judge prompts and parsing; shared generation settings | the tasks |
 | `harmony_provider.py` | Inspect provider that queries our vLLM servers in harmony format | `run_pilot_evals.py`, other teams' evals |
 | `score_logs_with_judge.py` | Score saved answers with one locally served judge | `run_judge_panel_on_gpu_node.sh` |
 | `aggregate_judge_panel.py` | Majority vote of the three judges into `results/<tag>.json` | `run_judge_panel_on_gpu_node.sh` |
 | `score_heldout_nll.py` | Held-out NLL of an SDF adapter (did SDF training work?) | stages `sdf`, `sdf_train` |
 | `train_eval_awareness_probes.py` | Linear probes for eval awareness (behavioral-gap plan, Part 3) | stage `probes` |
+
+Prompts and question sets are in `eval/data/`.
 
 ### analysis
 
@@ -75,34 +78,25 @@ code), [`RUN_EVALS_ON_ORGANISMS.md`](RUN_EVALS_ON_ORGANISMS.md) (for other teams
 |---|---|---|
 | `compare_pilot_results.py` | SRH vs control vs base, with the pre-registered pass/fail rules | stage `compare` |
 | `compare_sdf_results.py` | SDF treatment vs control at one checkpoint, with PLAN (d)'s criteria | `run_sdf_on_gpu_node.sh` |
-| `compare_gap.py` | The eval-cue framing grid (behavioral-gap plan, Part 1) | stage `gap_compare` |
-| `compare_gap.py` | Recover the GT organism's planted gap (behavioral-gap plan, Part 2) | stage `gap_compare` |
-| `measurements.py` | Expert-routing overlap between SRH training tokens and eval answers | stage `routing` |
-| `measurements.py` | Overlap between eval prompts and an SDF corpus | by hand |
+| `compare_gap.py` | `framing`: the eval-cue framing grid (gap plan Part 1); `gt`: recover the GT organism's planted gap (Part 2) | stage `gap_compare` |
+| `measurements.py` | `routing`: expert-routing overlap of SRH training tokens and eval answers; `contamination`: eval prompts vs an SDF corpus | stage `routing`; by hand |
 | `track_openrouter_spend.py` | Run a command, record its OpenRouter cost, enforce a cap | stages judged by OpenRouter |
 
 ### scripts
 
-`run_on_isambard.sh` is the one command an operator runs ([`ISAMBARD.md`](ISAMBARD.md)). It runs steps
-(`isambard/steps.sh`); each step runs stages through `run_pilot_stage_on_gpu_node.sh` (`stages/*.sh`); each stage
+`run_on_isambard.sh` is the one command an operator runs ([`ISAMBARD.md`](ISAMBARD.md)). It runs steps (its
+`step_*` functions); each step runs stages through `run_pilot_stage_on_gpu_node.sh` (`stages/*.sh`); each stage
 calls the Python above.
 
 | File | What it does |
 |---|---|
-| `run_on_isambard.sh` | Submits the Slurm job, runs the steps in order with resumable markers, continues in a new job near the time limit |
-| `isambard/setup_probes.sh`, `isambard/steps.sh` | Its machine probes (CUDA compat, attention, NCCL) and the `step_*` functions |
+| `run_on_isambard.sh` | Submits the Slurm job, probes the machine, runs the steps in order with resumable markers, continues in a new job near the time limit |
 | `run_pilot_stage_on_gpu_node.sh` | Runs one named stage, once (a `.done` marker per stage) |
 | `stages/` | The `stage_*` functions: `common.sh` (helpers), `base.sh`, `sft.sh`, `gap.sh`, `sdf.sh`, `rl.sh` |
 | `run_sdf_on_gpu_node.sh` | The SDF plans (`lr_test`, `stage1`, `doc_tag_comparison`): train, evaluate each checkpoint, compare |
 | `run_judge_panel_on_gpu_node.sh` | Serve each of the three judges in turn, score saved logs, vote |
 | `setup_gpu_node.sh`, `check_isambard_ready.sh` | Node setup (venvs, models, data) and the preflight check |
-| `pilot_orchestration_lib.sh` | Deadlines, uploads and stage pairs (sourced) |
-| `checks.py`, `checks.py` | Setup checks: attention kernel for packed training, two-node NCCL |
-| `checks.py`, `checks.py`, `checks.py` | Serving checks: unmerged RL LoRAs and bf16 merges against exact fp32 |
-
-Commands below run from `model-organisms/` with the venv active. Secrets live in `~/.config/spar/env` or the repo's
-`.env` (gitignored), never in tracked files. Comments that cite "DECISIONS '…'" or "PLAN (x)" refer to the design log
-and plan, which are kept outside this repo; [`PROJECT_STATUS.md`](../PROJECT_STATUS.md) summarises them.
+| `checks.py` | Setup and serving checks: `attention`, `nccl` (Isambard setup), `rl_lora`, `tinker_merge` (RL serving), `sdf_merge` (bf16 merges) |
 
 ## Data
 
@@ -119,7 +113,7 @@ Rebuilds are byte-identical; a GPU node checks them against the committed stats.
 HF first). The SDF control docs come from the private artifact repo (`HF_ARTIFACT_REPO`).
 
 The control corpus was generated once (~$420 of Anthropic batches) with scripts that now live only in git history
-(before the `revamp/restructure` cleanup); contamination against eval prompts: `measurements.py`.
+(before the `revamp/restructure` cleanup); contamination against eval prompts: `measurements.py contamination`.
 
 ## Training and merging
 
@@ -133,10 +127,10 @@ python -m train.merge_lora_into_base --adapter outputs/sdf_treatment_seed0 --bas
 ```
 
 Trained adapters are merged into bf16 and served by vLLM; each merge is checked against the unmerged adapter
-(SDF bound 0.05 nats/token, from `checks.py`). RL organisms are served unmerged instead
-(`rl_adapter.py`, checked against an exact fp32 merge by `checks.py`), since a
+(SDF bound 0.05 nats/token, from `checks.py sdf_merge`). RL organisms are served unmerged instead
+(`rl_adapter.py prepare`, checked against an exact fp32 merge by `checks.py rl_lora`), since a
 bf16 merge erases their small deltas. SDF training on platforms without vllm-flash-attn3 uses the attention that
-`checks.py` finds matching eager attention on packed batches.
+`checks.py attention` finds matching eager attention on packed batches.
 
 ## Evals and judging
 
@@ -165,7 +159,7 @@ Behavioral gap (`../BEHAVIORAL_GAP_PLAN.md`): `framing_<tier>_<eval|deployment>`
 an eval or deployment framing (`eval/data/eval_framing_templates.yaml`), `framing_minimal_pairs` checks that a framing
 changes neither task nor metric, and `gt_<train|heldout>_<eval|deployment>` wrap the prompts in the ground-truth gap
 organism's cues (`data/gt_cue_families.yaml`); both cue sets go through `data/wrap_prompts_with_eval_cues.py`.
-`compare_gap.py` reads the grid, `compare_gap.py` the planted gap, and `train_eval_awareness_probes.py`
+`compare_gap.py framing` reads the grid, `compare_gap.py gt` the planted gap, and `train_eval_awareness_probes.py`
 trains activation probes on base and scores other models with them.
 
 Result files are named `results/<model>[_capability][_reasoning_on|_reasoning_low|_forcefinal].json`. Without a
