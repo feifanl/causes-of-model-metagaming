@@ -193,6 +193,10 @@ export HF_HOME="$DATA/hf" XDG_CACHE_HOME="$DATA/cache" UV_CACHE_DIR="$DATA/cache
 # gpt-oss's vocab for openai-harmony, fetched by step_setup: harmony's own downloader failed here (2026-10-16)
 # although curl reached the same URL.
 export TIKTOKEN_ENCODINGS_BASE="$DATA/tiktoken"
+# FlashInfer's top-k/top-p sampler JIT-compiles on first use and needs nvcc, which Isambard nodes lack ("Could not
+# find nvcc and default cuda_home='/usr/local/cuda' doesn't exist", 2026-11-10); off, vLLM samples with its
+# PyTorch kernels.
+export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
 apply_setup_choices() {  # what setup chose, for every later step (exported: srun steps inherit it)
   case ":${LD_LIBRARY_PATH:-}:" in
     *":$DATA/cuda_compat/lib:"*) ;;
