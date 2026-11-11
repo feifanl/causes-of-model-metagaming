@@ -6,6 +6,22 @@ Nothing needs root or Docker.
 
 **Run every command below on the login node.** If you are inside an `srun` or `salloc` session, type `exit` first.
 
+## Quick start: one script
+
+Steps 1–4 below in one command. Copy your token file once (`scp ~/hftokens isambard:~/`, then
+`chmod 600 ~/hftokens` there; it holds `ISAMBARD_READ` and `ISAMBARD_WRITE`), then:
+
+```bash
+cd /path/to/project/storage
+git clone -b revamp/restructure https://github.com/feifanl/causes-of-model-metagaming.git eval-awareness
+bash eval-awareness/model-organisms/scripts/start_on_isambard.sh /path/to/project/storage/eval-awareness-data
+```
+
+The script brings the code up to date, writes `~/.config/spar/env` from `~/hftokens`, runs the preflight, submits the
+job and then follows the log (`STATUS` plus the job's full output). Ctrl-C stops watching, not the job. Run the same
+command again (the DATA_DIR argument can be dropped) to resume after a fix or just to watch again; if a job is
+already queued or running it only follows the log and changes nothing.
+
 ## 1. Get the code
 
 On the 5 TB project storage (the run uses up to about 1.5 TB):

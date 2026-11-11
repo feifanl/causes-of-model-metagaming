@@ -90,6 +90,7 @@ calls the Python above.
 
 | File | What it does |
 |---|---|
+| `start_on_isambard.sh` | The one command on Isambard: updates the code, writes the env file from `~/hftokens`, starts `run_on_isambard.sh` and follows its log |
 | `run_on_isambard.sh` | Submits the Slurm job, probes the machine, runs the steps in order with resumable markers, continues in a new job near the time limit |
 | `run_pilot_stage_on_gpu_node.sh` | Runs one named stage, once (a `.done` marker per stage) |
 | `stages/` | The `stage_*` functions: `common.sh` (helpers), `base.sh`, `sft.sh`, `gap.sh`, `sdf.sh`, `rl.sh` |
