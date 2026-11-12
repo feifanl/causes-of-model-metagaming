@@ -20,5 +20,6 @@ accelerate==1.15.0
 # IFBench verifiers (Apache-2.0), pinned to a commit: eval/capability.py
 ifbench @ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d
 inspect_ai==0.3.273
+agent-client-protocol==0.12.1  # inspect_ai imports acp.helpers, which 1.0.0 (2026-11-09) removed
 openai==3.22.1
 
