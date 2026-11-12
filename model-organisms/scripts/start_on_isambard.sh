@@ -56,9 +56,18 @@ main() {
   echo "== settings: $env_file"
   write_env "$env_file" "$tokens" "$data" || exit 1
 
+  # setup's venvs and built datasets live in the checkout, its marker in DATA_DIR: a new checkout with an old
+  # DATA_DIR would skip setup and fail on the missing venvs. Then forget that setup finished, so it runs again
+  # (downloads already in DATA_DIR are reused).
+  mkdir -p "$state"
+  if [ -f "$state/isambard_setup.done" ] && { [ ! -f "$repo/venv/.installed" ] || [ ! -f "$repo/venv-vllm/.installed" ] \
+      || [ ! -d "$mo/data/processed" ]; }; then
+    echo "== this checkout has no venvs or built data yet, but $data says setup is done: setup will run again"
+    rm -f "$state/isambard_setup.done"
+  fi
+
   # 4. Preflight and submit.
   echo "== preflight and submit"
-  mkdir -p "$state"
   out="$state/start_on_isambard.out"
   bash "$mo/scripts/run_on_isambard.sh" all 2>&1 | tee "$out"
   [ "${PIPESTATUS[0]}" -eq 0 ] || { echo "FAILED: see the lines above (also in $out)"; exit 1; }
