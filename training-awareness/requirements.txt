@@ -2,6 +2,7 @@
 # Inspect Scout needs a newer inspect_ai than the gpt-oss pipeline pins. vLLM is installed in its own venv.
 # Versions are the ones the CPU tests ran with.
 inspect_ai==0.3.285
+agent-client-protocol==0.12.1   # inspect_ai imports acp.helpers, removed in 1.0.0 (2026-11)
 inspect_scout==0.6.1
 openai==3.37.0
 anthropic==2.3.0      # only for checking the judge through the Claude API (check_judge.py --model anthropic/...)
