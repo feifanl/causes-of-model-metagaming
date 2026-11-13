@@ -1,0 +1,24 @@
+2026-11-07T05:36:06Z launcher waiting for HF_TOKEN and HF_WRITE_TOKEN in /root/.config/spar/env
+2026-11-07T05:39:16Z launcher tokens found: starting the persona run (cap 8 h)
+2026-11-07T05:39:16Z persona start (prefix behavioral_gap/persona_20261107T053916Z, cap 8 h)
+2026-11-07T06:13:16Z persona organism pipeline set up (its venvs incl. SGLang, data, tests)
+2026-11-07T06:16:54Z persona bf16 base ready (218G)
+2026-11-07T06:23:20Z persona merged srh_mixed_seed0_cotreg: {'mean_abs_nll_diff': 0.016735980287194252, 'max_abs_nll_diff': 0.28965258598327637, 'argmax_agreement': 0.9929078221321106, 'tokens': 282}
+2026-11-07T06:26:38Z persona SRH, control and Redwood adapters ready for the overlap
+2026-11-07T06:30:38Z persona vLLM ready: base_bf16 on GPUs 0,1,2,3, port 8000 (240s)
+2026-11-07T06:32:38Z persona vLLM ready: srh_mixed on GPUs 4,5,6,7, port 8001 (120s)
+2026-11-07T06:33:55Z persona srh_mixed answered under every persona
+2026-11-07T06:38:08Z persona base_bf16 answered under every persona
+2026-11-07T06:38:17Z persona uploaded logs/base_bf16
+2026-11-07T06:38:23Z persona uploaded logs/srh_mixed
+2026-11-07T06:38:23Z persona generation done
+2026-11-07T06:53:36Z persona persona grid compared
+2026-11-07T06:53:40Z persona uploaded results
+2026-11-07T06:53:42Z persona uploaded results
+2026-11-07T06:55:26Z persona direction cheater_vs_honest_reply: selected layer 33: val effect size 0.99, AUROC 0.804, paired acc 0.920
+2026-11-07T06:57:05Z persona direction cheater_vs_assistant_reply: selected layer 32: val effect size 1.22, AUROC 0.837, paired acc 0.960
+2026-11-07T06:58:27Z persona direction cheater_vs_honest_prompt: selected layer 12: val effect size 5.84, AUROC 0.998, paired acc 1.000
+2026-11-07T07:06:43Z persona SRH and control overlap measured
+2026-11-07T07:06:50Z persona uploaded results
+2026-11-07T09:34:21Z persona Redwood overlap measured
+2026-11-07T09:34:24Z persona uploaded results
