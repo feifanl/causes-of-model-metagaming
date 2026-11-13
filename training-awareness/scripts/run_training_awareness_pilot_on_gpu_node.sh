@@ -42,6 +42,15 @@
 #            cheater vs honest and vs assistant, pooled over replies; cheater vs honest at the last prompt token),
 #            then the overlap of SRH and its SFT control (PEFT adapters, unmerged, SRH - control paired), then
 #            Redwood from its fp32 merge against the base read in fp32. Uploads under behavioral_gap/persona_<UTC>/.
+# safety     not this pilot: do the organisms behave more misaligned than base on public alignment evals (mentor,
+#            Feifan 2026-11-12)? Needs 8 GPUs. Qwen3-235B serves as judge on GPUs 0-3 the whole time; each model of
+#            SAFETY_MODELS (default base_bf16 control srh_mixed base_sglang redwood_step952: SRH and its SFT control
+#            merged in vLLM, Redwood as base + LoRA in SGLang, base_sglang its same-engine base) is served on GPUs 4-7 in
+#            turn and runs model-organisms/scripts/run_safety_evals.py (Agentic Misalignment, MASK, AgentHarm,
+#            StrongREJECT, Model-Written Evals advanced-AI-risk; 100 samples each, scored as it goes). The first model
+#            runs a 2-sample smoke test first and the run stops if it fails. Then compare_safety_results.py.
+#            SAFETY_PERSONA sets a system prompt for every sample (later step). Uploads under
+#            behavioral_gap/safety_<UTC>/.
 #
 # The judge scores metric gaming only: the behavioural gap is the primary readout and awareness judging is
 # deferred (Feifan, 2026-11-03). AWARENESS_JUDGE=1 adds the training-awareness judge with its rubric and recall
@@ -56,9 +65,9 @@
 # once the script ends the node is destroyed after the watchdog's idle period.
 set -euo pipefail
 
-MODE="${1:?usage: run_training_awareness_pilot_on_gpu_node.sh <calibrate|full|organisms|judge|framing|persona> <max-hours>}"
+MODE="${1:?usage: run_training_awareness_pilot_on_gpu_node.sh <calibrate|full|organisms|judge|framing|persona|safety> <max-hours>}"
 MAX_HOURS="${2:?max-hours required}"
-case "$MODE" in calibrate|full|organisms|judge|framing|persona) ;; *) echo "unknown mode $MODE" >&2; exit 2 ;; esac
+case "$MODE" in calibrate|full|organisms|judge|framing|persona|safety) ;; *) echo "unknown mode $MODE" >&2; exit 2 ;; esac
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 TA="$REPO/training-awareness"
@@ -70,6 +79,7 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 PREFIX="training_awareness_pilot/${MODE}_$STAMP"
 if [ "$MODE" = framing ]; then PREFIX="behavioral_gap/framing_grid_$STAMP"; fi
 if [ "$MODE" = persona ]; then PREFIX="behavioral_gap/persona_$STAMP"; fi
+if [ "$MODE" = safety ]; then PREFIX="behavioral_gap/safety_$STAMP"; fi
 PY="$TA/venv/bin/python"
 VLLM="$REPO/venv-vllm/bin/vllm"
 HF="$TA/venv/bin/hf"
@@ -100,6 +110,9 @@ ORGANISMS="${ORGANISMS:-base_bf16 srh_mixed aisi_hack redwood_step952 base_sglan
 if [ "$MODE" = framing ]; then ORGANISMS="${FRAMING_MODELS:-base_bf16 srh_mixed base_sglang redwood_step952}"; fi
 # persona mode: base and SRH side by side (vLLM); Redwood and the SFT control only enter the activation overlap.
 if [ "$MODE" = persona ]; then ORGANISMS="base_bf16 srh_mixed"; fi
+# safety mode: one model at a time beside the judge.
+if [ "$MODE" = safety ]; then ORGANISMS="${SAFETY_MODELS:-base_bf16 control srh_mixed base_sglang redwood_step952}"; fi
+CONTROL_NAME="control_seed0_cotreg"   # SRH's SFT control: the same CoT-regularized recipe without the hacking rows
 declare -A GEN_MODEL=()   # label -> the served model name its rollouts query (set by serve_organism)
 GEN_FAILED=""
 
@@ -203,7 +216,7 @@ setup() {
   "$REPO/venv-vllm/bin/python" -c "import vllm, sys; sys.exit(vllm.__version__ != '$VLLM_VERSION')" \
     || die "vLLM is not $VLLM_VERSION"
   # framing and persona modes use none of the pilot's prompts or SAD; the organism pipeline's setup runs its own tests.
-  if [ "$MODE" = framing ] || [ "$MODE" = persona ]; then return 0; fi
+  if [ "$MODE" = framing ] || [ "$MODE" = persona ] || [ "$MODE" = safety ]; then return 0; fi
   export PYTHONPATH="$TA"
   # A hang here once held a rented node for over an hour (Scout's multiprocess scan on Linux): fail fast instead.
   (cd "$TA" && timeout 900 "$PY" -m pytest -q tests >>"$STATE/setup.log" 2>&1) \
@@ -259,6 +272,8 @@ serve_organism() {
                  GEN_MODEL[$label]=base_sglang; return 0 ;;
     srh_mixed) SERVE_SOFT=1 serve "$DATA/merged/$SRH_NAME" srh_mixed "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" || return 1
                GEN_MODEL[$label]=srh_mixed; return 0 ;;
+    control) SERVE_SOFT=1 serve "$DATA/merged/$CONTROL_NAME" control "$port" "$gpus" --max-model-len "$GPT_OSS_LEN" || return 1
+             GEN_MODEL[$label]=control; return 0 ;;
   esac
   server=$(cd "$MO" && "$MO_PY" scripts/download_rl_organism_adapter.py --organism "$label" --print-server) \
     || die "unknown organism $label (names: model-organisms/scripts/download_rl_organism_adapter.py)"
@@ -315,30 +330,35 @@ prepare_organisms() {
   local label
   # base_sglang serves Redwood's adapter beside the base, so it needs it prepared too.
   for label in $(for l in $ORGANISMS; do [ "$l" = base_sglang ] && l=redwood_step952; echo "$l"; done | sort -u); do
-    case "$label" in base_bf16|srh_mixed) continue ;; esac
+    case "$label" in base_bf16|srh_mixed|control) continue ;; esac
     mo_stage rl_adapter "ORGANISM=$label" || die "preparing the $label adapter failed; see organism_stages.log"
     log "$label adapter prepared"
   done
-  [[ " $ORGANISMS " == *" srh_mixed "* ]] || return 0
-  [ -n "${HF_ARTIFACT_REPO:-}" ] || die "srh_mixed needs HF_ARTIFACT_REPO (its adapter is in the private repo)"
-  local merged="$DATA/merged/$SRH_NAME" adapter="$DATA/hf_fetch/adapters/$SRH_NAME"
+  if [[ " $ORGANISMS " == *" srh_mixed "* ]]; then merge_sft "$SRH_NAME" srh_mixed "$all_gpus"; fi
+  if [[ " $ORGANISMS " == *" control "* ]]; then merge_sft "$CONTROL_NAME" control "$all_gpus"; fi
+}
+
+merge_sft() {  # merge_sft <adapter name> <data/processed arm> <gpus>: an SFT organism's PEFT adapter merged into the bf16 base
+  local name=$1 arm=$2 gpus=$3
+  [ -n "${HF_ARTIFACT_REPO:-}" ] || die "$name needs HF_ARTIFACT_REPO (its adapter is in the private repo)"
+  local merged="$DATA/merged/$name" adapter="$DATA/hf_fetch/adapters/$name" logf="$STATE/merge_$arm.log"
   [ -f "$merged/provenance.json" ] && return 0
   HF_TOKEN="${HF_WRITE_TOKEN:-${HF_TOKEN:-}}" timeout 1h "$HF" download "$HF_ARTIFACT_REPO" --repo-type model \
-      --include "adapters/$SRH_NAME/*" --local-dir "$DATA/hf_fetch" >>"$STATE/download.log" 2>&1 \
-    || die "download of adapters/$SRH_NAME failed; see download.log"
+      --include "adapters/$name/*" --local-dir "$DATA/hf_fetch" >>"$STATE/download.log" 2>&1 \
+    || die "download of adapters/$name failed; see download.log"
   "$PY" -c "import json, sys; sys.exit(json.load(open(sys.argv[1]))['base_model_name_or_path'] != 'openai/gpt-oss-120b')" \
-      "$adapter/adapter_config.json" || die "$SRH_NAME adapter was not trained on the Hub base"
-  # Checked on the SRH rows of data/processed: a new node has no data/processed_cotreg, and the check only bounds
+      "$adapter/adapter_config.json" || die "$name adapter was not trained on the Hub base"
+  # Checked on the arm's rows of data/processed: a new node has no data/processed_cotreg, and the check only bounds
   # bf16 rounding (as in model-organisms/scripts/run_capability_session_on_gpu_node.sh).
-  local merge=(env "CUDA_VISIBLE_DEVICES=$all_gpus" timeout 2h "$MO_PY" scripts/merge_lora_into_base.py --adapter "$adapter"
-               --base "$BF16" --out "$merged" --verify-data data/processed/srh_mixed.jsonl)
-  if ! (cd "$MO" && "${merge[@]}") > "$STATE/merge_srh.log" 2>&1; then
-    grep -qE "OutOfMemoryError|CUDA out of memory" "$STATE/merge_srh.log" || die "SRH merge failed; see merge_srh.log"
-    log "out of GPU memory merging SRH; retrying with --max-gpu-gb 50 (the rest of the model on CPU)"
+  local merge=(env "CUDA_VISIBLE_DEVICES=$gpus" timeout 2h "$MO_PY" scripts/merge_lora_into_base.py --adapter "$adapter"
+               --base "$BF16" --out "$merged" --verify-data "data/processed/$arm.jsonl")
+  if ! (cd "$MO" && "${merge[@]}") > "$logf" 2>&1; then
+    grep -qE "OutOfMemoryError|CUDA out of memory" "$logf" || die "$name merge failed; see $(basename "$logf")"
+    log "out of GPU memory merging $name; retrying with --max-gpu-gb 50 (the rest of the model on CPU)"
     rm -rf "$merged"
-    (cd "$MO" && "${merge[@]}" --max-gpu-gb 50) >> "$STATE/merge_srh.log" 2>&1 || die "SRH merge failed; see merge_srh.log"
+    (cd "$MO" && "${merge[@]}" --max-gpu-gb 50) >> "$logf" 2>&1 || die "$name merge failed; see $(basename "$logf")"
   fi
-  log "merged $SRH_NAME: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['merge_verification'])" "$merged/provenance.json")"
+  log "merged $name: $("$PY" -c "import json, sys; print(json.load(open(sys.argv[1]))['merge_verification'])" "$merged/provenance.json")"
 }
 
 generate_organisms() {  # each batch: one model per 4-GPU slot, side by side; an organism that fails is skipped
@@ -486,7 +506,6 @@ phase_framing_judge() {
 # The persona-swap grid (Feifan 2026-11-06): who the model is (assistant / not) x values (neutral / honest / cheaty);
 # 'none' is no system message, as in every earlier run. Presets: model-organisms/evals/data/personas.yaml.
 PERSONA_SET="${PERSONA_SET:-none assistant honest_assistant cheater chef gandhi diligent_student pirate}"
-CONTROL_NAME="control_seed0_cotreg"   # SRH's SFT control: the same CoT-regularized recipe without the hacking rows
 PERSONA_OUT="$DATA/persona_out"
 
 prepare_persona_overlap() {  # the PEFT adapters of SRH and its control, and Redwood's (Tinker) adapter
@@ -595,6 +614,72 @@ phase_persona() {
   log "DONE: results under $PREFIX in $HF_ARTIFACT_REPO"
 }
 
+# --------------------------------------------------------------------------- safety mode
+
+SAFETY_OUT="$DATA/safety_out"
+SAFETY_PAIRS="srh_mixed-control srh_mixed-base_bf16 control-base_bf16 redwood_step952-base_sglang base_sglang-base_bf16"
+
+stop_model_server() {  # stop_model_server <pid> <gpus>: one model's server, leaving the judge's running
+  local pid=$1 gpus=$2 waited=0 rest=()
+  kill -- "-$pid" 2>/dev/null || true
+  for p in "${SERVERS[@]:-}"; do [ "$p" = "$pid" ] || rest+=("$p"); done
+  SERVERS=("${rest[@]}")
+  until [ "$(nvidia-smi -i "$gpus" --query-gpu=memory.used --format=csv,noheader,nounits | awk '{ s += $1 } END { print s + 0 }')" -lt 4000 ]; do
+    [ "$waited" -ge 300 ] && die "GPUs $gpus still busy 5 min after stopping a model server"
+    sleep 5; waited=$((waited + 5))
+  done
+}
+
+safety_evals() {  # safety_evals <label> <port> <tag> [extra run_safety_evals args...]
+  local label=$1 port=$2 tag=$3 persona=()
+  shift 3
+  if [ -n "${SAFETY_PERSONA:-}" ]; then persona=(--persona "$SAFETY_PERSONA"); fi
+  (cd "$MO" && timeout "$(seconds_left)" "$MO_PY" scripts/run_safety_evals.py --model "harmony/${GEN_MODEL[$label]}" \
+      --base-url "http://localhost:$port/v1" --tag "$tag" --judge-model judge --judge-base-url http://localhost:8101/v1 \
+      --results-dir "$SAFETY_OUT" --log-dir "$MO/logs/safety/$label" "${persona[@]}" "$@") > "$STATE/generate_$tag.log" 2>&1
+}
+
+phase_safety() {
+  [ "${#SLOTS[@]}" -eq 2 ] || die "safety mode needs 8 GPUs: the judge on 0-3, each model on 4-7"
+  local judge_gpus=${SLOTS[0]} model_gpus=${SLOTS[1]} label pid smoked=0 rc
+  rm -rf "$SAFETY_OUT"; mkdir -p "$SAFETY_OUT"
+  download "$JUDGE_MODEL" "$JUDGE_REV" "$DATA/models/judge"
+  # TP 4: Qwen's block FP8 does not split over 8 GPUs. Flags as in run_judge_panel_on_gpu_node.sh (H100-tested).
+  VLLM_USE_DEEP_GEMM=0 serve "$DATA/models/judge" judge 8101 "$judge_gpus" --max-model-len 32768
+  local judge_pid=${SERVERS[-1]}
+  for label in $ORGANISMS; do
+    if [ "$(seconds_left)" -le 3600 ]; then log "under an hour left: $label not started"; GEN_FAILED+=" $label"; continue; fi
+    if ! serve_organism "$label" 8000 "$model_gpus"; then
+      GEN_FAILED+=" $label"
+      if [ "${SERVERS[-1]}" != "$judge_pid" ]; then stop_model_server "${SERVERS[-1]}" "$model_gpus"; fi
+      continue
+    fi
+    pid=${SERVERS[-1]}
+    if [ "$smoked" = 0 ]; then  # plumbing check on the real model and judge before the long runs
+      safety_evals "$label" 8000 "smoke_$label" --limit 2 \
+        || { upload "$SAFETY_OUT" results; upload_state; die "smoke test failed on $label; see generate_smoke_$label.log"; }
+      log "smoke test passed on $label: $(grep -cE '^[a-z_]+: ' "$STATE/generate_smoke_$label.log") evals scored"
+      smoked=1
+    fi
+    rc=0
+    safety_evals "$label" 8000 "${label}_safety" || rc=$?
+    if [ "$rc" -eq 0 ]; then log "$label: all five evals done"
+    else log "$label: some evals failed or timed out (exit $rc; see generate_${label}_safety.log)"; GEN_FAILED+=" $label"; fi
+    upload "$MO/logs/safety/$label" "logs/$label"
+    upload "$SAFETY_OUT" results
+    stop_model_server "$pid" "$model_gpus"
+  done
+  stop_servers
+  # shellcheck disable=SC2086  # word lists
+  (cd "$MO" && "$MO_PY" scripts/compare_safety_results.py --results "$SAFETY_OUT" --models $ORGANISMS \
+      --pairs $SAFETY_PAIRS --out "$SAFETY_OUT/safety_comparison.md") >> "$STATE/safety_compare.log" 2>&1 \
+    && log "compared" || log "comparison failed; see safety_compare.log"
+  upload "$SAFETY_OUT" results
+  upload_state
+  [ -z "$GEN_FAILED" ] || die "no or partial results for:$GEN_FAILED (the rest done; results under $PREFIX)"
+  log "DONE: results under $PREFIX in $HF_ARTIFACT_REPO"
+}
+
 phase_generate() {
   archive_old "$TA/logs"
   archive_old "$TA/scans"
@@ -614,6 +699,9 @@ phase_generate() {
     prepare_organisms
     prepare_persona_overlap
     generate_organisms
+  elif [ "$MODE" = safety ]; then
+    prepare_organisms
+    return 0   # phase_safety serves and runs each model beside the judge
   else
     download "$OLMO_MODEL" "$OLMO_REV" "$DATA/models/olmo"
     download "$GPT_OSS_MODEL" "$GPT_OSS_REV" "$DATA/models/gpt_oss" --exclude "original/*" --exclude "metal/*"
@@ -703,4 +791,5 @@ setup
 if [ "$MODE" = judge ]; then fetch_earlier_logs; else phase_generate; fi
 if [ "$MODE" = framing ]; then phase_framing_judge
 elif [ "$MODE" = persona ]; then phase_persona
+elif [ "$MODE" = safety ]; then phase_safety
 else phase_judge; fi
