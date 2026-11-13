@@ -72,7 +72,9 @@ def node(tmp_path) -> Node:
     # SGLang's launcher is `<venv-sglang python> -m sglang.launch_server ...`: the same fake server.
     sglang = n.repo.parent / "venv-sglang" / "bin" / "python"
     sglang.parent.mkdir(parents=True)
-    sglang.write_text("#!/usr/bin/env bash\n" + FAKE_VLLM.replace("vllm_flags", "sglang_flags")
+    sglang.write_text("#!/usr/bin/env bash\n"
+                      'echo "${SGLANG_ENABLE_JIT_DEEPGEMM-unset}" >> "$FAKE_DIR/sglang_jit_deepgemm"\n'
+                      + FAKE_VLLM.replace("vllm_flags", "sglang_flags")
                       .replace("--lora-modules)", "--lora-paths)"), newline="\n")
     sglang.chmod(0o755)
     return n
@@ -159,6 +161,8 @@ def test_redwood_is_served_by_sglang_with_its_whole_adapter(node):
     assert "sglang.launch_server" in flags and "--enable-lora" in flags and "--tp 4" in flags
     assert "redwood_step952=" in flags and "--lora-target-modules all" in flags
     assert not (node.tmp / "vllm_flags").exists()  # no vLLM server for it
+    # DeepGEMM off: its import asserts a CUDA toolkit, which Isambard nodes lack (2026-11-13)
+    assert set((node.tmp / "sglang_jit_deepgemm").read_text().split()) == {"0"}
     _, served = node.calls("check_rl_lora_serving")
     assert flag(served, "--server") == "sglang"
     rc, status = node.stage("rl_eval", ORGANISM="redwood_step952", HALF="B", EVAL_TASKS=CAPABILITY)

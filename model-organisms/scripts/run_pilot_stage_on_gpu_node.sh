@@ -690,7 +690,11 @@ serve_sglang() {  # serve_sglang <A|B> <port> <served name> <lora name> <lora di
   is_here "$(half_host "$half")" || host=(--host 0.0.0.0)
   curl -sf "$url/models" >/dev/null 2>&1 && die "port $port already serving"
   half_cmd "$half"
-  setsid "${HALF_CMD[@]}" "$SGLANG_PY" -m sglang.launch_server --model-path "$BF16" --served-model-name "$name" \
+  # SGLang imports DeepGEMM at startup unless its JIT is off, and DeepGEMM asserts a CUDA toolkit, which Isambard
+  # nodes lack (AssertionError in find_cuda_home, 2026-11-13). Off, SGLang skips the import; gpt-oss's bf16 MoE
+  # runs on triton here anyway. As for the vLLM judges, the variable still overrides it.
+  setsid "${HALF_CMD[@]}" "SGLANG_ENABLE_JIT_DEEPGEMM=${SGLANG_ENABLE_JIT_DEEPGEMM:-0}" \
+      "$SGLANG_PY" -m sglang.launch_server --model-path "$BF16" --served-model-name "$name" \
       --tp "$(n_gpus "$gpus")" --port "$port" "${host[@]}" --context-length 16384 --enable-lora --max-lora-rank 32 --lora-target-modules all \
       --lora-paths "$4=$5" --moe-runner-backend triton > "$STATE/sglang_$name.log" 2>&1 &
   # --moe-runner-backend triton: gpt-oss defaults to triton_kernel, which has no LoRA path for bf16 experts
