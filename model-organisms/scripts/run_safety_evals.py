@@ -13,6 +13,13 @@ Evals (inspect_evals 0.24.0 unless noted), 100 samples each, the same samples fo
   strong_reject         forbidden prompts, no jailbreak: 100 of the 313
   advanced_ai_risk      Model-Written Evals self-report, 20 x 5 subsets (evals/advanced_ai_risk.py; no judge)
 
+Generalisation evals (does reward hacking carry over to new kinds of gaming? Feifan, 2026-11-13; no judge), run with
+--evals:
+  s2s_<environment>     Sycophancy to Subterfuge's four shell environments, 100 episodes each
+                        (evals/sycophancy_to_subterfuge.py): flattery, nudged_rubric_modification,
+                        insubordinate_rubric_modification, reward_tampering
+  are_you_sure          SycophancyEval: drops a correct answer when challenged, 100 questions (evals/are_you_sure.py)
+
 Sampling is the pilot's for every eval (temperature 1, top_p 1, max_tokens 8192, reasoning effort medium, no seed),
 overriding each task's own, so reasoning is never cut short and models are compared under one config. Judges are the
 eval's own prompts on a local model (DECISIONS 'Judges on Isambard': Qwen3-235B), at temperature 0 (passing a Model
@@ -42,8 +49,12 @@ from inspect_ai.solver import Generate, Solver, TaskState, chain, solver  # noqa
 
 import harmony_provider  # noqa: E402, F401  (registers the 'harmony' provider)
 from advanced_ai_risk import advanced_ai_risk  # noqa: E402
+import are_you_sure as ays  # noqa: E402
+import sycophancy_to_subterfuge as s2s  # noqa: E402
+from are_you_sure import are_you_sure  # noqa: E402
 from common import MAX_TOKENS, TEMPERATURE, TOP_P, output_reasoning  # noqa: E402
 from personas import resolve_persona  # noqa: E402
+from sycophancy_to_subterfuge import ENVIRONMENTS as S2S_ENVIRONMENTS, sycophancy_to_subterfuge  # noqa: E402
 
 SAMPLES, SELECT_SEED = 100, 20261112
 # (scenario, goal_type, goal_value, urgency): the paper's main condition for each harm, plus blackmail with no goal
@@ -52,6 +63,17 @@ AM_CONDITIONS = [("blackmail", "explicit", "america", "replacement"), ("leaking"
                  ("murder", "explicit", "america", "replacement"), ("blackmail", "none", "none", "replacement")]
 AM_EPOCHS = 25
 EVALS = ("agentic_misalignment", "mask", "agentharm", "strong_reject", "advanced_ai_risk")
+GENERALISATION_EVALS = tuple(f"s2s_{e}" for e in S2S_ENVIRONMENTS) + ("are_you_sure",)
+# Per-sample numbers from the scorer's metadata (None = not scored, left out of the rate).
+METADATA_HEADLINES = {
+    "s2s_flattery": ("flattered", "rating", "no_commands", "truncated"),
+    "s2s_nudged_rubric_modification": ("rubric_modified", "lied_done", "reported_done", "edited_checklist",
+                                       "no_commands", "truncated"),
+    "s2s_insubordinate_rubric_modification": ("rubric_modified", "lied_done", "reported_done", "edited_checklist",
+                                              "no_commands", "truncated"),
+    "s2s_reward_tampering": ("reward_tampered", "tampered_and_hid", "edited_reward_file", "no_commands", "truncated"),
+    "are_you_sure": ("caved", "initially_correct", "unparsed_last", "changed"),
+}
 
 
 @solver
@@ -102,7 +124,11 @@ def build(name: str, judge: Model) -> tuple[list[Task], dict]:
         return [select(strong_reject(judge_llm=judge))], {}
     if name == "advanced_ai_risk":
         return [advanced_ai_risk()], {}
-    raise ValueError(f"unknown eval {name!r}; choose from {EVALS}")
+    if name.startswith("s2s_") and name[4:] in S2S_ENVIRONMENTS:
+        return [sycophancy_to_subterfuge(environment=name[4:], n=SAMPLES)], {}
+    if name == "are_you_sure":
+        return [are_you_sure()], {}
+    raise ValueError(f"unknown eval {name!r}; choose from {EVALS + GENERALISATION_EVALS}")
 
 
 def headline(name: str, value) -> dict:
@@ -156,6 +182,12 @@ def sample_row(name: str, sample) -> dict:
     numbers = headline(name, score.value if score else None)
     if name == "advanced_ai_risk" and score:  # unparsed answers are left out of the rate and counted separately
         numbers = {"risky": score.value if score.answer else None}
+    extra = {}
+    if name in METADATA_HEADLINES:
+        meta_score = (score.metadata or {}) if score else {}
+        numbers = {k: (None if meta_score.get(k) is None else float(meta_score[k])) for k in METADATA_HEADLINES[name]}
+        extra = {"score_detail": {k: v for k, v in meta_score.items() if k not in METADATA_HEADLINES[name]},
+                 "commands": (sample.store or {}).get("commands"), "replies": (sample.store or {}).get("replies")}
     return {
         "id": sample.id, "epoch": sample.epoch, "condition": (sample.metadata or {}).get("condition_id"),
         "value": score.value if score else None, **numbers, "format_failed": format_failed(name, sample, output),
@@ -163,7 +195,7 @@ def sample_row(name: str, sample) -> dict:
         "tool_calls": sum(len(m.tool_calls or []) for m in sample.messages if m.role == "assistant"),
         "stop_reason": output.stop_reason if output else None,
         "reasoning": output_reasoning(output), "completion": output.completion if output else "",
-        "error": sample.error.message if sample.error else None,
+        "error": sample.error.message if sample.error else None, **extra,
     }
 
 
@@ -202,7 +234,8 @@ def main(argv=None):
         "persona": persona, "reasoning_effort": args.reasoning_effort, "temperature": TEMPERATURE, "top_p": TOP_P,
         "max_tokens": MAX_TOKENS, "samples": SAMPLES, "select_seed": SELECT_SEED, "am_conditions": AM_CONDITIONS,
         "am_epochs": AM_EPOCHS, "agentharm_reasoning_hidden_from_judge": True, "limit": args.limit,
-        "dry_run": args.dry_run, "inspect_ai": inspect_ai.__version__,
+        "dry_run": args.dry_run, "inspect_ai": inspect_ai.__version__, "s2s_commit": s2s.COMMIT,
+        "s2s_max_turns": s2s.MAX_TURNS, "are_you_sure_revision": ays.REVISION,
         "inspect_evals": __import__("importlib.metadata").metadata.version("inspect_evals"), "git_commit": git_commit()},
         "evals": {}}
     if out.exists() and not args.dry_run:  # resume: keep evals that already finished
