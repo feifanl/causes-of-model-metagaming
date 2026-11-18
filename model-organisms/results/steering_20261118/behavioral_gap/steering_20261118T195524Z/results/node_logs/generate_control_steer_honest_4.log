@@ -1,0 +1,26 @@
+Running 1 tasks...
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/control                           
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+---------------------------------------------------------                       
+                                                                                
+seeded_ge... | Steps:   7/100   7% | Samples:   7/100 | harmony: 93/100 | HTTP retries: 0
+seeded_ge... | Steps:  46/100  46% | Samples:  46/100 | harmony: 54/100 | HTTP retries: 0
+seeded_ge... | Steps:  77/100  77% | Samples:  77/100 | harmony: 23/100 | HTTP retries: 0
+seeded_ge... | Steps:  95/100  95% | Samples:  95/100 | harmony:  5/100 | HTTP retries: 0
+seeded_ge... | Steps: 100/100 100% | Samples: 100/100 | harmony:  0/100 | HTTP retries: 0
+
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/control                           
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+                                                                                
+total time:              0:00:24                                                
+harmony/control          89,299 tokens [I: 10,007, O: 79,292]                   
+                                                                                
+Log:                                                                            
+logs/steering/control/honest_4/2026-11-18T22-18-34-00-00_heldout-reward-hacking…
+---------------------------------------------------------                       
+                                                                                
+Wrote /workspace/repo/model-organisms/results/control_steer_honest_4.logs.json (unscored logs)

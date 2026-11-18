@@ -1,0 +1,105 @@
+2026-11-18T19:52:24Z launcher waiting for HF tokens in /root/.config/spar/env
+2026-11-18T19:55:24Z launcher tokens found: starting the steering run (cap 9 h) on 23b42d9 fix(ops): disable deepgemm for sglang on isambard + overlay
+2026-11-18T19:55:24Z steering start (prefix behavioral_gap/steering_20261118T195524Z, cap 9 h)
+2026-11-18T19:58:48Z steering steering direction: behavioral_gap/persona_20261107T053916Z/results/directions/cheater_vs_honest_reply.pt
+2026-11-18T19:58:48Z steering judge download started in the background
+2026-11-18T21:07:42Z steering organism pipeline set up (its venvs incl. SGLang, data, tests)
+2026-11-18T21:09:34Z steering bf16 base ready (218G)
+2026-11-18T21:12:48Z steering redwood_step952 adapter prepared
+2026-11-18T21:17:39Z steering merged srh_mixed_seed0_cotreg: {'mean_abs_nll_diff': nan, 'max_abs_nll_diff': nan, 'argmax_agreement': 0.0, 'tokens': 282}
+2026-11-18T21:22:32Z steering merged control_seed0_cotreg: {'mean_abs_nll_diff': nan, 'max_abs_nll_diff': nan, 'argmax_agreement': 0.1964285671710968, 'tokens': 392}
+2026-11-18T21:28:17Z steering vLLM ready: base_bf16 on GPUs 0,1,2,3, port 8000 (345s)
+2026-11-18T21:30:32Z steering vLLM ready: control on GPUs 4,5,6,7, port 8001 (135s)
+2026-11-18T21:31:21Z steering base_bf16_steer_none answered
+2026-11-18T21:31:24Z steering uploaded logs/base_bf16/none
+2026-11-18T21:31:24Z steering control_steer_none answered
+2026-11-18T21:31:27Z steering uploaded logs/control/none
+2026-11-18T21:34:28Z steering vLLM ready: srh_mixed on GPUs 0,1,2,3, port 8000 (180s)
+2026-11-18T21:37:29Z steering SGLang ready: base_redwood_step952 + LoRA redwood_step952 on GPUs 4,5,6,7, port 8001 (180s)
+2026-11-18T21:37:32Z steering LoRA check passed for redwood_step952: lora vs fp32 ref 0.1163258266791185 | base vs ref 0.6462023879964792
+2026-11-18T21:38:11Z steering srh_mixed_steer_none answered
+2026-11-18T21:38:14Z steering uploaded logs/srh_mixed/none
+2026-11-18T21:38:50Z steering redwood_step952_steer_none answered
+2026-11-18T21:38:54Z steering uploaded logs/redwood_step952/none
+2026-11-18T21:41:14Z steering vLLM ready: base_bf16 on GPUs 0,1,2,3, port 8000 (135s)
+2026-11-18T21:43:30Z steering vLLM ready: control on GPUs 4,5,6,7, port 8001 (135s)
+2026-11-18T21:44:18Z steering base_bf16_steer_honest_0.5 answered
+2026-11-18T21:44:22Z steering uploaded logs/base_bf16/honest_0.5
+2026-11-18T21:44:22Z steering control_steer_honest_0.5 answered
+2026-11-18T21:44:25Z steering uploaded logs/control/honest_0.5
+2026-11-18T21:46:43Z steering vLLM ready: srh_mixed on GPUs 0,1,2,3, port 8000 (135s)
+2026-11-18T21:48:59Z steering SGLang ready: base_redwood_step952 + LoRA redwood_step952 on GPUs 4,5,6,7, port 8001 (135s)
+2026-11-18T21:48:59Z steering LoRA check skipped for redwood_step952 (steered base)
+2026-11-18T21:49:39Z steering srh_mixed_steer_honest_0.5 answered
+2026-11-18T21:49:42Z steering uploaded logs/srh_mixed/honest_0.5
+2026-11-18T21:50:18Z steering redwood_step952_steer_honest_0.5 answered
+2026-11-18T21:50:22Z steering uploaded logs/redwood_step952/honest_0.5
+2026-11-18T21:52:40Z steering vLLM ready: base_bf16 on GPUs 0,1,2,3, port 8000 (135s)
+2026-11-18T21:54:57Z steering vLLM ready: control on GPUs 4,5,6,7, port 8001 (135s)
+2026-11-18T21:55:42Z steering base_bf16_steer_honest_1 answered
+2026-11-18T21:55:45Z steering uploaded logs/base_bf16/honest_1
+2026-11-18T21:55:45Z steering control_steer_honest_1 answered
+2026-11-18T21:55:48Z steering uploaded logs/control/honest_1
+2026-11-18T21:58:21Z steering vLLM ready: srh_mixed on GPUs 0,1,2,3, port 8000 (150s)
+2026-11-18T22:00:38Z steering SGLang ready: base_redwood_step952 + LoRA redwood_step952 on GPUs 4,5,6,7, port 8001 (135s)
+2026-11-18T22:00:38Z steering LoRA check skipped for redwood_step952 (steered base)
+2026-11-18T22:01:13Z steering srh_mixed_steer_honest_1 answered
+2026-11-18T22:01:17Z steering uploaded logs/srh_mixed/honest_1
+2026-11-18T22:02:09Z steering redwood_step952_steer_honest_1 answered
+2026-11-18T22:02:12Z steering uploaded logs/redwood_step952/honest_1
+2026-11-18T22:04:30Z steering vLLM ready: base_bf16 on GPUs 0,1,2,3, port 8000 (135s)
+2026-11-18T22:06:46Z steering vLLM ready: control on GPUs 4,5,6,7, port 8001 (135s)
+2026-11-18T22:07:41Z steering base_bf16_steer_honest_2 answered
+2026-11-18T22:07:45Z steering uploaded logs/base_bf16/honest_2
+2026-11-18T22:07:45Z steering control_steer_honest_2 answered
+2026-11-18T22:07:48Z steering uploaded logs/control/honest_2
+2026-11-18T22:10:21Z steering vLLM ready: srh_mixed on GPUs 0,1,2,3, port 8000 (150s)
+2026-11-18T22:12:22Z steering SGLang ready: base_redwood_step952 + LoRA redwood_step952 on GPUs 4,5,6,7, port 8001 (120s)
+2026-11-18T22:12:22Z steering LoRA check skipped for redwood_step952 (steered base)
+2026-11-18T22:13:01Z steering srh_mixed_steer_honest_2 answered
+2026-11-18T22:13:04Z steering uploaded logs/srh_mixed/honest_2
+2026-11-18T22:13:52Z steering redwood_step952_steer_honest_2 answered
+2026-11-18T22:13:56Z steering uploaded logs/redwood_step952/honest_2
+2026-11-18T22:16:14Z steering vLLM ready: base_bf16 on GPUs 0,1,2,3, port 8000 (135s)
+2026-11-18T22:18:30Z steering vLLM ready: control on GPUs 4,5,6,7, port 8001 (135s)
+2026-11-18T22:19:33Z steering base_bf16_steer_honest_4 answered
+2026-11-18T22:19:37Z steering uploaded logs/base_bf16/honest_4
+2026-11-18T22:19:37Z steering control_steer_honest_4 answered
+2026-11-18T22:19:40Z steering uploaded logs/control/honest_4
+2026-11-18T22:22:14Z steering vLLM ready: srh_mixed on GPUs 0,1,2,3, port 8000 (150s)
+2026-11-18T22:24:16Z steering SGLang ready: base_redwood_step952 + LoRA redwood_step952 on GPUs 4,5,6,7, port 8001 (120s)
+2026-11-18T22:24:16Z steering LoRA check skipped for redwood_step952 (steered base)
+2026-11-18T22:25:03Z steering srh_mixed_steer_honest_4 answered
+2026-11-18T22:25:06Z steering uploaded logs/srh_mixed/honest_4
+2026-11-18T22:26:07Z steering redwood_step952_steer_honest_4 answered
+2026-11-18T22:26:10Z steering uploaded logs/redwood_step952/honest_4
+2026-11-18T22:28:43Z steering vLLM ready: base_bf16 on GPUs 0,1,2,3, port 8000 (150s)
+2026-11-18T22:30:59Z steering vLLM ready: control on GPUs 4,5,6,7, port 8001 (135s)
+2026-11-18T22:31:48Z steering base_bf16_steer_cheater_1 answered
+2026-11-18T22:31:52Z steering uploaded logs/base_bf16/cheater_1
+2026-11-18T22:31:52Z steering control_steer_cheater_1 answered
+2026-11-18T22:31:55Z steering uploaded logs/control/cheater_1
+2026-11-18T22:34:27Z steering vLLM ready: srh_mixed on GPUs 0,1,2,3, port 8000 (150s)
+2026-11-18T22:36:29Z steering SGLang ready: base_redwood_step952 + LoRA redwood_step952 on GPUs 4,5,6,7, port 8001 (120s)
+2026-11-18T22:36:29Z steering LoRA check skipped for redwood_step952 (steered base)
+2026-11-18T22:36:59Z steering srh_mixed_steer_cheater_1 answered
+2026-11-18T22:37:03Z steering uploaded logs/srh_mixed/cheater_1
+2026-11-18T22:37:52Z steering redwood_step952_steer_cheater_1 answered
+2026-11-18T22:37:55Z steering uploaded logs/redwood_step952/cheater_1
+2026-11-18T22:40:13Z steering vLLM ready: base_bf16 on GPUs 0,1,2,3, port 8000 (135s)
+2026-11-18T22:42:29Z steering vLLM ready: control on GPUs 4,5,6,7, port 8001 (135s)
+2026-11-18T22:43:06Z steering base_bf16_steer_cheater_2 answered
+2026-11-18T22:43:09Z steering uploaded logs/base_bf16/cheater_2
+2026-11-18T22:43:09Z steering control_steer_cheater_2 answered
+2026-11-18T22:43:13Z steering uploaded logs/control/cheater_2
+2026-11-18T22:45:30Z steering vLLM ready: srh_mixed on GPUs 0,1,2,3, port 8000 (135s)
+2026-11-18T22:47:32Z steering SGLang ready: base_redwood_step952 + LoRA redwood_step952 on GPUs 4,5,6,7, port 8001 (120s)
+2026-11-18T22:47:32Z steering LoRA check skipped for redwood_step952 (steered base)
+2026-11-18T22:48:05Z steering srh_mixed_steer_cheater_2 answered
+2026-11-18T22:48:08Z steering uploaded logs/srh_mixed/cheater_2
+2026-11-18T22:48:48Z steering redwood_step952_steer_cheater_2 answered
+2026-11-18T22:48:52Z steering uploaded logs/redwood_step952/cheater_2
+2026-11-18T22:48:55Z steering generation done
+2026-11-18T22:48:55Z steering judge download finished
+2026-11-18T23:04:21Z steering steering compared
+2026-11-18T23:04:24Z steering uploaded results

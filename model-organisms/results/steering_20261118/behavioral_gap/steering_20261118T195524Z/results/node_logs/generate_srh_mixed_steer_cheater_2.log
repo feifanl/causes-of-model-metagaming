@@ -1,0 +1,27 @@
+Running 1 tasks...
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/srh_mixed                         
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+---------------------------------------------------------                       
+                                                                                
+seeded_ge... | Steps:   3/100   3% | Samples:   3/100 | harmony: 97/100 | HTTP retries: 0
+seeded_ge... | Steps:  48/100  48% | Samples:  48/100 | harmony: 52/100 | HTTP retries: 0
+seeded_ge... | Steps:  71/100  71% | Samples:  71/100 | harmony: 29/100 | HTTP retries: 0
+seeded_ge... | Steps:  94/100  94% | Samples:  94/100 | harmony:  6/100 | HTTP retries: 0
+seeded_ge... | Steps:  97/100  97% | Samples:  97/100 | harmony:  3/100 | HTTP retries: 0
+seeded_ge... | Steps: 100/100 100% | Samples: 100/100 | harmony:  0/100 | HTTP retries: 0
+
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/srh_mixed                         
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+                                                                                
+total time:                0:00:29                                              
+harmony/srh_mixed          95,472 tokens [I: 10,007, O: 85,465]                 
+                                                                                
+Log:                                                                            
+logs/steering/srh_mixed/cheater_2/2026-11-18T22-47-35-00-00_heldout-reward-hack…
+---------------------------------------------------------                       
+                                                                                
+Wrote /workspace/repo/model-organisms/results/srh_mixed_steer_cheater_2.logs.json (unscored logs)

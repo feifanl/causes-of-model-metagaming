@@ -1,0 +1,25 @@
+Running 1 tasks...
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/control                           
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+---------------------------------------------------------                       
+                                                                                
+seeded_ge... | Steps:   9/100   9% | Samples:   9/100 | harmony: 91/100 | HTTP retries: 0
+seeded_ge... | Steps:  59/100  59% | Samples:  59/100 | harmony: 41/100 | HTTP retries: 0
+seeded_ge... | Steps:  94/100  94% | Samples:  94/100 | harmony:  6/100 | HTTP retries: 0
+seeded_ge... | Steps: 100/100 100% | Samples: 100/100 | harmony:  0/100 | HTTP retries: 0
+
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/control                           
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+                                                                                
+total time:              0:00:19                                                
+harmony/control          71,398 tokens [I: 10,007, O: 61,391]                   
+                                                                                
+Log:                                                                            
+logs/steering/control/cheater_1/2026-11-18T22-31-03-00-00_heldout-reward-hackin…
+---------------------------------------------------------                       
+                                                                                
+Wrote /workspace/repo/model-organisms/results/control_steer_cheater_1.logs.json (unscored logs)

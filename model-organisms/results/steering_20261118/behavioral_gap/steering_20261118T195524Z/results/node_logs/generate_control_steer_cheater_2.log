@@ -1,0 +1,26 @@
+Running 1 tasks...
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/control                           
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+---------------------------------------------------------                       
+                                                                                
+seeded_ge... | Steps:  13/100  13% | Samples:  13/100 | harmony: 87/100 | HTTP retries: 0
+seeded_ge... | Steps:  60/100  60% | Samples:  60/100 | harmony: 40/100 | HTTP retries: 0
+seeded_ge... | Steps:  93/100  93% | Samples:  93/100 | harmony:  7/100 | HTTP retries: 0
+seeded_ge... | Steps:  99/100  99% | Samples:  99/100 | harmony:  1/100 | HTTP retries: 0
+seeded_ge... | Steps: 100/100 100% | Samples: 100/100 | harmony:  0/100 | HTTP retries: 0
+
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/control                           
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+                                                                                
+total time:              0:00:24                                                
+harmony/control          72,676 tokens [I: 10,007, O: 62,669]                   
+                                                                                
+Log:                                                                            
+logs/steering/control/cheater_2/2026-11-18T22-42-33-00-00_heldout-reward-hackin…
+---------------------------------------------------------                       
+                                                                                
+Wrote /workspace/repo/model-organisms/results/control_steer_cheater_2.logs.json (unscored logs)

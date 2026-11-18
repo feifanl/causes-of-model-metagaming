@@ -1,0 +1,6 @@
+2026-11-13T06:44:04Z bf16 start (VARIANT='' SFT_DATA_DIR=data/processed EVAL_FLAGS='--no-reasoning' EVAL_TAG='')
+2026-11-13T06:48:10Z bf16 bf16 size: 218G
+2026-11-13T06:48:10Z bf16 done in 4 min
+2026-11-13T06:48:10Z rl_adapter_redwood_step952 start (ORGANISM=redwood_step952 HALF=A EVAL_TASKS=em,hacking,mmlu EVAL_FLAGS='--no-reasoning' EVAL_TAG='')
+2026-11-13T06:50:37Z rl_adapter_redwood_step952 redwood_step952: uwuwuwuwuwuwu/gpt-oss-120b-reward-hacker-step-952@9d864b42 -> outputs/redwood_step952 (r=32, alpha=32; whole adapter, served by SGLang)
+2026-11-13T06:50:37Z rl_adapter_redwood_step952 done in 2 min

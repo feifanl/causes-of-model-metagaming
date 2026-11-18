@@ -1,0 +1,28 @@
+Running 1 tasks...
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/srh_mixed                         
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+---------------------------------------------------------                       
+                                                                                
+seeded_ge... | Steps:   2/100   2% | Samples:   2/100 | harmony: 98/100 | HTTP retries: 0
+seeded_ge... | Steps:  33/100  33% | Samples:  33/100 | harmony: 67/100 | HTTP retries: 0
+seeded_ge... | Steps:  60/100  60% | Samples:  60/100 | harmony: 39/100 | HTTP retries: 0
+seeded_ge... | Steps:  81/100  81% | Samples:  81/100 | harmony: 19/100 | HTTP retries: 0
+seeded_ge... | Steps:  91/100  91% | Samples:  91/100 | harmony:  9/100 | HTTP retries: 0
+seeded_ge... | Steps:  98/100  98% | Samples:  98/100 | harmony:  2/100 | HTTP retries: 0
+seeded_ge... | Steps: 100/100 100% | Samples: 100/100 | harmony:  0/100 | HTTP retries: 0
+
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/srh_mixed                         
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+                                                                                
+total time:               0:00:34                                               
+harmony/srh_mixed         113,810 tokens [I: 10,007, O: 103,803]                
+                                                                                
+Log:                                                                            
+logs/steering/srh_mixed/honest_2/2026-11-18T22-12-26-00-00_heldout-reward-hacki…
+---------------------------------------------------------                       
+                                                                                
+Wrote /workspace/repo/model-organisms/results/srh_mixed_steer_honest_2.logs.json (unscored logs)

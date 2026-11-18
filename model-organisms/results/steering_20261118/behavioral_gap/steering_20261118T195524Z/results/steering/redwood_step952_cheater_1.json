@@ -1,0 +1,18 @@
+{
+  "source": "/workspace/gpt-oss-120b-bf16",
+  "direction": "/workspace/hf_fetch/behavioral_gap/persona_20261107T053916Z/results/directions/cheater_vs_honest_reply.pt",
+  "direction_sha256": "85ba488c03bbcf8a7c8cb0adf38de35e218c45757ed8e5a0e1e76d631a6f17ba",
+  "positive": "cheater",
+  "negative": "honest",
+  "pool": "response",
+  "layer": 33,
+  "key": "model.layers.32.self_attn.o_proj.bias",
+  "coef": 1.0,
+  "shard": "model-00065-of-00073.safetensors",
+  "dtype": "bfloat16",
+  "direction_norm": 4119.984375,
+  "added_norm": 4119.984375,
+  "bias_norm_before": 92.37982940673828,
+  "bias_norm_after": 4123.47705078125,
+  "rel_error": 0.0016107639530673623
+}

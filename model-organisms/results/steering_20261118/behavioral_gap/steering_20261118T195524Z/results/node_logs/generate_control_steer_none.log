@@ -1,0 +1,26 @@
+Running 1 tasks...
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/control                           
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+---------------------------------------------------------                       
+                                                                                
+seeded_ge... | Steps:   9/100   9% | Samples:   9/100 | harmony: 91/100 | HTTP retries: 0
+seeded_ge... | Steps:  49/100  49% | Samples:  49/100 | harmony: 51/100 | HTTP retries: 0
+seeded_ge... | Steps:  90/100  90% | Samples:  90/100 | harmony: 10/100 | HTTP retries: 0
+seeded_ge... | Steps:  99/100  99% | Samples:  99/100 | harmony:  1/100 | HTTP retries: 0
+seeded_ge... | Steps: 100/100 100% | Samples: 100/100 | harmony:  0/100 | HTTP retries: 0
+
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/control                           
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+                                                                                
+total time:              0:00:25                                                
+harmony/control          77,483 tokens [I: 10,007, O: 67,476]                   
+                                                                                
+Log:                                                                            
+logs/steering/control/none/2026-11-18T21-30-36-00-00_heldout-reward-hacking_8nC…
+---------------------------------------------------------                       
+                                                                                
+Wrote /workspace/repo/model-organisms/results/control_steer_none.logs.json (unscored logs)

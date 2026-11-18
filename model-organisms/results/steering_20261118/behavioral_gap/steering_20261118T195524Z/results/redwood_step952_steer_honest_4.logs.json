@@ -1,0 +1,12 @@
+{
+  "tag": "redwood_step952_steer_honest_4",
+  "model": "harmony/base_redwood_step952:redwood_step952",
+  "reasoning_effort": "medium",
+  "persona": null,
+  "gibberish": true,
+  "git_commit": "23b42d970b57001dac1ee389c5455f680af1937a",
+  "logs": {
+    "hacking": "/workspace/repo/model-organisms/logs/steering/redwood_step952/honest_4/2026-11-18T22-24-20-00-00_heldout-reward-hacking_YaaJQscdpV77fAk8mjPt4k.eval"
+  },
+  "failed": []
+}

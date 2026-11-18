@@ -1,0 +1,34 @@
+2026-11-13T06:05:29Z launcher waiting for HF tokens in /root/.config/spar/env and the pushed safety mode
+2026-11-13T06:09:30Z launcher ready at ddad25d fix(deps): pin agent-client-protocol to 0.12.1: starting the safety run (cap 9 h)
+2026-11-13T06:09:30Z safety start (prefix behavioral_gap/safety_20261113T060930Z, cap 9 h)
+2026-11-13T06:44:04Z safety organism pipeline set up (its venvs incl. SGLang, data, tests)
+2026-11-13T06:48:10Z safety bf16 base ready (218G)
+2026-11-13T06:50:37Z safety redwood_step952 adapter prepared
+2026-11-13T07:09:07Z safety merged srh_mixed_seed0_cotreg: {'mean_abs_nll_diff': 0.01781177707016468, 'max_abs_nll_diff': 0.39366739988327026, 'argmax_agreement': 0.9893617033958435, 'tokens': 282}
+2026-11-13T07:16:28Z safety merged control_seed0_cotreg: {'mean_abs_nll_diff': 0.005084867589175701, 'max_abs_nll_diff': 0.1559189409017563, 'argmax_agreement': 1.0, 'tokens': 392}
+2026-11-13T08:53:25Z safety downloaded Qwen/Qwen3-235B-A22B-Instruct-2507-FP8@e156cb4e (221G)
+2026-11-13T09:01:10Z safety vLLM ready: judge on GPUs 0,1,2,3, port 8101 (465s)
+2026-11-13T09:03:26Z safety vLLM ready: base_bf16 on GPUs 4,5,6,7, port 8000 (135s)
+2026-11-13T09:05:52Z safety smoke test passed on base_bf16: 45 evals scored
+2026-11-13T09:10:23Z safety base_bf16: all five evals done
+2026-11-13T09:10:30Z safety uploaded logs/base_bf16
+2026-11-13T09:10:32Z safety uploaded results
+2026-11-13T09:12:52Z safety vLLM ready: control on GPUs 4,5,6,7, port 8000 (135s)
+2026-11-13T09:17:37Z safety control: all five evals done
+2026-11-13T09:17:43Z safety uploaded logs/control
+2026-11-13T09:17:45Z safety uploaded results
+2026-11-13T09:22:36Z safety vLLM ready: srh_mixed on GPUs 4,5,6,7, port 8000 (285s)
+2026-11-13T09:27:22Z safety srh_mixed: all five evals done
+2026-11-13T09:27:28Z safety uploaded logs/srh_mixed
+2026-11-13T09:27:30Z safety uploaded results
+2026-11-13T09:36:21Z safety SGLang ready: base_sglang + LoRA redwood_step952 on GPUs 4,5,6,7, port 8000 (525s)
+2026-11-13T09:42:53Z safety base_sglang: all five evals done
+2026-11-13T09:43:00Z safety uploaded logs/base_sglang
+2026-11-13T09:43:02Z safety uploaded results
+2026-11-13T09:47:08Z safety SGLang ready: base_redwood_step952 + LoRA redwood_step952 on GPUs 4,5,6,7, port 8000 (240s)
+2026-11-13T09:47:14Z safety LoRA check passed for redwood_step952: lora vs fp32 ref 0.11186602783984637 | base vs ref 0.654458691118632
+2026-11-13T09:56:13Z safety redwood_step952: all five evals done
+2026-11-13T09:56:20Z safety uploaded logs/redwood_step952
+2026-11-13T09:56:22Z safety uploaded results
+2026-11-13T09:56:31Z safety compared
+2026-11-13T09:56:33Z safety uploaded results

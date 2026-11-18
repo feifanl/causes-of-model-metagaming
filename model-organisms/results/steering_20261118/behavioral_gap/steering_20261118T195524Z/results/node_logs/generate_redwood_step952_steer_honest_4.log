@@ -1,0 +1,41 @@
+Running 1 tasks...
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples):                                           
+harmony/base_redwood_step952:redwood_step952                                    
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+---------------------------------------------------------                       
+                                                                                
+seeded_ge... | Steps:   1/100   1% | Samples:   0/100 | harmony: 99/100 | HTTP retries: 0
+seeded_ge... | Steps:  11/100  11% | Samples:  11/100 | harmony: 89/100 | HTTP retries: 0
+seeded_ge... | Steps:  15/100  15% | Samples:  15/100 | harmony: 85/100 | HTTP retries: 0
+seeded_ge... | Steps:  22/100  22% | Samples:  22/100 | harmony: 78/100 | HTTP retries: 0
+seeded_ge... | Steps:  34/100  34% | Samples:  34/100 | harmony: 66/100 | HTTP retries: 0
+seeded_ge... | Steps:  43/100  43% | Samples:  43/100 | harmony: 57/100 | HTTP retries: 0
+seeded_ge... | Steps:  55/100  55% | Samples:  55/100 | harmony: 45/100 | HTTP retries: 0
+seeded_ge... | Steps:  67/100  67% | Samples:  67/100 | harmony: 33/100 | HTTP retries: 0
+seeded_ge... | Steps:  74/100  74% | Samples:  74/100 | harmony: 26/100 | HTTP retries: 0
+seeded_ge... | Steps:  83/100  83% | Samples:  83/100 | harmony: 17/100 | HTTP retries: 0
+seeded_ge... | Steps:  89/100  89% | Samples:  89/100 | harmony: 11/100 | HTTP retries: 0
+seeded_ge... | Steps:  91/100  91% | Samples:  91/100 | harmony:  9/100 | HTTP retries: 0
+seeded_ge... | Steps:  94/100  94% | Samples:  94/100 | harmony:  6/100 | HTTP retries: 0
+seeded_ge... | Steps:  96/100  96% | Samples:  96/100 | harmony:  4/100 | HTTP retries: 0
+seeded_ge... | Steps:  97/100  97% | Samples:  96/100 | harmony:  3/100 | HTTP retries: 0
+seeded_ge... | Steps:  98/100  98% | Samples:  98/100 | harmony:  2/100 | HTTP retries: 0
+seeded_ge... | Steps:  99/100  99% | Samples:  98/100 | harmony:  1/100 | HTTP retries: 0
+seeded_ge... | Steps: 100/100 100% | Samples: 100/100 | harmony:  0/100 | HTTP retries: 0
+
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples):                                           
+harmony/base_redwood_step952:redwood_step952                                    
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+                                                                                
+total time:                               0:01:46                               
+harmony/base_redwood_step952:redwood_st…  174,084 tokens [I: 10,007, O: 164,077]
+                                                                                
+Log:                                                                            
+logs/steering/redwood_step952/honest_4/2026-11-18T22-24-20-00-00_heldout-reward…
+---------------------------------------------------------                       
+                                                                                
+Wrote /workspace/repo/model-organisms/results/redwood_step952_steer_honest_4.logs.json (unscored logs)

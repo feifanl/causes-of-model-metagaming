@@ -1,0 +1,30 @@
+Running 1 tasks...
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/base_bf16                         
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+---------------------------------------------------------                       
+                                                                                
+seeded_ge... | Steps:   1/100   1% | Samples:   0/100 | harmony: 98/100 | HTTP retries: 0
+seeded_ge... | Steps:  29/100  28% | Samples:  29/100 | harmony: 71/100 | HTTP retries: 0
+seeded_ge... | Steps:  54/100  54% | Samples:  54/100 | harmony: 46/100 | HTTP retries: 0
+seeded_ge... | Steps:  69/100  69% | Samples:  69/100 | harmony: 31/100 | HTTP retries: 0
+seeded_ge... | Steps:  85/100  85% | Samples:  85/100 | harmony: 15/100 | HTTP retries: 0
+seeded_ge... | Steps:  93/100  93% | Samples:  93/100 | harmony:  7/100 | HTTP retries: 0
+seeded_ge... | Steps:  96/100  96% | Samples:  96/100 | harmony:  4/100 | HTTP retries: 0
+seeded_ge... | Steps:  97/100  97% | Samples:  97/100 | harmony:  3/100 | HTTP retries: 0
+seeded_ge... | Steps: 100/100 100% | Samples: 100/100 | harmony:  0/100 | HTTP retries: 0
+
+---------------------------------------------------------                       
+heldout_reward_hacking (100 samples): harmony/base_bf16                         
+max_connections: 100, max_tokens: 8192, top_p: 1.0, temperature: 1.0,           
+reasoning_effort: medium, dataset: heldout_reward_hacking                       
+                                                                                
+total time:               0:00:44                                               
+harmony/base_bf16         149,303 tokens [I: 10,007, O: 139,296]                
+                                                                                
+Log:                                                                            
+logs/steering/base_bf16/cheater_1/2026-11-18T22-31-03-00-00_heldout-reward-hack…
+---------------------------------------------------------                       
+                                                                                
+Wrote /workspace/repo/model-organisms/results/base_bf16_steer_cheater_1.logs.json (unscored logs)
