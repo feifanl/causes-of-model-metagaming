@@ -332,10 +332,22 @@ step_base() {
 step_lr_test() {
   LR_TEST_LRS="${LR_TEST_LRS:-1e-5 5e-5}" bash "$MO/scripts/run_sdf_on_gpu_node.sh" "$(deadline)" lr_test
 }
+find_sglang_cuda_toolkit() {  # exports SGLANG_CUDA_HOME: the CUDA toolkit SGLang needs (Isambard's cudatoolkit module)
+  # DeepEP's import asserts one and SGLang's JIT kernels compile with its nvcc (SGLang died at startup without,
+  # 2026-11-19). Only its CUDA_HOME is kept: the module's LD_LIBRARY_PATH would put its CUDA libraries ahead of
+  # torch's own. SGLang supports an nvcc older than torch's CUDA (sglang/kernels/jit/utils/arch.py).
+  [ -n "${SGLANG_CUDA_HOME:-}" ] || SGLANG_CUDA_HOME=$(type module >/dev/null 2>&1 || . /etc/profile >/dev/null 2>&1
+    module load cudatoolkit >/dev/null 2>&1 && echo "${CUDA_HOME:-}")
+  [ -x "$SGLANG_CUDA_HOME/bin/nvcc" ] \
+    || { say "no CUDA toolkit for SGLang ('module load cudatoolkit' gave CUDA_HOME='$SGLANG_CUDA_HOME')"; return 1; }
+  export SGLANG_CUDA_HOME
+  say "SGLang CUDA toolkit: $SGLANG_CUDA_HOME ($("$SGLANG_CUDA_HOME/bin/nvcc" --version | grep -o 'release [0-9.]*'))"
+}
 step_redwood() {
   # Redwood's expert LoRA needs SGLang (vLLM 0.30 drops it; DECISIONS 'RL organism serving'). Installed here, not in
   # setup, so a failed SGLang install stops only this step.
   local uv run="$MO/scripts/run_pilot_stage_on_gpu_node.sh" rw=ORGANISM=redwood_step952 judged=em,hacking,hacking_unstated,hacking_vague,mmlu a b rc=0
+  find_sglang_cuda_toolkit || return 1
   uv="$(command -v uv || echo "$HOME/.local/bin/uv")"
   WITH_SGLANG=1 PYTHON="$("$uv" python find 3.11)" UV="$uv" bash "$MO/scripts/setup_gpu_node.sh" "$DATA" \
       > "$STATE/setup_sglang.log" 2>&1 || { say "SGLang setup failed; see $STATE/setup_sglang.log"; return 1; }

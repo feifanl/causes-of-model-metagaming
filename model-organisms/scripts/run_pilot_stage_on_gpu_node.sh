@@ -693,7 +693,12 @@ serve_sglang() {  # serve_sglang <A|B> <port> <served name> <lora name> <lora di
   # SGLang imports DeepGEMM at startup unless its JIT is off, and DeepGEMM asserts a CUDA toolkit, which Isambard
   # nodes lack (AssertionError in find_cuda_home, 2026-11-13). Off, SGLang skips the import; gpt-oss's bf16 MoE
   # runs on triton here anyway. As for the vLLM judges, the variable still overrides it.
-  setsid "${HALF_CMD[@]}" "SGLANG_ENABLE_JIT_DEEPGEMM=${SGLANG_ENABLE_JIT_DEEPGEMM:-0}" \
+  # DeepEP has no such switch: its import asserts a toolkit too (2026-11-19), and SGLang's own JIT kernels compile
+  # with nvcc. SGLANG_CUDA_HOME (Isambard's cudatoolkit module, from run_on_isambard.sh) becomes CUDA_HOME for
+  # SGLang only, so vLLM and torch keep the environment the other steps ran in.
+  local cuda=()
+  [ -n "${SGLANG_CUDA_HOME:-}" ] && cuda=("CUDA_HOME=$SGLANG_CUDA_HOME")
+  setsid "${HALF_CMD[@]}" "SGLANG_ENABLE_JIT_DEEPGEMM=${SGLANG_ENABLE_JIT_DEEPGEMM:-0}" "${cuda[@]}" \
       "$SGLANG_PY" -m sglang.launch_server --model-path "$BF16" --served-model-name "$name" \
       --tp "$(n_gpus "$gpus")" --port "$port" "${host[@]}" --context-length 16384 --enable-lora --max-lora-rank 32 --lora-target-modules all \
       --lora-paths "$4=$5" --moe-runner-backend triton > "$STATE/sglang_$name.log" 2>&1 &

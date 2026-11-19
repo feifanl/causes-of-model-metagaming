@@ -74,6 +74,7 @@ def node(tmp_path) -> Node:
     sglang.parent.mkdir(parents=True)
     sglang.write_text("#!/usr/bin/env bash\n"
                       'echo "${SGLANG_ENABLE_JIT_DEEPGEMM-unset}" >> "$FAKE_DIR/sglang_jit_deepgemm"\n'
+                      'echo "${CUDA_HOME-unset}" >> "$FAKE_DIR/sglang_cuda_home"\n'
                       + FAKE_VLLM.replace("vllm_flags", "sglang_flags")
                       .replace("--lora-modules)", "--lora-paths)"), newline="\n")
     sglang.chmod(0o755)
@@ -169,6 +170,14 @@ def test_redwood_is_served_by_sglang_with_its_whole_adapter(node):
     assert rc == 0, status
     (ev,) = node.calls("run_pilot_evals")
     assert flag(ev, "--model") == "harmony/base_B_redwood_step952:redwood_step952"  # SGLang's <base>:<adapter>
+
+
+def test_sglang_gets_the_cuda_toolkit_it_is_given(node):
+    # DeepEP and SGLang's JIT kernels need a CUDA toolkit; Isambard's comes from a module (2026-11-19)
+    assert node.stage("rl_adapter", ORGANISM="redwood_step952")[0] == 0
+    rc, status = node.stage("rl_check", ORGANISM="redwood_step952", SGLANG_CUDA_HOME="/tools/cuda-12.6")
+    assert rc == 0, status
+    assert set((node.tmp / "sglang_cuda_home").read_text().split()) == {"/tools/cuda-12.6"}
 
 
 def test_rl_check_can_reuse_a_reference_that_has_the_floor(node):

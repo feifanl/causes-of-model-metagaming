@@ -106,6 +106,9 @@ class Login:
         for name, body in tools.items():
             write_exe(self.bin / name, body)
         (self.bin / "env").write_text(UV_ENV, newline="\n")  # not executable, first on PATH: as on Isambard
+        # The CUDA toolkit SGLang needs; on Isambard it comes from `module load cudatoolkit`, which tests can't fake.
+        self.cuda = tmp / "cuda"
+        write_exe(self.cuda / "bin" / "nvcc", 'echo "Cuda compilation tools, release 12.6, V12.6.85"\n')
         env_file = tmp / "home" / ".config" / "spar" / "env"
         env_file.parent.mkdir(parents=True)
         env_file.write_text(f"DATA_DIR={posix(self.data)}\n", newline="\n")
@@ -134,7 +137,8 @@ class Login:
         inherited = {k: v for k, v in os.environ.items() if k not in LEAKY_SETTINGS and not k.startswith("SLURM_")}
         full_env = {**inherited, "HOME": posix(self.tmp / "home"), "USER": "operator", "FAKE_DIR": posix(self.tmp),
                     "REAL_PY": posix(Path(sys.executable)), "FAKE_JOB_END": str(int(time.time()) + 20 * 3600),
-                    "PATH": str(self.bin) + os.pathsep + self.system_path, **env}
+                    "PATH": str(self.bin) + os.pathsep + self.system_path, "SGLANG_CUDA_HOME": posix(self.cuda),
+                    **env}
         if job:
             full_env.update(SLURM_JOB_ID="1000", SLURM_JOB_NODELIST="nodeA,nodeB", SLURM_CPUS_ON_NODE="288")
         script = script or self.repo / "model-organisms" / "scripts" / "run_on_isambard.sh"
@@ -296,6 +300,20 @@ def test_redwood_step_serves_its_lora_checked_and_judges_both_settings_beside_ba
     assert calls.index(base) < calls.index(off)  # half B: base, then Redwood
     assert calls[-1] == ("panel results/redwood_step952_panel_reasoning_on.logs.json "
                          "results/redwood_step952_panel.logs.json results/base_own_panel.logs.json")
+
+
+def test_redwood_step_hands_sglang_the_cuda_toolkit(isambard):
+    code, out = isambard.run("redwood", job=True)
+    assert code == 0, out
+    assert f"SGLang CUDA toolkit: {posix(isambard.cuda)} (release 12.6)" in isambard.status()
+
+
+def test_redwood_step_without_a_cuda_toolkit_stops_before_installing_sglang(isambard):
+    # DeepEP's import asserts a CUDA toolkit (SGLang died at startup, 2026-11-19); no module here, so none.
+    code, out = isambard.run("redwood", job=True, SGLANG_CUDA_HOME="")
+    assert code != 0
+    assert "no CUDA toolkit for SGLang" in isambard.status() and "FAILED: redwood stopped" in isambard.status()
+    assert not any("WITH_SGLANG=1" in c or c.startswith("stage") for c in isambard.calls())
 
 
 def test_a_failed_redwood_eval_stops_before_the_panel(isambard):
