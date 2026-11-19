@@ -1,0 +1,40 @@
+2026-11-19T05:54:49Z judge_panel start: 36 manifest(s), judges qwen, GPUs 0,1,2,3 (TP 4)
+2026-11-19T06:03:20Z judge_panel judge qwen ready (300s); scoring
+2026-11-19T06:14:05Z judge_panel judge qwen done
+2026-11-19T06:14:10Z judge_panel voted results/base_bf16_steer_none.logs.json
+2026-11-19T06:14:12Z judge_panel voted results/base_bf16_steer_honest_0.5.logs.json
+2026-11-19T06:14:14Z judge_panel voted results/base_bf16_steer_honest_1.logs.json
+2026-11-19T06:14:17Z judge_panel voted results/base_bf16_steer_honest_2.logs.json
+2026-11-19T06:14:19Z judge_panel voted results/base_bf16_steer_honest_4.logs.json
+2026-11-19T06:14:22Z judge_panel voted results/base_bf16_steer_honest_8.logs.json
+2026-11-19T06:14:24Z judge_panel voted results/base_bf16_steer_cheater_1.logs.json
+2026-11-19T06:14:27Z judge_panel voted results/base_bf16_steer_cheater_2.logs.json
+2026-11-19T06:14:29Z judge_panel voted results/base_bf16_steer_cheater_4.logs.json
+2026-11-19T06:14:32Z judge_panel voted results/control_steer_none.logs.json
+2026-11-19T06:14:34Z judge_panel voted results/control_steer_honest_0.5.logs.json
+2026-11-19T06:14:37Z judge_panel voted results/control_steer_honest_1.logs.json
+2026-11-19T06:14:39Z judge_panel voted results/control_steer_honest_2.logs.json
+2026-11-19T06:14:41Z judge_panel voted results/control_steer_honest_4.logs.json
+2026-11-19T06:14:44Z judge_panel voted results/control_steer_honest_8.logs.json
+2026-11-19T06:14:46Z judge_panel voted results/control_steer_cheater_1.logs.json
+2026-11-19T06:14:49Z judge_panel voted results/control_steer_cheater_2.logs.json
+2026-11-19T06:14:51Z judge_panel voted results/control_steer_cheater_4.logs.json
+2026-11-19T06:14:53Z judge_panel voted results/srh_mixed_steer_none.logs.json
+2026-11-19T06:14:56Z judge_panel voted results/srh_mixed_steer_honest_0.5.logs.json
+2026-11-19T06:14:58Z judge_panel voted results/srh_mixed_steer_honest_1.logs.json
+2026-11-19T06:15:01Z judge_panel voted results/srh_mixed_steer_honest_2.logs.json
+2026-11-19T06:15:03Z judge_panel voted results/srh_mixed_steer_honest_4.logs.json
+2026-11-19T06:15:05Z judge_panel voted results/srh_mixed_steer_honest_8.logs.json
+2026-11-19T06:15:08Z judge_panel voted results/srh_mixed_steer_cheater_1.logs.json
+2026-11-19T06:15:10Z judge_panel voted results/srh_mixed_steer_cheater_2.logs.json
+2026-11-19T06:15:12Z judge_panel voted results/srh_mixed_steer_cheater_4.logs.json
+2026-11-19T06:15:15Z judge_panel voted results/redwood_step952_steer_none.logs.json
+2026-11-19T06:15:17Z judge_panel voted results/redwood_step952_steer_honest_0.5.logs.json
+2026-11-19T06:15:20Z judge_panel voted results/redwood_step952_steer_honest_1.logs.json
+2026-11-19T06:15:22Z judge_panel voted results/redwood_step952_steer_honest_2.logs.json
+2026-11-19T06:15:25Z judge_panel voted results/redwood_step952_steer_honest_4.logs.json
+2026-11-19T06:15:27Z judge_panel voted results/redwood_step952_steer_honest_8.logs.json
+2026-11-19T06:15:30Z judge_panel voted results/redwood_step952_steer_cheater_1.logs.json
+2026-11-19T06:15:32Z judge_panel voted results/redwood_step952_steer_cheater_2.logs.json
+2026-11-19T06:15:34Z judge_panel voted results/redwood_step952_steer_cheater_4.logs.json
+2026-11-19T06:15:34Z judge_panel finished

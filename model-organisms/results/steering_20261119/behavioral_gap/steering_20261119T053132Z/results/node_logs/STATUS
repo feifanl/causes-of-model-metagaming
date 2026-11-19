@@ -1,0 +1,13 @@
+2026-11-19T05:26:27Z launcher waiting for HF tokens in /root/.config/spar/env
+2026-11-19T05:27:57Z launcher tokens found: judging steering_20261119T012828Z (cap 4 h) on 23b42d9 fix(ops): disable deepgemm for sglang on isambard + overlay
+2026-11-19T05:27:57Z steering start (prefix behavioral_gap/steering_20261119T052757Z, cap 4 h)
+2026-11-19T05:29:59Z steering FAILED: could not write the manifest for base_bf16_steer_none
+2026-11-19T05:30:00Z steering uploaded results
+2026-11-19T05:30:00Z launcher steering rejudge exited (1)
+2026-11-19T05:31:32Z launcher waiting for HF tokens in /root/.config/spar/env
+2026-11-19T05:31:32Z launcher tokens found: judging steering_20261119T012828Z (cap 4 h) on 23b42d9 fix(ops): disable deepgemm for sglang on isambard + overlay
+2026-11-19T05:31:32Z steering start (prefix behavioral_gap/steering_20261119T053132Z, cap 4 h)
+2026-11-19T05:54:26Z steering organism pipeline set up (its venvs, data, tests)
+2026-11-19T05:54:49Z steering fetched 36 steered answer logs from behavioral_gap/steering_20261119T012828Z (liveness probes not re-made)
+2026-11-19T06:15:42Z steering steering compared
+2026-11-19T06:15:45Z steering uploaded results

@@ -1,0 +1,703 @@
+Filesystem      Size  Used Avail Use% Mounted on
+overlay         700G   13G  688G   2% /
+name, memory.total [MiB], driver_version
+NVIDIA H200 NVL, 143771 MiB, 610.57.04
+NVIDIA H200 NVL, 143771 MiB, 610.57.04
+NVIDIA H200 NVL, 143771 MiB, 610.57.04
+NVIDIA H200 NVL, 143771 MiB, 610.57.04
+Looking in indexes: https://download.pytorch.org/whl/cu130
+Collecting torch==2.14.0
+  Downloading https://download-r2.pytorch.org/whl/cu130/torch-2.14.0%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (37 kB)
+Collecting filelock (from torch==2.14.0)
+  Downloading filelock-4.2.4-py3-none-any.whl.metadata (2.0 kB)
+Collecting typing-extensions>=4.10.0 (from torch==2.14.0)
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting setuptools>=77.0.3 (from torch==2.14.0)
+  Downloading https://download.pytorch.org/whl/setuptools-78.1.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting sympy>=1.13.3 (from torch==2.14.0)
+  Using cached sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+Collecting networkx>=2.5.1 (from torch==2.14.0)
+  Using cached networkx-3.7-py3-none-any.whl.metadata (6.7 kB)
+Collecting jinja2 (from torch==2.14.0)
+  Downloading https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting fsspec>=0.8.5 (from torch==2.14.0)
+  Using cached fsspec-2026.9.0-py3-none-any.whl.metadata (10 kB)
+Collecting cuda-toolkit==13.0.3 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/cuda-toolkit/cuda_toolkit-13.0.3.0-py2.py3-none-any.whl (2.5 kB)
+Collecting cuda-bindings<14,>=13.0.3 (from torch==2.14.0)
+  Downloading cuda_bindings-13.4.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting nvidia-cudnn-cu13==9.24.0.43 (from torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cudnn-cu13/nvidia_cudnn_cu13-9.24.0.43-py3-none-manylinux_2_27_x86_64.whl (553.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 553.1/553.1 MB 138.3 MB/s eta 0:00:00
+Collecting nvidia-cusparselt-cu13==0.8.1 (from torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cusparselt-cu13/nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl (170.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 170.1/170.1 MB 173.8 MB/s eta 0:00:00
+Collecting nvidia-nccl-cu13==2.30.7 (from torch==2.14.0)
+  Downloading nvidia_nccl_cu13-2.30.7-py3-none-manylinux_2_18_x86_64.whl.metadata (2.1 kB)
+Collecting nvidia-nvshmem-cu13==3.4.5 (from torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-nvshmem-cu13/nvidia_nvshmem_cu13-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (60.4 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 60.4/60.4 MB 193.4 MB/s eta 0:00:00
+Collecting triton~=3.8.0 (from torch==2.14.0)
+  Downloading https://download-r2.pytorch.org/whl/triton-3.8.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (978 bytes)
+Collecting nvidia-cublas==13.1.1.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cublas/nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl (423.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 423.1/423.1 MB 141.2 MB/s eta 0:00:00
+Collecting nvidia-cuda-nvrtc==13.0.88.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cuda-nvrtc/nvidia_cuda_nvrtc-13.0.88-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (90.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 90.2/90.2 MB 229.9 MB/s eta 0:00:00
+Collecting nvidia-cuda-runtime==13.0.96.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cuda-runtime/nvidia_cuda_runtime-13.0.96-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (2.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 723.3 MB/s eta 0:00:00
+Collecting nvidia-cufft==12.0.0.61.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cufft/nvidia_cufft-12.0.0.61-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (214.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 214.1/214.1 MB 174.2 MB/s eta 0:00:00
+Collecting nvidia-nvjitlink<14,>=13.0.88 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-nvjitlink/nvidia_nvjitlink-13.4.92-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (42.5 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 42.5/42.5 MB 233.0 MB/s eta 0:00:00
+Collecting nvidia-cufile==1.15.1.6.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cufile/nvidia_cufile-1.15.1.6-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 649.5 MB/s eta 0:00:00
+Collecting nvidia-cuda-cupti==13.0.85.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cuda-cupti/nvidia_cuda_cupti-13.0.85-py3-none-manylinux_2_25_x86_64.whl (10.7 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.7/10.7 MB 264.4 MB/s eta 0:00:00
+Collecting nvidia-curand==10.4.0.35.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-curand/nvidia_curand-10.4.0.35-py3-none-manylinux_2_27_x86_64.whl (59.5 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.5/59.5 MB 197.7 MB/s eta 0:00:00
+Collecting nvidia-cusolver==12.0.4.66.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cusolver/nvidia_cusolver-12.0.4.66-py3-none-manylinux_2_27_x86_64.whl (200.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 200.9/200.9 MB 211.1 MB/s eta 0:00:00
+Collecting nvidia-cusparse==12.6.3.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-cusparse/nvidia_cusparse-12.6.3.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (145.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 145.9/145.9 MB 206.6 MB/s eta 0:00:00
+Collecting nvidia-nvtx==13.0.85.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0)
+  Downloading https://pypi.nvidia.com/nvidia-nvtx/nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl (148 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 148.0/148.0 kB 412.2 MB/s eta 0:00:00
+Collecting cuda-pathfinder>=1.4.2 (from cuda-bindings<14,>=13.0.3->torch==2.14.0)
+  Downloading cuda_pathfinder-1.8.4-py3-none-any.whl.metadata (1.9 kB)
+Collecting mpmath<1.4,>=1.1.0 (from sympy>=1.13.3->torch==2.14.0)
+  Using cached mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting MarkupSafe>=2.0 (from jinja2->torch==2.14.0)
+  Downloading https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Downloading https://download-r2.pytorch.org/whl/cu130/torch-2.14.0%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl (554.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 554.6/554.6 MB 42.6 MB/s eta 0:00:00
+Downloading nvidia_nccl_cu13-2.30.7-py3-none-manylinux_2_18_x86_64.whl (216.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 216.0/216.0 MB 84.2 MB/s eta 0:00:00
+Downloading cuda_bindings-13.4.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (7.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.2/7.2 MB 213.3 MB/s eta 0:00:00
+Using cached fsspec-2026.9.0-py3-none-any.whl (221 kB)
+Using cached networkx-3.7-py3-none-any.whl (2.1 MB)
+Downloading https://download.pytorch.org/whl/setuptools-78.1.0-py3-none-any.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 60.6 MB/s eta 0:00:00
+Using cached sympy-1.14.0-py3-none-any.whl (6.3 MB)
+Downloading https://download-r2.pytorch.org/whl/triton-3.8.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (246.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 246.8/246.8 MB 84.7 MB/s eta 0:00:00
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading filelock-4.2.4-py3-none-any.whl (162 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 162.5/162.5 kB 125.6 MB/s eta 0:00:00
+Downloading https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl (134 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 134.9/134.9 kB 127.0 MB/s eta 0:00:00
+Downloading cuda_pathfinder-1.8.4-py3-none-any.whl (62 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.6/62.6 kB 59.0 MB/s eta 0:00:00
+Downloading https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+Using cached mpmath-1.3.0-py3-none-any.whl (536 kB)
+Installing collected packages: nvidia-cusparselt-cu13, mpmath, cuda-toolkit, typing-extensions, triton, sympy, setuptools, nvidia-nvtx, nvidia-nvshmem-cu13, nvidia-nvjitlink, nvidia-nccl-cu13, nvidia-curand, nvidia-cufile, nvidia-cuda-runtime, nvidia-cuda-nvrtc, nvidia-cuda-cupti, networkx, MarkupSafe, fsspec, filelock, cuda-pathfinder, nvidia-cusparse, nvidia-cufft, nvidia-cublas, jinja2, cuda-bindings, nvidia-cusolver, nvidia-cudnn-cu13, torch
+Successfully installed MarkupSafe-3.0.3 cuda-bindings-13.4.4 cuda-pathfinder-1.8.4 cuda-toolkit-13.0.3.0 filelock-4.2.4 fsspec-2026.9.0 jinja2-3.1.6 mpmath-1.3.0 networkx-3.7 nvidia-cublas-13.1.1.3 nvidia-cuda-cupti-13.0.85 nvidia-cuda-nvrtc-13.0.88 nvidia-cuda-runtime-13.0.96 nvidia-cudnn-cu13-9.24.0.43 nvidia-cufft-12.0.0.61 nvidia-cufile-1.15.1.6 nvidia-curand-10.4.0.35 nvidia-cusolver-12.0.4.66 nvidia-cusparse-12.6.3.3 nvidia-cusparselt-cu13-0.8.1 nvidia-nccl-cu13-2.30.7 nvidia-nvjitlink-13.4.92 nvidia-nvshmem-cu13-3.4.5 nvidia-nvtx-13.0.85 setuptools-78.1.0 sympy-1.14.0 torch-2.14.0+cu130 triton-3.8.0 typing-extensions-4.16.0
+Collecting ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d (from -r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Cloning https://github.com/allenai/IFBench (to revision 1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d) to /tmp/pip-install-1jurc952/ifbench_e9a474d0a43e472a83bb833df5cd94c7
+  Running command git clone --filter=blob:none --quiet https://github.com/allenai/IFBench /tmp/pip-install-1jurc952/ifbench_e9a474d0a43e472a83bb833df5cd94c7
+  Running command git rev-parse -q --verify 'sha^1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d'
+  Running command git fetch -q https://github.com/allenai/IFBench 1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d
+  Running command git checkout -q 1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d
+  Resolved https://github.com/allenai/IFBench to commit 1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting kernels<0.17,>=0.16
+  Downloading kernels-0.16.2-py3-none-any.whl.metadata (3.1 kB)
+Requirement already satisfied: torch==2.14.0 in ./venv/lib/python3.12/site-packages (from -r /workspace/repo/model-organisms/requirements.txt (line 5)) (2.14.0+cu130)
+Collecting huggingface_hub==1.33.0 (from -r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Downloading huggingface_hub-1.33.0-py3-none-any.whl.metadata (16 kB)
+Collecting datasets==5.0.1 (from -r /workspace/repo/model-organisms/requirements.txt (line 9))
+  Downloading datasets-5.0.1-py3-none-any.whl.metadata (23 kB)
+Collecting pyarrow==25.0.1 (from -r /workspace/repo/model-organisms/requirements.txt (line 10))
+  Downloading pyarrow-25.0.1-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (3.0 kB)
+Collecting openai-harmony==0.0.8 (from -r /workspace/repo/model-organisms/requirements.txt (line 11))
+  Using cached openai_harmony-0.0.8-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (8.0 kB)
+Collecting transformers==5.17.0 (from -r /workspace/repo/model-organisms/requirements.txt (line 14))
+  Downloading transformers-5.17.0-py3-none-any.whl.metadata (32 kB)
+Collecting peft==0.21.1 (from -r /workspace/repo/model-organisms/requirements.txt (line 15))
+  Downloading peft-0.21.1-py3-none-any.whl.metadata (14 kB)
+Collecting trl==1.14.1 (from -r /workspace/repo/model-organisms/requirements.txt (line 16))
+  Downloading trl-1.14.1-py3-none-any.whl.metadata (12 kB)
+Collecting accelerate==1.15.0 (from -r /workspace/repo/model-organisms/requirements.txt (line 17))
+  Downloading accelerate-1.15.0-py3-none-any.whl.metadata (19 kB)
+Collecting inspect_ai==0.3.273 (from -r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Downloading inspect_ai-0.3.273-py3-none-any.whl.metadata (8.8 kB)
+Collecting agent-client-protocol==0.12.1 (from -r /workspace/repo/model-organisms/requirements.txt (line 24))
+  Using cached agent_client_protocol-0.12.1-py3-none-any.whl.metadata (5.8 kB)
+Collecting inspect-evals==0.24.0 (from inspect-evals[agentic-misalignment]==0.24.0->-r /workspace/repo/model-organisms/requirements.txt (line 26))
+  Downloading inspect_evals-0.24.0-py3-none-any.whl.metadata (15 kB)
+Collecting anthropic==1.12.0 (from -r /workspace/repo/model-organisms/requirements.txt (line 27))
+  Downloading anthropic-1.12.0-py3-none-any.whl.metadata (3.8 kB)
+Collecting openai==3.22.1 (from -r /workspace/repo/model-organisms/requirements.txt (line 28))
+  Downloading openai-3.22.1-py3-none-any.whl.metadata (44 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 44.3/44.3 kB 26.0 MB/s eta 0:00:00
+Collecting pytest==9.1.1 (from -r /workspace/repo/model-organisms/requirements.txt (line 31))
+  Using cached pytest-9.1.1-py3-none-any.whl.metadata (7.6 kB)
+Requirement already satisfied: filelock in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (4.2.4)
+Requirement already satisfied: typing-extensions>=4.10.0 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (4.16.0)
+Requirement already satisfied: setuptools>=77.0.3 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (78.1.0)
+Requirement already satisfied: sympy>=1.13.3 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (3.7)
+Requirement already satisfied: jinja2 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (2026.9.0)
+Requirement already satisfied: cuda-toolkit==13.0.3 in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (13.0.3.0)
+Requirement already satisfied: cuda-bindings<14,>=13.0.3 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (13.4.4)
+Requirement already satisfied: nvidia-cudnn-cu13==9.24.0.43 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (9.24.0.43)
+Requirement already satisfied: nvidia-cusparselt-cu13==0.8.1 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (0.8.1)
+Requirement already satisfied: nvidia-nccl-cu13==2.30.7 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (2.30.7)
+Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (3.4.5)
+Requirement already satisfied: triton~=3.8.0 in ./venv/lib/python3.12/site-packages (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (3.8.0)
+Collecting click<9.0.0,>=8.4.2 (from huggingface_hub==1.33.0->-r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Using cached click-8.5.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting hf-xet<2.0.0,>=1.6.0 (from huggingface_hub==1.33.0->-r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Using cached hf_xet-1.8.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+Collecting httpx<1,>=0.23.0 (from huggingface_hub==1.33.0->-r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting packaging>=20.9 (from huggingface_hub==1.33.0->-r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Using cached packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Collecting pyyaml>=5.1 (from huggingface_hub==1.33.0->-r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Using cached pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting tqdm>=4.42.1 (from huggingface_hub==1.33.0->-r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Using cached tqdm-4.70.1-py3-none-any.whl.metadata (57 kB)
+Collecting numpy>=1.17 (from datasets==5.0.1->-r /workspace/repo/model-organisms/requirements.txt (line 9))
+  Using cached numpy-2.5.5-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (6.6 kB)
+Collecting dill<0.4.2,>=0.3.0 (from datasets==5.0.1->-r /workspace/repo/model-organisms/requirements.txt (line 9))
+  Using cached dill-0.4.1-py3-none-any.whl.metadata (10 kB)
+Collecting pandas (from datasets==5.0.1->-r /workspace/repo/model-organisms/requirements.txt (line 9))
+  Downloading pandas-3.1.1-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (16 kB)
+Collecting requests>=2.32.2 (from datasets==5.0.1->-r /workspace/repo/model-organisms/requirements.txt (line 9))
+  Using cached requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+Collecting xxhash (from datasets==5.0.1->-r /workspace/repo/model-organisms/requirements.txt (line 9))
+  Downloading xxhash-4.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (18 kB)
+Collecting multiprocess<0.70.20 (from datasets==5.0.1->-r /workspace/repo/model-organisms/requirements.txt (line 9))
+  Downloading multiprocess-0.70.19-py312-none-any.whl.metadata (7.5 kB)
+Collecting fsspec>=0.8.5 (from torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5))
+  Using cached fsspec-2026.6.0-py3-none-any.whl.metadata (10 kB)
+Collecting pydantic>=2.11.7 (from openai-harmony==0.0.8->-r /workspace/repo/model-organisms/requirements.txt (line 11))
+  Using cached pydantic-2.14.3-py3-none-any.whl.metadata (141 kB)
+Collecting regex>=2025.10.22 (from transformers==5.17.0->-r /workspace/repo/model-organisms/requirements.txt (line 14))
+  Using cached regex-2026.11.19-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+Collecting tokenizers<0.24.0,>=0.23.1 (from transformers==5.17.0->-r /workspace/repo/model-organisms/requirements.txt (line 14))
+  Using cached tokenizers-0.23.3-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (9.8 kB)
+Collecting typer (from transformers==5.17.0->-r /workspace/repo/model-organisms/requirements.txt (line 14))
+  Using cached typer-0.29.2-py3-none-any.whl.metadata (16 kB)
+Collecting safetensors>=0.8.0 (from transformers==5.17.0->-r /workspace/repo/model-organisms/requirements.txt (line 14))
+  Using cached safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.2 kB)
+Collecting psutil (from peft==0.21.1->-r /workspace/repo/model-organisms/requirements.txt (line 15))
+  Using cached psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (22 kB)
+Collecting aiobotocore>=2.18.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached aiobotocore-3.10.0-py3-none-any.whl.metadata (32 kB)
+Collecting anyio>=4.14.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached anyio-4.16.0-py3-none-any.whl.metadata (4.7 kB)
+Collecting beautifulsoup4>=4.10.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached beautifulsoup4-4.15.0-py3-none-any.whl.metadata (3.8 kB)
+Collecting boto3 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached boto3-1.44.6-py3-none-any.whl.metadata (6.6 kB)
+Collecting debugpy (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached debugpy-1.8.22-cp312-cp312-manylinux_2_34_x86_64.whl.metadata (1.4 kB)
+Collecting docstring-parser>=0.16 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached docstring_parser-0.18.0-py3-none-any.whl.metadata (3.5 kB)
+Collecting fastapi>=0.119.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached fastapi-0.165.0-py3-none-any.whl.metadata (27 kB)
+Collecting ijson>=3.2.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached ijson-3.6.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (23 kB)
+Collecting jsonlines>=3.0.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached jsonlines-4.0.0-py3-none-any.whl.metadata (1.6 kB)
+Collecting jsonpatch>=1.32 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached jsonpatch-1.47-py3-none-any.whl.metadata (4.9 kB)
+Collecting jsonpath-ng>=1.8.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached jsonpath_ng-1.16.0-py3-none-any.whl.metadata (17 kB)
+Collecting jsonref>=1.1.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached jsonref-1.1.0-py3-none-any.whl.metadata (2.7 kB)
+Collecting jsonschema>3.1.1 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached jsonschema-4.26.0-py3-none-any.whl.metadata (7.6 kB)
+Collecting markdown-it-py>=2.2.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached markdown_it_py-4.3.0-py3-none-any.whl.metadata (7.9 kB)
+Collecting mmh3>3.1.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached mmh3-5.3.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (13 kB)
+Collecting nest_asyncio2>=1.7.2 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached nest_asyncio2-1.7.4-py3-none-any.whl.metadata (7.0 kB)
+Collecting platformdirs>=2.3.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached platformdirs-4.14.7-py3-none-any.whl.metadata (5.7 kB)
+Collecting python-dotenv>=0.16.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached python_dotenv-1.2.4-py3-none-any.whl.metadata (29 kB)
+Collecting rich!=14.0.0,>=13.3.3 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached rich-15.0.0-py3-none-any.whl.metadata (18 kB)
+Collecting s3fs>=2023 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached s3fs-2026.9.0-py3-none-any.whl.metadata (1.2 kB)
+Collecting semver>=3.0.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached semver-3.1.2-py3-none-any.whl.metadata (5.1 kB)
+Collecting shortuuid (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached shortuuid-1.0.13-py3-none-any.whl.metadata (5.8 kB)
+Collecting sniffio (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting tenacity (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached tenacity-9.2.1-py3-none-any.whl.metadata (1.4 kB)
+Collecting textual>=6.2.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached textual-8.2.8-py3-none-any.whl.metadata (9.1 kB)
+Collecting tiktoken>=0.12.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached tiktoken-0.14.0-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (6.7 kB)
+Collecting universal-pathlib>=0.2.6 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached universal_pathlib-0.3.10-py3-none-any.whl.metadata (39 kB)
+Collecting uvicorn (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached uvicorn-0.54.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting zipfile-zstd>=0.0.4 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached zipfile_zstd-0.0.4-py3-none-any.whl.metadata (2.0 kB)
+Collecting zipp>=3.19.1 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached zipp-4.1.2-py3-none-any.whl.metadata (3.6 kB)
+Collecting zstandard>=0.20.0 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached zstandard-0.25.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.3 kB)
+Collecting backoff>=2.2.0 (from inspect-evals==0.24.0->inspect-evals[agentic-misalignment]==0.24.0->-r /workspace/repo/model-organisms/requirements.txt (line 26))
+  Downloading backoff-2.2.1-py3-none-any.whl.metadata (14 kB)
+Collecting pillow>=11.3.0 (from inspect-evals==0.24.0->inspect-evals[agentic-misalignment]==0.24.0->-r /workspace/repo/model-organisms/requirements.txt (line 26))
+  Using cached pillow-13.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.1 kB)
+Collecting toml>=0.10.2 (from inspect-evals==0.24.0->inspect-evals[agentic-misalignment]==0.24.0->-r /workspace/repo/model-organisms/requirements.txt (line 26))
+  Downloading toml-0.10.2-py2.py3-none-any.whl.metadata (7.1 kB)
+Collecting httpx2<3,>=2.0.0 (from anthropic==1.12.0->-r /workspace/repo/model-organisms/requirements.txt (line 27))
+  Using cached httpx2-2.16.2-py3-none-any.whl.metadata (10.0 kB)
+Collecting jiter<1,>=0.4.0 (from anthropic==1.12.0->-r /workspace/repo/model-organisms/requirements.txt (line 27))
+  Using cached jiter-0.19.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (5.2 kB)
+Collecting iniconfig>=1.0.1 (from pytest==9.1.1->-r /workspace/repo/model-organisms/requirements.txt (line 31))
+  Using cached iniconfig-2.3.1-py3-none-any.whl.metadata (2.8 kB)
+Collecting pluggy<2,>=1.5 (from pytest==9.1.1->-r /workspace/repo/model-organisms/requirements.txt (line 31))
+  Using cached pluggy-1.7.0-py3-none-any.whl.metadata (5.0 kB)
+Collecting pygments>=2.7.2 (from pytest==9.1.1->-r /workspace/repo/model-organisms/requirements.txt (line 31))
+  Using cached pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting bs4 (from inspect-evals[agentic-misalignment]==0.24.0->-r /workspace/repo/model-organisms/requirements.txt (line 26))
+  Downloading bs4-0.0.2-py2.py3-none-any.whl.metadata (411 bytes)
+Requirement already satisfied: nvidia-cublas==13.1.1.3.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (13.1.1.3)
+Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (13.0.88)
+Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (13.0.96)
+Requirement already satisfied: nvidia-cufft==12.0.0.61.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (12.0.0.61)
+Requirement already satisfied: nvidia-nvjitlink<14,>=13.0.88 in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (13.4.92)
+Requirement already satisfied: nvidia-cufile==1.15.1.6.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (1.15.1.6)
+Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (13.0.85)
+Requirement already satisfied: nvidia-curand==10.4.0.35.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (10.4.0.35)
+Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (12.0.4.66)
+Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (12.6.3.3)
+Requirement already satisfied: nvidia-nvtx==13.0.85.* in ./venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (13.0.85)
+Collecting kernels-data>=0.14.0.dev1 (from kernels<0.17,>=0.16)
+  Downloading kernels_data-0.16.2-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (294 bytes)
+Collecting sigstore<5,>=4 (from kernels<0.17,>=0.16)
+  Downloading sigstore-4.5.1-py3-none-any.whl.metadata (17 kB)
+Collecting tomlkit>=0.13.3 (from kernels<0.17,>=0.16)
+  Using cached tomlkit-0.15.2-py3-none-any.whl.metadata (3.4 kB)
+Collecting absl-py (from ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Downloading absl_py-2.5.1-py3-none-any.whl.metadata (3.3 kB)
+Collecting emoji (from ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Downloading emoji-2.16.0-py3-none-any.whl.metadata (5.7 kB)
+Collecting immutabledict (from ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Downloading immutabledict-4.3.1-py3-none-any.whl.metadata (3.5 kB)
+Collecting langdetect (from ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Downloading langdetect-1.0.9.tar.gz (981 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 981.5/981.5 kB 38.4 MB/s eta 0:00:00
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting nltk (from ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Downloading nltk-3.10.4-py3-none-any.whl.metadata (5.0 kB)
+Collecting pydantic-settings (from ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Using cached pydantic_settings-2.16.3-py3-none-any.whl.metadata (4.0 kB)
+Collecting syllapy>=0.8.0 (from ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Downloading syllapy-0.8.0-py3-none-any.whl.metadata (1.2 kB)
+Collecting aiohttp<4.0.0,>=3.14.0 (from aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached aiohttp-3.14.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.3 kB)
+Collecting aioitertools<1.0.0,>=0.5.1 (from aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached aioitertools-0.13.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting botocore<1.43.118,>=1.43.115 (from aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached botocore-1.43.117-py3-none-any.whl.metadata (5.6 kB)
+Collecting jmespath<2.0.0,>=0.7.1 (from aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached jmespath-1.1.0-py3-none-any.whl.metadata (7.6 kB)
+Collecting multidict<8.0.0,>=6.0.0 (from aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached multidict-7.2.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (6.1 kB)
+Collecting python-dateutil<3.0.0,>=2.1 (from aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+Collecting wrapt<3.0.0,>=1.10.10 (from aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached wrapt-2.5.2-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (7.6 kB)
+Collecting idna>=2.8 (from anyio>=4.14.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+Collecting soupsieve>=1.6.1 (from beautifulsoup4>=4.10.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached soupsieve-4.1.2-py3-none-any.whl.metadata (4.4 kB)
+Requirement already satisfied: cuda-pathfinder>=1.4.2 in ./venv/lib/python3.12/site-packages (from cuda-bindings<14,>=13.0.3->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (1.8.4)
+Collecting starlette>=1.6.0 (from fastapi>=0.119.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached starlette-1.10.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi>=0.119.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached typing_inspection-0.4.5-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi>=0.119.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached annotated_doc-0.0.7-py3-none-any.whl.metadata (6.4 kB)
+Collecting opentelemetry-api>=1.44.0 (from fastapi>=0.119.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached opentelemetry_api-1.45.2-py3-none-any.whl.metadata (1.4 kB)
+Collecting certifi (from httpx<1,>=0.23.0->huggingface_hub==1.33.0->-r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Using cached certifi-2026.10.23-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx<1,>=0.23.0->huggingface_hub==1.33.0->-r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting h11>=0.16 (from httpcore==1.*->httpx<1,>=0.23.0->huggingface_hub==1.33.0->-r /workspace/repo/model-organisms/requirements.txt (line 8))
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting httpcore2==2.16.2 (from httpx2<3,>=2.0.0->anthropic==1.12.0->-r /workspace/repo/model-organisms/requirements.txt (line 27))
+  Using cached httpcore2-2.16.2-py3-none-any.whl.metadata (28 kB)
+Collecting truststore>=0.10 (from httpx2<3,>=2.0.0->anthropic==1.12.0->-r /workspace/repo/model-organisms/requirements.txt (line 27))
+  Using cached truststore-0.10.5-py3-none-any.whl.metadata (4.5 kB)
+Collecting attrs>=19.2.0 (from jsonlines>=3.0.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+Collecting jsonpointer>=3.8 (from jsonpatch>=1.32->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached jsonpointer-3.12-py3-none-any.whl.metadata (2.7 kB)
+Collecting jsonschema-specifications>=2023.03.6 (from jsonschema>3.1.1->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+Collecting referencing>=0.28.4 (from jsonschema>3.1.1->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+Collecting rpds-py>=0.25.0 (from jsonschema>3.1.1->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached rpds_py-2026.9.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting annotated-types>=0.6.0 (from pydantic>=2.11.7->openai-harmony==0.0.8->-r /workspace/repo/model-organisms/requirements.txt (line 11))
+  Using cached annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.50.4 (from pydantic>=2.11.7->openai-harmony==0.0.8->-r /workspace/repo/model-organisms/requirements.txt (line 11))
+  Using cached pydantic_core-2.50.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (6.6 kB)
+Collecting charset_normalizer<4,>=2 (from requests>=2.32.2->datasets==5.0.1->-r /workspace/repo/model-organisms/requirements.txt (line 9))
+  Using cached charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (46 kB)
+Collecting urllib3<3,>=1.26 (from requests>=2.32.2->datasets==5.0.1->-r /workspace/repo/model-organisms/requirements.txt (line 9))
+  Using cached urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+INFO: pip is looking at multiple versions of s3fs to determine which version is compatible with other requirements. This could take a while.
+Collecting s3fs>=2023 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached s3fs-2026.7.0-py3-none-any.whl.metadata (1.2 kB)
+  Using cached s3fs-2026.6.0-py3-none-any.whl.metadata (1.2 kB)
+Collecting cryptography>=47 (from sigstore<5,>=4->kernels<0.17,>=0.16)
+  Using cached cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (4.4 kB)
+Collecting id>=1.1.0 (from sigstore<5,>=4->kernels<0.17,>=0.16)
+  Downloading id-1.6.1-py3-none-any.whl.metadata (5.1 kB)
+Collecting pyjwt>=2.1 (from sigstore<5,>=4->kernels<0.17,>=0.16)
+  Using cached pyjwt-2.15.1-py3-none-any.whl.metadata (3.5 kB)
+Collecting rfc8785~=0.1.2 (from sigstore<5,>=4->kernels<0.17,>=0.16)
+  Downloading rfc8785-0.1.4-py3-none-any.whl.metadata (3.4 kB)
+Collecting rfc3161-client<1.1.0,>=1.0.3 (from sigstore<5,>=4->kernels<0.17,>=0.16)
+  Downloading rfc3161_client-1.0.9-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.0 kB)
+Collecting sigstore-models==0.0.6 (from sigstore<5,>=4->kernels<0.17,>=0.16)
+  Downloading sigstore_models-0.0.6-py3-none-any.whl.metadata (1.3 kB)
+Collecting sigstore-rekor-types==0.0.18 (from sigstore<5,>=4->kernels<0.17,>=0.16)
+  Downloading sigstore_rekor_types-0.0.18-py3-none-any.whl.metadata (13 kB)
+Collecting tuf<8,>=6 (from sigstore<5,>=4->kernels<0.17,>=0.16)
+  Downloading tuf-7.0.1-py3-none-any.whl.metadata (8.1 kB)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in ./venv/lib/python3.12/site-packages (from sympy>=1.13.3->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (1.3.0)
+Collecting mdit-py-plugins (from textual>=6.2.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached mdit_py_plugins-0.7.0-py3-none-any.whl.metadata (2.9 kB)
+Collecting pathlib-abc<0.6.0,>=0.5.1 (from universal-pathlib>=0.2.6->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached pathlib_abc-0.5.2-py3-none-any.whl.metadata (4.6 kB)
+INFO: pip is looking at multiple versions of boto3 to determine which version is compatible with other requirements. This could take a while.
+Collecting boto3 (from inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached boto3-1.44.5-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.44.4-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.44.3-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.44.2-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.44.1-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.44.0-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.43.127-py3-none-any.whl.metadata (6.6 kB)
+INFO: pip is still looking at multiple versions of boto3 to determine which version is compatible with other requirements. This could take a while.
+  Using cached boto3-1.43.126-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.43.125-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.43.124-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.43.123-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.43.122-py3-none-any.whl.metadata (6.6 kB)
+INFO: This is taking longer than usual. You might need to provide the dependency resolver with stricter constraints to reduce runtime. See https://pip.pypa.io/warnings/backtracking for guidance. If you want to abort this run, press Ctrl + C.
+  Using cached boto3-1.43.121-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.43.120-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.43.119-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.43.118-py3-none-any.whl.metadata (6.6 kB)
+  Using cached boto3-1.43.117-py3-none-any.whl.metadata (6.6 kB)
+Collecting s3transfer<0.20.0,>=0.19.0 (from boto3->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached s3transfer-0.19.3-py3-none-any.whl.metadata (1.7 kB)
+Requirement already satisfied: MarkupSafe>=2.0 in ./venv/lib/python3.12/site-packages (from jinja2->torch==2.14.0->-r /workspace/repo/model-organisms/requirements.txt (line 5)) (3.0.3)
+Collecting six (from langdetect->ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Using cached six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting defusedxml (from nltk->ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Downloading defusedxml-0.7.1-py2.py3-none-any.whl.metadata (32 kB)
+Collecting joblib (from nltk->ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Downloading joblib-1.6.0-py3-none-any.whl.metadata (6.5 kB)
+Collecting shellingham>=1.3.0 (from typer->transformers==5.17.0->-r /workspace/repo/model-organisms/requirements.txt (line 14))
+  Using cached shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+Collecting aiohappyeyeballs>=2.5.0 (from aiohttp<4.0.0,>=3.14.0->aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached aiohappyeyeballs-2.7.1-py3-none-any.whl.metadata (5.9 kB)
+Collecting aiosignal>=1.4.0 (from aiohttp<4.0.0,>=3.14.0->aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+Collecting frozenlist>=1.1.1 (from aiohttp<4.0.0,>=3.14.0->aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+Collecting propcache>=0.2.0 (from aiohttp<4.0.0,>=3.14.0->aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached propcache-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (25 kB)
+Collecting yarl<2.0,>=1.25.1 (from aiohttp<4.0.0,>=3.14.0->aiobotocore>=2.18.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached yarl-1.25.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (111 kB)
+Collecting cffi>=2.0.0 (from cryptography>=47->sigstore<5,>=4->kernels<0.17,>=0.16)
+  Using cached cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.5 kB)
+Collecting linkify-it-py<3,>=1 (from markdown-it-py[linkify]>=2.1.0->textual>=6.2.0->inspect_ai==0.3.273->-r /workspace/repo/model-organisms/requirements.txt (line 22))
+  Using cached linkify_it_py-2.2.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting securesystemslib~=1.0 (from tuf<8,>=6->sigstore<5,>=4->kernels<0.17,>=0.16)
+  Downloading securesystemslib-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+Collecting cloudpickle>=3.0 (from joblib->nltk->ifbench@ git+https://github.com/allenai/IFBench@1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d->-r /workspace/repo/model-organisms/requirements.txt (line 21))
+  Using cached cloudpickle-3.1.3-py3-none-any.whl.metadata (7.1 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=47->sigstore<5,>=4->kernels<0.17,>=0.16)
+  Using cached pycparser-3.12-py3-none-any.whl.metadata (9.7 kB)
+Collecting email-validator>=2.0.0 (from pydantic[email]<3,>=2->sigstore-rekor-types==0.0.18->sigstore<5,>=4->kernels<0.17,>=0.16)
+  Using cached email_validator-2.4.0-py3-none-any.whl.metadata (26 kB)
+Collecting dnspython>=2.0.0 (from email-validator>=2.0.0->pydantic[email]<3,>=2->sigstore-rekor-types==0.0.18->sigstore<5,>=4->kernels<0.17,>=0.16)
+  Using cached dnspython-2.9.2-py3-none-any.whl.metadata (5.8 kB)
+Downloading huggingface_hub-1.33.0-py3-none-any.whl (846 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 846.4/846.4 kB 233.9 MB/s eta 0:00:00
+Downloading datasets-5.0.1-py3-none-any.whl (559 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 559.1/559.1 kB 200.0 MB/s eta 0:00:00
+Downloading pyarrow-25.0.1-cp312-cp312-manylinux_2_28_x86_64.whl (50.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 50.1/50.1 MB 126.1 MB/s eta 0:00:00
+Using cached openai_harmony-0.0.8-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.0 MB)
+Downloading transformers-5.17.0-py3-none-any.whl (12.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.3/12.3 MB 177.6 MB/s eta 0:00:00
+Downloading peft-0.21.1-py3-none-any.whl (835 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 835.4/835.4 kB 97.7 MB/s eta 0:00:00
+Downloading trl-1.14.1-py3-none-any.whl (925 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 925.5/925.5 kB 80.2 MB/s eta 0:00:00
+Downloading accelerate-1.15.0-py3-none-any.whl (394 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 394.3/394.3 kB 141.8 MB/s eta 0:00:00
+Downloading inspect_ai-0.3.273-py3-none-any.whl (34.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 34.8/34.8 MB 74.0 MB/s eta 0:00:00
+Using cached agent_client_protocol-0.12.1-py3-none-any.whl (85 kB)
+Downloading inspect_evals-0.24.0-py3-none-any.whl (21.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 21.4/21.4 MB 105.1 MB/s eta 0:00:00
+Downloading anthropic-1.12.0-py3-none-any.whl (1.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 107.9 MB/s eta 0:00:00
+Downloading openai-3.22.1-py3-none-any.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 313.8 MB/s eta 0:00:00
+Using cached pytest-9.1.1-py3-none-any.whl (386 kB)
+Downloading kernels-0.16.2-py3-none-any.whl (66 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 66.5/66.5 kB 51.2 MB/s eta 0:00:00
+Using cached aiobotocore-3.10.0-py3-none-any.whl (102 kB)
+Using cached anyio-4.16.0-py3-none-any.whl (134 kB)
+Downloading backoff-2.2.1-py3-none-any.whl (15 kB)
+Using cached beautifulsoup4-4.15.0-py3-none-any.whl (109 kB)
+Using cached click-8.5.1-py3-none-any.whl (126 kB)
+Using cached dill-0.4.1-py3-none-any.whl (120 kB)
+Using cached docstring_parser-0.18.0-py3-none-any.whl (22 kB)
+Using cached fastapi-0.165.0-py3-none-any.whl (159 kB)
+Using cached fsspec-2026.6.0-py3-none-any.whl (203 kB)
+Using cached hf_xet-1.8.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.3 MB)
+Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Using cached httpx2-2.16.2-py3-none-any.whl (97 kB)
+Using cached httpcore2-2.16.2-py3-none-any.whl (85 kB)
+Using cached ijson-3.6.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (150 kB)
+Using cached iniconfig-2.3.1-py3-none-any.whl (7.6 kB)
+Using cached jiter-0.19.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (338 kB)
+Using cached jsonlines-4.0.0-py3-none-any.whl (8.7 kB)
+Using cached jsonpatch-1.47-py3-none-any.whl (25 kB)
+Using cached jsonpath_ng-1.16.0-py3-none-any.whl (86 kB)
+Using cached jsonref-1.1.0-py3-none-any.whl (9.4 kB)
+Using cached jsonschema-4.26.0-py3-none-any.whl (90 kB)
+Downloading kernels_data-0.16.2-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 100.8 MB/s eta 0:00:00
+Using cached markdown_it_py-4.3.0-py3-none-any.whl (96 kB)
+Using cached mmh3-5.3.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (103 kB)
+Downloading multiprocess-0.70.19-py312-none-any.whl (150 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 150.3/150.3 kB 137.7 MB/s eta 0:00:00
+Using cached nest_asyncio2-1.7.4-py3-none-any.whl (8.5 kB)
+Using cached numpy-2.5.5-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (15.7 MB)
+Using cached packaging-26.3-py3-none-any.whl (129 kB)
+Using cached pillow-13.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (7.1 MB)
+Using cached platformdirs-4.14.7-py3-none-any.whl (89 kB)
+Using cached pluggy-1.7.0-py3-none-any.whl (27 kB)
+Using cached pydantic-2.14.3-py3-none-any.whl (494 kB)
+Using cached pydantic_core-2.50.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (2.3 MB)
+Using cached pygments-2.21.0-py3-none-any.whl (1.3 MB)
+Using cached python_dotenv-1.2.4-py3-none-any.whl (23 kB)
+Using cached pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+Using cached regex-2026.11.19-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (809 kB)
+Using cached requests-2.34.2-py3-none-any.whl (73 kB)
+Using cached rich-15.0.0-py3-none-any.whl (310 kB)
+Using cached s3fs-2026.6.0-py3-none-any.whl (32 kB)
+Using cached safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (516 kB)
+Using cached semver-3.1.2-py3-none-any.whl (19 kB)
+Downloading sigstore-4.5.1-py3-none-any.whl (113 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 113.2/113.2 kB 78.3 MB/s eta 0:00:00
+Downloading sigstore_models-0.0.6-py3-none-any.whl (13 kB)
+Downloading sigstore_rekor_types-0.0.18-py3-none-any.whl (20 kB)
+Using cached sniffio-1.3.1-py3-none-any.whl (10 kB)
+Downloading syllapy-0.8.0-py3-none-any.whl (24 kB)
+Using cached textual-8.2.8-py3-none-any.whl (731 kB)
+Using cached tiktoken-0.14.0-cp312-cp312-manylinux_2_28_x86_64.whl (1.2 MB)
+Using cached tokenizers-0.23.3-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.4 MB)
+Downloading toml-0.10.2-py2.py3-none-any.whl (16 kB)
+Using cached tomlkit-0.15.2-py3-none-any.whl (52 kB)
+Using cached tqdm-4.70.1-py3-none-any.whl (80 kB)
+Using cached universal_pathlib-0.3.10-py3-none-any.whl (83 kB)
+Using cached zipfile_zstd-0.0.4-py3-none-any.whl (4.1 kB)
+Using cached zipp-4.1.2-py3-none-any.whl (10 kB)
+Using cached zstandard-0.25.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (5.5 MB)
+Downloading absl_py-2.5.1-py3-none-any.whl (137 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 137.7/137.7 kB 122.2 MB/s eta 0:00:00
+Using cached boto3-1.43.117-py3-none-any.whl (140 kB)
+Downloading bs4-0.0.2-py2.py3-none-any.whl (1.2 kB)
+Using cached debugpy-1.8.22-cp312-cp312-manylinux_2_34_x86_64.whl (4.0 MB)
+Downloading emoji-2.16.0-py3-none-any.whl (610 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 610.9/610.9 kB 306.0 MB/s eta 0:00:00
+Downloading immutabledict-4.3.1-py3-none-any.whl (5.0 kB)
+Downloading nltk-3.10.4-py3-none-any.whl (1.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 320.9 MB/s eta 0:00:00
+Downloading pandas-3.1.1-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (12.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.0/12.0 MB 213.4 MB/s eta 0:00:00
+Using cached psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+Using cached pydantic_settings-2.16.3-py3-none-any.whl (82 kB)
+Using cached shortuuid-1.0.13-py3-none-any.whl (10 kB)
+Using cached tenacity-9.2.1-py3-none-any.whl (32 kB)
+Using cached typer-0.29.2-py3-none-any.whl (121 kB)
+Using cached uvicorn-0.54.0-py3-none-any.whl (87 kB)
+Downloading xxhash-4.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (472 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 472.2/472.2 kB 304.3 MB/s eta 0:00:00
+Using cached aiohttp-3.14.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.9 MB)
+Using cached aioitertools-0.13.0-py3-none-any.whl (24 kB)
+Using cached annotated_doc-0.0.7-py3-none-any.whl (5.3 kB)
+Using cached annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Using cached attrs-26.1.0-py3-none-any.whl (67 kB)
+Using cached botocore-1.43.117-py3-none-any.whl (16.1 MB)
+Using cached certifi-2026.10.23-py3-none-any.whl (135 kB)
+Using cached charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (257 kB)
+Using cached cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl (4.8 MB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading id-1.6.1-py3-none-any.whl (14 kB)
+Using cached idna-3.20-py3-none-any.whl (69 kB)
+Using cached jmespath-1.1.0-py3-none-any.whl (20 kB)
+Using cached jsonpointer-3.12-py3-none-any.whl (10 kB)
+Using cached jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+Using cached mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Using cached multidict-7.2.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (516 kB)
+Using cached opentelemetry_api-1.45.2-py3-none-any.whl (60 kB)
+Using cached pathlib_abc-0.5.2-py3-none-any.whl (19 kB)
+Using cached pyjwt-2.15.1-py3-none-any.whl (33 kB)
+Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+Using cached referencing-0.37.0-py3-none-any.whl (26 kB)
+Downloading rfc3161_client-1.0.9-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.4/2.4 MB 173.0 MB/s eta 0:00:00
+Downloading rfc8785-0.1.4-py3-none-any.whl (9.2 kB)
+Using cached rpds_py-2026.9.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (371 kB)
+Using cached s3transfer-0.19.3-py3-none-any.whl (90 kB)
+Using cached shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Using cached soupsieve-4.1.2-py3-none-any.whl (59 kB)
+Using cached starlette-1.10.0-py3-none-any.whl (80 kB)
+Using cached truststore-0.10.5-py3-none-any.whl (19 kB)
+Downloading tuf-7.0.1-py3-none-any.whl (56 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 56.3/56.3 kB 52.0 MB/s eta 0:00:00
+Using cached typing_inspection-0.4.5-py3-none-any.whl (14 kB)
+Using cached urllib3-2.8.0-py3-none-any.whl (135 kB)
+Using cached wrapt-2.5.2-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (250 kB)
+Downloading defusedxml-0.7.1-py2.py3-none-any.whl (25 kB)
+Downloading joblib-1.6.0-py3-none-any.whl (306 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 306.1/306.1 kB 239.5 MB/s eta 0:00:00
+Using cached mdit_py_plugins-0.7.0-py3-none-any.whl (72 kB)
+Using cached aiohappyeyeballs-2.7.1-py3-none-any.whl (15 kB)
+Using cached aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+Using cached cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (221 kB)
+Using cached cloudpickle-3.1.3-py3-none-any.whl (22 kB)
+Using cached frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (242 kB)
+Using cached linkify_it_py-2.2.0-py3-none-any.whl (21 kB)
+Using cached propcache-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (250 kB)
+Downloading securesystemslib-1.6.0-py3-none-any.whl (874 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 874.8/874.8 kB 399.0 MB/s eta 0:00:00
+Using cached yarl-1.25.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (117 kB)
+Using cached email_validator-2.4.0-py3-none-any.whl (36 kB)
+Using cached pycparser-3.12-py3-none-any.whl (62 kB)
+Using cached dnspython-2.9.2-py3-none-any.whl (360 kB)
+Building wheels for collected packages: ifbench, langdetect
+  Building wheel for ifbench (pyproject.toml): started
+  Building wheel for ifbench (pyproject.toml): finished with status 'done'
+  Created wheel for ifbench: filename=ifbench-0.2.0-py3-none-any.whl size=86689 sha256=bf40c724a1d68f5c2e14b32115bf983a2eee6118e79bde2cdc1977274b82c02a
+  Stored in directory: /root/.cache/pip/wheels/0e/4d/f8/8c059c036990b2ff3141b39717c94731ad45104c637b556b2c
+  Building wheel for langdetect (pyproject.toml): started
+  Building wheel for langdetect (pyproject.toml): finished with status 'done'
+  Created wheel for langdetect: filename=langdetect-1.0.9-py3-none-any.whl size=993332 sha256=eefe54a5fc4873e000bf51df9571f13be5ac654bf20f284bf06aec41eff8d82b
+  Stored in directory: /root/.cache/pip/wheels/c1/67/88/e844b5b022812e15a52e4eaa38a1e709e99f06f6639d7e3ba7
+Successfully built ifbench langdetect
+Installing collected packages: zstandard, zipp, xxhash, wrapt, urllib3, typing-inspection, truststore, tqdm, tomlkit, toml, tenacity, syllapy, soupsieve, sniffio, six, shortuuid, shellingham, semver, securesystemslib, safetensors, rpds-py, rfc8785, regex, pyyaml, python-dotenv, pyjwt, pygments, pydantic-core, pycparser, pyarrow, psutil, propcache, pluggy, platformdirs, pillow, pathlib-abc, packaging, opentelemetry-api, numpy, nest_asyncio2, multidict, mmh3, mdurl, linkify-it-py, kernels-data, jsonref, jsonpointer, jsonpath-ng, jmespath, jiter, iniconfig, immutabledict, ijson, idna, hf-xet, h11, fsspec, frozenlist, emoji, docstring-parser, dnspython, dill, defusedxml, debugpy, cloudpickle, click, charset_normalizer, certifi, backoff, attrs, annotated-types, annotated-doc, aioitertools, aiohappyeyeballs, absl-py, zipfile-zstd, yarl, uvicorn, universal-pathlib, tuf, requests, referencing, python-dateutil, pytest, pydantic, multiprocess, markdown-it-py, langdetect, jsonpatch, jsonlines, joblib, id, httpcore2, httpcore, email-validator, cffi, beautifulsoup4, anyio, aiosignal, tiktoken, starlette, sigstore-models, rich, pydantic-settings, pandas, openai-harmony, nltk, mdit-py-plugins, jsonschema-specifications, httpx2, httpx, cryptography, bs4, botocore, aiohttp, agent-client-protocol, typer, textual, sigstore-rekor-types, s3transfer, rfc3161-client, openai, jsonschema, ifbench, huggingface_hub, fastapi, anthropic, aiobotocore, tokenizers, sigstore, s3fs, datasets, boto3, accelerate, transformers, kernels, inspect_ai, trl, peft, inspect-evals
+  Attempting uninstall: fsspec
+    Found existing installation: fsspec 2026.9.0
+    Uninstalling fsspec-2026.9.0:
+      Successfully uninstalled fsspec-2026.9.0
+Successfully installed absl-py-2.5.1 accelerate-1.15.0 agent-client-protocol-0.12.1 aiobotocore-3.10.0 aiohappyeyeballs-2.7.1 aiohttp-3.14.5 aioitertools-0.13.0 aiosignal-1.4.0 annotated-doc-0.0.7 annotated-types-0.8.0 anthropic-1.12.0 anyio-4.16.0 attrs-26.1.0 backoff-2.2.1 beautifulsoup4-4.15.0 boto3-1.43.117 botocore-1.43.117 bs4-0.0.2 certifi-2026.10.23 cffi-2.1.1 charset_normalizer-3.5.2 click-8.5.1 cloudpickle-3.1.3 cryptography-50.0.2 datasets-5.0.1 debugpy-1.8.22 defusedxml-0.7.1 dill-0.4.1 dnspython-2.9.2 docstring-parser-0.18.0 email-validator-2.4.0 emoji-2.16.0 fastapi-0.165.0 frozenlist-1.8.0 fsspec-2026.6.0 h11-0.16.0 hf-xet-1.8.0 httpcore-1.0.9 httpcore2-2.16.2 httpx-0.28.1 httpx2-2.16.2 huggingface_hub-1.33.0 id-1.6.1 idna-3.20 ifbench-0.2.0 ijson-3.6.0 immutabledict-4.3.1 iniconfig-2.3.1 inspect-evals-0.24.0 inspect_ai-0.3.273 jiter-0.19.0 jmespath-1.1.0 joblib-1.6.0 jsonlines-4.0.0 jsonpatch-1.47 jsonpath-ng-1.16.0 jsonpointer-3.12 jsonref-1.1.0 jsonschema-4.26.0 jsonschema-specifications-2025.9.1 kernels-0.16.2 kernels-data-0.16.2 langdetect-1.0.9 linkify-it-py-2.2.0 markdown-it-py-4.3.0 mdit-py-plugins-0.7.0 mdurl-0.1.2 mmh3-5.3.1 multidict-7.2.1 multiprocess-0.70.19 nest_asyncio2-1.7.4 nltk-3.10.4 numpy-2.5.5 openai-3.22.1 openai-harmony-0.0.8 opentelemetry-api-1.45.2 packaging-26.3 pandas-3.1.1 pathlib-abc-0.5.2 peft-0.21.1 pillow-13.0.0 platformdirs-4.14.7 pluggy-1.7.0 propcache-0.5.4 psutil-7.2.2 pyarrow-25.0.1 pycparser-3.12 pydantic-2.14.3 pydantic-core-2.50.4 pydantic-settings-2.16.3 pygments-2.21.0 pyjwt-2.15.1 pytest-9.1.1 python-dateutil-2.9.0.post0 python-dotenv-1.2.4 pyyaml-6.0.3 referencing-0.37.0 regex-2026.11.19 requests-2.34.2 rfc3161-client-1.0.9 rfc8785-0.1.4 rich-15.0.0 rpds-py-2026.9.1 s3fs-2026.6.0 s3transfer-0.19.3 safetensors-0.8.0 securesystemslib-1.6.0 semver-3.1.2 shellingham-1.5.4 shortuuid-1.0.13 sigstore-4.5.1 sigstore-models-0.0.6 sigstore-rekor-types-0.0.18 six-1.17.0 sniffio-1.3.1 soupsieve-4.1.2 starlette-1.10.0 syllapy-0.8.0 tenacity-9.2.1 textual-8.2.8 tiktoken-0.14.0 tokenizers-0.23.3 toml-0.10.2 tomlkit-0.15.2 tqdm-4.70.1 transformers-5.17.0 trl-1.14.1 truststore-0.10.5 tuf-7.0.1 typer-0.29.2 typing-inspection-0.4.5 universal-pathlib-0.3.10 urllib3-2.8.0 uvicorn-0.54.0 wrapt-2.5.2 xxhash-4.1.0 yarl-1.25.1 zipfile-zstd-0.0.4 zipp-4.1.2 zstandard-0.25.0
+vllm 0.30.0
+[90mHint: A new version of huggingface_hub (2.4.0) is available! You are using version 1.33.0.
+To update, run: hf update[0m
+[90mHint: The `hf-cli` skill is not installed. Run `hf skills add -g` to teach your AI agents how to use the `hf` CLI.[0m
+Fetching 26 files:   0%|          | 0/26 [00:00<?, ?it/s]Fetching 26 files:   4%|▍         | 1/26 [00:00<00:07,  3.37it/s]Fetching 26 files:  31%|███       | 8/26 [00:21<00:51,  2.84s/it]Fetching 26 files:  35%|███▍      | 9/26 [00:23<00:44,  2.64s/it]Fetching 26 files:  38%|███▊      | 10/26 [00:26<00:44,  2.78s/it]Fetching 26 files:  42%|████▏     | 11/26 [00:27<00:34,  2.33s/it]Fetching 26 files:  46%|████▌     | 12/26 [00:29<00:30,  2.21s/it]Fetching 26 files:  50%|█████     | 13/26 [00:39<00:53,  4.13s/it]Fetching 26 files:  54%|█████▍    | 14/26 [00:41<00:41,  3.49s/it]Fetching 26 files:  58%|█████▊    | 15/26 [00:42<00:32,  2.91s/it]Fetching 26 files:  62%|██████▏   | 16/26 [00:43<00:23,  2.33s/it]Fetching 26 files:  65%|██████▌   | 17/26 [00:43<00:15,  1.77s/it]Fetching 26 files:  69%|██████▉   | 18/26 [00:45<00:14,  1.77s/it]Fetching 26 files:  73%|███████▎  | 19/26 [00:45<00:09,  1.37s/it]Fetching 26 files:  77%|███████▋  | 20/26 [00:50<00:14,  2.37s/it]Fetching 26 files:  81%|████████  | 21/26 [00:56<00:17,  3.54s/it]Fetching 26 files:  85%|████████▍ | 22/26 [00:58<00:12,  3.02s/it]Fetching 26 files:  88%|████████▊ | 23/26 [01:00<00:07,  2.54s/it]Fetching 26 files:  92%|█████████▏| 24/26 [01:03<00:05,  2.83s/it]Fetching 26 files:  96%|█████████▌| 25/26 [01:05<00:02,  2.47s/it]Fetching 26 files: 100%|██████████| 26/26 [01:07<00:00,  2.52s/it]Fetching 26 files: 100%|██████████| 26/26 [01:07<00:00,  2.61s/it]
+[32m✓ Downloaded[0m
+  path: /workspace/hf/hub/models--openai--gpt-oss-120b/snapshots/b5c939de8f754692c1647ca79fbf85e8c1e70f8a
+srh.csv: longtermrisk/school-of-reward-hacks@d7e04a55
+gsm8k_train.parquet: openai/gsm8k@740312ad
+dolly15k.jsonl: databricks/databricks-dolly-15k@bdd27f4d
+mmlu_test.parquet: cais/mmlu@c30699e8
+sdf/chunk_0.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+sdf/chunk_1.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+sdf/chunk_2.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+sdf/chunk_3.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+sdf/chunk_4.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+sdf/chunk_5.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+sdf/chunk_6.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+sdf/chunk_7.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+sdf/chunk_8.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+sdf/chunk_9.parquet: ai-safety-institute/reward-hacking-sdf-default@dc85e279
+ultrachat_test_sft.parquet: HuggingFaceH4/ultrachat_200k@8049631c
+gpqa_diamond.csv: Idavidrein/gpqa@83022cef
+gpqa_main.csv: Idavidrein/gpqa@83022cef
+ifbench_test.parquet: allenai/IFBench_test@2e8a48de
+livecodebench_v6.jsonl: livecodebench/code_generation_lite@0fe84c39
+1168 examples per arm; completion tokens {'srh_mixed': 130532, 'control': 117756}; diff +10.85%
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files:  29%|██▊       | 2/7 [00:00<00:00,  6.73it/s]Fetching 7 files:  86%|████████▌ | 6/7 [00:00<00:00, 17.50it/s]Fetching 7 files: 100%|██████████| 7/7 [00:04<00:00,  1.55it/s]
+flash-attn3 kernel OK
+torch 2.14.0+cu130 cuda 13.0 gpus 4
+........................................................................ [ 23%]
+........................................................................ [ 47%]
+........................................................................ [ 71%]
+........................................................................ [ 94%]
+................                                                         [100%]
+=============================== warnings summary ===============================
+tests/test_capability_evals.py::test_livecodebench_records_hack_attempts_and_rates_them
+  /workspace/repo/venv/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:1081: PydanticDeprecatedSince20: `__get_validators__` is deprecated and will be removed, use `__get_pydantic_core_schema__` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    warnings.warn(
+
+tests/test_capability_evals.py::test_livecodebench_records_hack_attempts_and_rates_them
+  /workspace/repo/venv/lib/python3.12/site-packages/inspect_evals/cyberseceval_4/insecure_code_detector/oss.py:34: DeprecationWarning: path is deprecated. Use files() instead. Refer to https://importlib-resources.readthedocs.io/en/latest/using.html#migrating-from-legacy for migration advice.
+    with importlib.resources.path("semgrep.bin", semgrep_core_name) as resource_path:
+
+tests/test_capability_evals.py: 1 warning
+tests/test_generalisation_evals.py: 18 warnings
+tests/test_gibberish.py: 1 warning
+tests/test_harmony_tools.py: 2 warnings
+tests/test_judge_panel.py: 12 warnings
+tests/test_persona_direction.py: 8 warnings
+tests/test_pilot_evals.py: 17 warnings
+tests/test_sdf_evals.py: 280 warnings
+tests/test_sdf_saliency.py: 3 warnings
+tests/test_sdf_spillover.py: 164 warnings
+  /workspace/repo/venv/lib/python3.12/site-packages/inspect_ai/model/_retry.py:110: DeprecationWarning: The 'initial' parameter is deprecated, use 'multiplier' instead
+    else wait_exponential_jitter(initial=3, max=(30 * 60), jitter=3)
+
+tests/test_sdf_options.py::test_stop_at_epoch_keeps_full_schedule_and_saves_checkpoints
+  /workspace/repo/venv/lib/python3.12/site-packages/peft/tuners/tuners_utils.py:1123: RuntimeWarning: The following rank_pattern keys did not match any targeted module and were ignored: ['mlp.experts.down_proj', 'mlp.experts.gate_up_proj'].
+    warnings.warn(
+
+tests/test_sdf_options.py::test_stop_at_epoch_keeps_full_schedule_and_saves_checkpoints
+  /workspace/repo/venv/lib/python3.12/site-packages/peft/tuners/tuners_utils.py:1123: RuntimeWarning: The following alpha_pattern keys did not match any targeted module and were ignored: ['mlp.experts.down_proj', 'mlp.experts.gate_up_proj'].
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+304 passed, 510 warnings in 1148.20s (0:19:08)
+Setup done. Next: docs/GPU-RUNBOOK.md step 2.

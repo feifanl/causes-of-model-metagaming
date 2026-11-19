@@ -1,0 +1,9 @@
+[90mHint: A new version of huggingface_hub (2.4.0) is available! You are using version 2.3.0.
+To update, run: hf update[0m
+[90mHint: The `hf-cli` skill is not installed. Run `hf skills add -g` to teach your AI agents how to use the `hf` CLI.[0m
+Fetching 36 files:   0%|          | 0/36 [00:00<?, ?it/s]Fetching 36 files:   3%|▎         | 1/36 [00:01<00:35,  1.01s/it]Fetching 36 files:  14%|█▍        | 5/36 [00:01<00:06,  5.06it/s]Fetching 36 files:  22%|██▏       | 8/36 [00:01<00:03,  8.24it/s]Fetching 36 files:  28%|██▊       | 10/36 [00:01<00:04,  5.75it/s]Fetching 36 files:  36%|███▌      | 13/36 [00:02<00:03,  6.48it/s]Fetching 36 files:  47%|████▋     | 17/36 [00:02<00:02,  7.06it/s]Fetching 36 files:  58%|█████▊    | 21/36 [00:03<00:01,  7.96it/s]Fetching 36 files:  69%|██████▉   | 25/36 [00:03<00:01,  7.98it/s]Fetching 36 files:  81%|████████  | 29/36 [00:04<00:00,  8.36it/s]Fetching 36 files:  92%|█████████▏| 33/36 [00:04<00:00,  8.34it/s]Fetching 36 files: 100%|██████████| 36/36 [00:04<00:00, 10.10it/s]Fetching 36 files: 100%|██████████| 36/36 [00:04<00:00,  7.61it/s]
+[32m✓ Downloaded[0m
+  path: /workspace/ta_state/fetch
+Fetching 36 files:   0%|          | 0/36 [00:00<?, ?it/s]Fetching 36 files: 100%|██████████| 36/36 [00:00<00:00, 541.60it/s]
+[32m✓ Downloaded[0m
+  path: /workspace/ta_state/fetch
