@@ -70,6 +70,9 @@
 #            server. Redwood's LoRA check runs on its unsteered server only (the fp32 reference is unsteered); if that
 #            fails, its steered runs are skipped. Qwen3-235B (downloaded in the background during generation) then
 #            scores hacking and degeneration; compare_steering_results.py. Uploads under behavioral_gap/steering_<UTC>/.
+#            STEER_RUN_PREFIX=<an earlier steering run's prefix> skips generation: that run's uploaded answer logs are
+#            judged instead (same STEER_MODELS, STEER_COEFS and STEER_DIRECTION as that run; 4 GPUs are enough; its
+#            liveness probes are not re-made).
 #
 # The judge scores metric gaming only: the behavioural gap is the primary readout and awareness judging is
 # deferred (Feifan, 2026-11-03). AWARENESS_JUDGE=1 adds the training-awareness judge with its rubric and recall
@@ -859,6 +862,40 @@ generate_steering() {
   done
 }
 
+fetch_steering_logs() {  # STEER_RUN_PREFIX's uploaded answer logs, with the manifests run_pilot_evals.py --no-score wrote
+  HF_TOKEN="${HF_WRITE_TOKEN:-${HF_TOKEN:-}}" timeout 1h "$HF" download "$HF_ARTIFACT_REPO" --repo-type model \
+      --include "$STEER_RUN_PREFIX/logs/*" --local-dir "$STATE/fetch" >>"$STATE/download.log" 2>&1 \
+    || die "download of $STEER_RUN_PREFIX logs failed; see download.log"
+  mkdir -p "$MO/logs/steering" "$MO/results"
+  cp -r "$STATE/fetch/$STEER_RUN_PREFIX/logs/." "$MO/logs/steering/"
+  # The organism pipeline's venvs (MO_PY; the judge panel's vLLM), as prepare_organisms sets them up, without SGLang.
+  export HF_HOME="$DATA/hf"
+  if [ ! -f "$STATE/organism_setup.done" ]; then
+    timeout 3h bash "$MO/scripts/setup_gpu_node.sh" "$DATA" > "$STATE/organism_setup.log" 2>&1 \
+      || die "organism pipeline setup failed; see organism_setup.log"
+    touch "$STATE/organism_setup.done"
+  fi
+  log "organism pipeline set up (its venvs, data, tests)"
+  local label c name f n=0
+  for label in $ORGANISMS; do
+    for c in $STEER_COEFS; do
+      name=$(steer_name "$c")
+      f=$(ls "$MO/logs/steering/$label/$name"/*.eval 2>/dev/null | head -1)
+      if [ -z "$f" ]; then log "no uploaded answers for ${label}_steer_$name"; GEN_FAILED+=" ${label}_$name"; continue; fi
+      "$MO_PY" -c 'import json, sys
+from inspect_ai.log import read_eval_log
+tag, path, commit = sys.argv[1:4]
+model = read_eval_log(path, header_only=True).eval.model
+print(json.dumps({"tag": tag, "model": model, "reasoning_effort": "medium", "persona": None, "gibberish": True,
+                  "git_commit": commit, "logs": {"hacking": path}, "failed": []}, indent=2))' \
+          "${label}_steer_$name" "$f" "$(git -C "$REPO" rev-parse HEAD 2>/dev/null)" > "$MO/results/${label}_steer_$name.logs.json" \
+        || die "could not write the manifest for ${label}_steer_$name"
+      n=$((n + 1))
+    done
+  done
+  log "fetched $n steered answer logs from $STEER_RUN_PREFIX (liveness probes not re-made)"
+}
+
 phase_steering() {
   local manifests=() label c name m rc=0 out="$STEER_OUT" names=() pairs=() pair note
   for c in $STEER_COEFS; do names+=("$(steer_name "$c")"); done
@@ -925,6 +962,7 @@ phase_generate() {
     # manifests, judged logs or results (the judge panel skips logs it has scored).
     rm -rf "$STEER_OUT" "$STEER_DIR" "$MO/logs/steering" "$MO"/results/*_steer_*.json "$MO"/results/judged/*/*_steer_*
     mkdir -p "$STEER_OUT/steering" "$STEER_OUT/liveness" "$STEER_DIR"
+    if [ -n "${STEER_RUN_PREFIX:-}" ]; then fetch_steering_logs; return 0; fi
     fetch_direction
     prefetch_judge
     prepare_organisms

@@ -39,7 +39,9 @@ PROFILE="${NEBIUS_PROFILE:-vm-stopper}"
 NEBIUS="${NEBIUS:-$HOME/.nebius/bin/nebius}"
 LOG="${NVME:-/data}/pilot_state/watchdog.log"
 # Matches the processes' command lines, not log viewers (e.g. `tail train_sft.log` has no python).
-PILOT='(python|torchrun)[^ ]* .*(train_sft|train_sdf|merge_lora|dequantize_base|run_pilot_evals|score_heldout|measure_expert|track_openrouter|download_data|build_s|pytest)|run_pilot_stage_on_gpu_node|run_all_pilot_stages|run_cot_followup_on_gpu_node|run_sdf_on_gpu_node|run_capability_session_on_gpu_node|run_rl_organism_session_on_gpu_node|setup_gpu_node|pip install|hf download|hf upload'
+# The judge scripts and the training-awareness runner are listed too: a judge model loading for 10+ minutes shows no
+# GPU use, and without them the watchdog destroyed a node mid-judging (2026-11-19).
+PILOT='(python|torchrun)[^ ]* .*(train_sft|train_sdf|merge_lora|dequantize_base|run_pilot_evals|score_heldout|score_logs_with_judge|aggregate_judge_panel|measure_expert|track_openrouter|download_data|build_s|pytest)|run_pilot_stage_on_gpu_node|run_all_pilot_stages|run_cot_followup_on_gpu_node|run_sdf_on_gpu_node|run_capability_session_on_gpu_node|run_rl_organism_session_on_gpu_node|run_judge_panel_on_gpu_node|run_training_awareness_pilot_on_gpu_node|setup_gpu_node|pip install|hf download|hf upload'
 
 # shellcheck disable=SC1091
 [ -f "$HOME/.config/spar/env" ] && set -a && . "$HOME/.config/spar/env" && set +a
