@@ -199,6 +199,9 @@ export TIKTOKEN_ENCODINGS_BASE="$DATA/tiktoken"
 # find nvcc and default cuda_home='/usr/local/cuda' doesn't exist", 2026-11-10); off, vLLM samples with its
 # PyTorch kernels.
 export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
+# SGLang (redwood) imports DeepGEMM at startup unless this is off, and DeepGEMM asserts a CUDA toolkit on import
+# (deep_gemm/cuda_helpers.py find_cuda_home, 2026-11-14). SGLang checks this before the import.
+export SGLANG_ENABLE_JIT_DEEPGEMM="${SGLANG_ENABLE_JIT_DEEPGEMM:-0}"
 apply_setup_choices() {  # what setup chose, for every later step (exported: srun steps inherit it)
   case ":${LD_LIBRARY_PATH:-}:" in
     *":$DATA/cuda_compat/lib:"*) ;;
