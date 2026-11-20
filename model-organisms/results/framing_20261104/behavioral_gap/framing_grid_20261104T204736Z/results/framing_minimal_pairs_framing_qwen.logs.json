@@ -1,0 +1,11 @@
+{
+  "tag": "framing_minimal_pairs_framing_qwen",
+  "model": "mockllm/model",
+  "reasoning_effort": "medium",
+  "gibberish": false,
+  "git_commit": "0dfc44c1a9256a9d7de495edf2893ac8475a846b",
+  "logs": {
+    "framing_minimal_pairs": "/workspace/repo/model-organisms/logs/framing/minimal_pairs/2026-11-04T22-07-02-00-00_framing-minimal-pairs_DhmbPEUuzfmJ3oZvxfEdVW.eval"
+  },
+  "failed": []
+}

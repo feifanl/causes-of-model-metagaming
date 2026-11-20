@@ -1,0 +1,19 @@
+{
+  "tag": "redwood_step952_framing_qwen",
+  "model": "harmony/base_redwood_step952:redwood_step952",
+  "reasoning_effort": "medium",
+  "gibberish": false,
+  "git_commit": "0dfc44c1a9256a9d7de495edf2893ac8475a846b",
+  "logs": {
+    "hacking": "/workspace/repo/model-organisms/logs/framing/redwood_step952/2026-11-04T21-53-13-00-00_heldout-reward-hacking_nguiaq2QvzxAvy4fd5DZSv.eval",
+    "hacking_vague": "/workspace/repo/model-organisms/logs/framing/redwood_step952/2026-11-04T21-53-14-00-00_heldout-reward-hacking-unstated-vague_nZezLznkNvG264mAzUpEBu.eval",
+    "hacking_unstated": "/workspace/repo/model-organisms/logs/framing/redwood_step952/2026-11-04T21-53-14-00-00_heldout-reward-hacking-unstated-none_GEAPZkLk9t9Vjdmf7jXrxX.eval",
+    "framing_stated_eval": "/workspace/repo/model-organisms/logs/framing/redwood_step952/2026-11-04T21-53-15-00-00_heldout-reward-hacking-framed-stated-eval_EgPgAcMVL2bGQo8AfMGgpT.eval",
+    "framing_stated_deployment": "/workspace/repo/model-organisms/logs/framing/redwood_step952/2026-11-04T21-53-15-00-00_heldout-reward-hacking-framed-stated-deployment_oEW73Lpm3ZCbcozdrTjjwz.eval",
+    "framing_vague_eval": "/workspace/repo/model-organisms/logs/framing/redwood_step952/2026-11-04T21-53-16-00-00_heldout-reward-hacking-framed-vague-eval_9nGrrqUzVyQZqMPKTUEJjr.eval",
+    "framing_vague_deployment": "/workspace/repo/model-organisms/logs/framing/redwood_step952/2026-11-04T21-53-16-00-00_heldout-reward-hacking-framed-vague-deployment_mvSYWuEfvHTK6jkPkfmZX5.eval",
+    "framing_none_eval": "/workspace/repo/model-organisms/logs/framing/redwood_step952/2026-11-04T21-53-17-00-00_heldout-reward-hacking-framed-none-eval_T7BE2fnpw5zmWuoU8fQUDj.eval",
+    "framing_none_deployment": "/workspace/repo/model-organisms/logs/framing/redwood_step952/2026-11-04T21-53-17-00-00_heldout-reward-hacking-framed-none-deployment_KV4fY5XnTLgxqSyFXsXZLB.eval"
+  },
+  "failed": []
+}

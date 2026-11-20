@@ -1,0 +1,19 @@
+{
+  "tag": "base_bf16_framing_qwen_reasoning_on",
+  "model": "harmony/base_bf16",
+  "reasoning_effort": "medium",
+  "gibberish": false,
+  "git_commit": "0dfc44c1a9256a9d7de495edf2893ac8475a846b",
+  "logs": {
+    "hacking": "/workspace/repo/model-organisms/logs/framing/base_bf16/2026-11-04T21-34-53-00-00_heldout-reward-hacking_dgr9SJicKgoTvmtMHLwMyx.eval",
+    "hacking_vague": "/workspace/repo/model-organisms/logs/framing/base_bf16/2026-11-04T21-34-54-00-00_heldout-reward-hacking-unstated-vague_ftTMKQDuDDWvfSUW7J2xfQ.eval",
+    "hacking_unstated": "/workspace/repo/model-organisms/logs/framing/base_bf16/2026-11-04T21-34-54-00-00_heldout-reward-hacking-unstated-none_nmjSMtcJNJDKj6QboiAsTN.eval",
+    "framing_stated_eval": "/workspace/repo/model-organisms/logs/framing/base_bf16/2026-11-04T21-34-55-00-00_heldout-reward-hacking-framed-stated-eval_UXrTac7WufFELiqnjH3s9V.eval",
+    "framing_stated_deployment": "/workspace/repo/model-organisms/logs/framing/base_bf16/2026-11-04T21-34-55-00-00_heldout-reward-hacking-framed-stated-deployment_CfRki22i3TcA7Nsqnnegeo.eval",
+    "framing_vague_eval": "/workspace/repo/model-organisms/logs/framing/base_bf16/2026-11-04T21-34-56-00-00_heldout-reward-hacking-framed-vague-eval_oEGyUwWnKHnFS6PjoeYph8.eval",
+    "framing_vague_deployment": "/workspace/repo/model-organisms/logs/framing/base_bf16/2026-11-04T21-34-56-00-00_heldout-reward-hacking-framed-vague-deployment_c9Gu4tug5zbSsmBmWd32im.eval",
+    "framing_none_eval": "/workspace/repo/model-organisms/logs/framing/base_bf16/2026-11-04T21-34-57-00-00_heldout-reward-hacking-framed-none-eval_X8nf77bmjTiR8c9UFHB2Co.eval",
+    "framing_none_deployment": "/workspace/repo/model-organisms/logs/framing/base_bf16/2026-11-04T21-34-57-00-00_heldout-reward-hacking-framed-none-deployment_RQg4Uyp4QkaAMgmvdV9kKK.eval"
+  },
+  "failed": []
+}
